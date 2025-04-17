@@ -977,10 +977,10 @@ class AuthService:
         """
         try:
             user.last_login = datetime.utcnow()
-            db_session.commit()
+            db_session.session.commit()  # Изменить на db_session.session.commit()
             log_action(ActionType.LOGIN, f"User {user.username} logged in", db_session)
         except Exception as e:
-            db_session.rollback()
+            db_session.session.rollback()  # Изменить на db_session.session.rollback()
             current_app.logger.error(f"Error logging user login: {str(e)}")
 
     @staticmethod
@@ -995,7 +995,7 @@ class AuthService:
         try:
             log_action(ActionType.LOGOUT, f"User {user.username} logged out", db_session)
         except Exception as e:
-            db_session.rollback()
+            db_session.session.rollback()  # Изменить на db_session.session.rollback() если здесь есть rollback
             current_app.logger.error(current_app.logger.error(f"Error logging user logout: {str(e)}"))
 
 

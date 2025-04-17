@@ -173,10 +173,10 @@ def log_action(action_type, description, db_session):
         )
 
         try:
-            db_session.add(log_entry)
-            db_session.commit()
+            db_session.session.add(log_entry)  # Изменить на db_session.session.add(log_entry)
+            db_session.session.commit()  # Изменить на db_session.session.commit()
         except Exception as e:
-            db_session.rollback()
+            db_session.session.rollback()  # Изменить на db_session.session.rollback()
             current_app.logger.error(f"Error logging action: {str(e)}")
 
 
