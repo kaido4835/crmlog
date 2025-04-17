@@ -46,6 +46,15 @@ def create_app(config_name='default'):
         app.logger.setLevel(logging.INFO)
         app.logger.info('CRM startup')
 
+    # Import models to ensure they are registered with SQLAlchemy
+    from models import users, operations
+
+    # Set up user loader
+    @login_manager.user_loader
+    def load_user(user_id):
+        from models.users import User
+        return User.query.get(int(user_id))
+
     # Register blueprints
     from views.auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)

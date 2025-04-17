@@ -4,7 +4,7 @@ from datetime import datetime
 from sqlalchemy import Enum
 import enum
 
-from app import db, login_manager
+from app import db
 
 
 class UserRole(enum.Enum):
@@ -39,12 +39,9 @@ class User(UserMixin, db.Model):
     operator = db.relationship('Operator', uselist=False, back_populates='user', cascade='all, delete-orphan')
     driver = db.relationship('Driver', uselist=False, back_populates='user', cascade='all, delete-orphan')
 
-    logs = db.relationship('Log', back_populates='user')
-    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', back_populates='sender')
-    received_messages = db.relationship('Message', foreign_keys='Message.recipient_id', back_populates='recipient')
-
-    def __init__(self, **kwargs):
-        super(User, self).__init__(**kwargs)
+    logs = db.relationship('Log', back_populates='user', cascade='all, delete-orphan')
+    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', back_populates='sender', cascade='all, delete-orphan')
+    received_messages = db.relationship('Message', foreign_keys='Message.recipient_id', back_populates='recipient', cascade='all, delete-orphan')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -130,8 +127,3 @@ class Driver(db.Model):
 
     def __repr__(self):
         return f'<Driver {self.user.username}>'
-
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
