@@ -174,10 +174,12 @@ class CompanyOwnerRegistrationForm(UserForm):
         super(CompanyOwnerRegistrationForm, self).__init__(*args, **kwargs)
         self.role.data = UserRole.COMPANY_OWNER.value
 
-    def validate(self):
-        if not super(CompanyOwnerRegistrationForm, self).validate():
+    def validate(self, extra_validators=None):
+        # First call the parent class validate method with extra_validators
+        if not super(CompanyOwnerRegistrationForm, self).validate(extra_validators=extra_validators):
             return False
 
+        # Company validation logic
         if not self.company_id.data and not self.create_new_company.data:
             self.company_id.errors.append('Please select a company or create a new one')
             return False
