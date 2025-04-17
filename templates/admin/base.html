@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-cogs"></i> Admin Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('admin.dashboard') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin.user_list') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin.user_list' %}active{% endif %}">
+                    <i class="fas fa-users"></i> Users
+                </a>
+                <a href="{{ url_for('admin.create_user') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin.create_user' %}active{% endif %}">
+                    <i class="fas fa-user-plus"></i> Create User
+                </a>
+                <a href="{{ url_for('admin.create_admin') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin.create_admin' %}active{% endif %}">
+                    <i class="fas fa-user-shield"></i> Create Admin
+                </a>
+                <a href="{{ url_for('admin.company_list') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin.company_list' %}active{% endif %}">
+                    <i class="fas fa-building"></i> Companies
+                </a>
+                <a href="{{ url_for('admin.create_company') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin.create_company' %}active{% endif %}">
+                    <i class="fas fa-plus-square"></i> Create Company
+                </a>
+                <a href="{{ url_for('admin.create_company_owner') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin.create_company_owner' %}active{% endif %}">
+                    <i class="fas fa-user-tie"></i> Create Company Owner
+                </a>
+                <a href="{{ url_for('admin.log_list') }}" class="list-group-item list-group-item-action {% if request.endpoint == 'admin.log_list' %}active{% endif %}">
+                    <i class="fas fa-clipboard-list"></i> System Logs
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">{{ title }}</h5>
+            </div>
+            <div class="card-body">
+                {% block admin_content %}{% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

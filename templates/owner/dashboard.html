@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Owner Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.owner_dashboard') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> Managers
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-bar"></i> Reports
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="fas fa-cog"></i> Company Settings
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Company Owner Dashboard</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> This is a placeholder for the Company Owner Dashboard. In a complete application, this would show company statistics, manager performance, and business metrics.
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card text-center mb-4">
+                            <div class="card-body">
+                                <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                                <h2 class="display-4">0</h2>
+                                <p class="text-muted">Total Managers</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card text-center mb-4">
+                            <div class="card-body">
+                                <i class="fas fa-tasks fa-3x text-success mb-3"></i>
+                                <h2 class="display-4">0</h2>
+                                <p class="text-muted">Total Tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card text-center mb-4">
+                            <div class="card-body">
+                                <i class="fas fa-truck fa-3x text-warning mb-3"></i>
+                                <h2 class="display-4">0</h2>
+                                <p class="text-muted">Active Routes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Performance Overview</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-center text-muted py-5">
+                            <i class="fas fa-chart-line fa-3x mb-3 d-block"></i>
+                            Performance charts and metrics would be displayed here.
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Recent Activity</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-center text-muted py-4">
+                            No recent activities to display.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
