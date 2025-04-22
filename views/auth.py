@@ -30,7 +30,7 @@ def login():
             return redirect(url_for('auth.login'))
 
         login_user(user, remember=form.remember_me.data)
-        AuthService.login_user(user, db)
+        AuthService.login_user(user, db.session)
 
         # Redirect to the page the user was trying to access
         next_page = request.args.get('next')
