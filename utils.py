@@ -2,9 +2,12 @@ import os
 import uuid
 import shutil
 from functools import wraps
-from flask import abort, flash, redirect, url_for, request, current_app
+from flask import abort, flash, redirect, url_for, request, current_app, g
 from flask_login import current_user
 from werkzeug.utils import secure_filename
+import logging
+import time
+import traceback
 
 from models import ActionType, Log
 
@@ -55,7 +58,6 @@ def admin_required(f):
     """
     Decorator that checks if the current user is an admin
     """
-
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
@@ -71,7 +73,6 @@ def admin_required(f):
             return redirect(url_for('main.index'))
 
         return f(*args, **kwargs)
-
     return decorated_function
 
 
@@ -101,9 +102,7 @@ def role_required(roles):
                 return redirect(url_for('main.index'))
 
             return f(*args, **kwargs)
-
         return decorated_function
-
     return decorator
 
 
@@ -112,7 +111,6 @@ def company_access_required(f):
     Decorator that checks if the current user has access to a specific company
     Used for views that receive company_id as a parameter
     """
-
     @wraps(f)
     def decorated_function(company_id, *args, **kwargs):
         # Admin has access to all companies
@@ -137,7 +135,6 @@ def company_access_required(f):
             return redirect(url_for('main.index'))
 
         return f(company_id, *args, **kwargs)
-
     return decorated_function
 
 
@@ -173,12 +170,9 @@ def log_action(action_type, description, db_session):
         )
 
         try:
-            # Исправлено с db_session.session.add(log_entry) на db_session.add(log_entry)
             db_session.add(log_entry)
-            # Исправлено с db_session.session.commit() на db_session.commit()
             db_session.commit()
         except Exception as e:
-            # Исправлено с db_session.session.rollback() на db_session.rollback()
             db_session.rollback()
             current_app.logger.error(f"Error logging action: {str(e)}")
 
@@ -275,3 +269,93 @@ def create_pagination_dict(pagination, endpoint, **kwargs):
         'prev_url': url_for(endpoint, page=pagination.prev_num, **kwargs) if pagination.has_prev else None,
         'next_url': url_for(endpoint, page=pagination.next_num, **kwargs) if pagination.has_next else None
     }
+
+
+# Added from simple_log_utils.py
+def log_function(func):
+    """
+    Simple decorator to log function execution time and errors
+
+    Usage:
+        @log_function
+        def your_function():
+            ...
+    """
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        logger = current_app.logger
+        func_name = func.__name__
+        module_name = func.__module__
+
+        logger.info(f"Executing: {module_name}.{func_name}")
+        start_time = time.time()
+
+        try:
+            result = func(*args, **kwargs)
+            execution_time = time.time() - start_time
+            logger.info(f"Completed: {module_name}.{func_name} in {execution_time:.4f}s")
+            return result
+        except Exception as e:
+            execution_time = time.time() - start_time
+            logger.error(f"Error in {module_name}.{func_name} after {execution_time:.4f}s: {str(e)}")
+            logger.error(traceback.format_exc())
+            raise
+
+    return wrapper
+
+
+def log_db_operation(operation_type, entity_name, entity_id=None, details=None):
+    """
+    Log database operations for auditing
+
+    Args:
+        operation_type: Type of operation (e.g., 'create', 'update', 'delete')
+        entity_name: Name of the entity (e.g., 'User', 'Task', 'Document')
+        entity_id: ID of the entity (optional)
+        details: Additional details (optional)
+    """
+    logger = current_app.logger
+
+    message = f"DB {operation_type.upper()}: {entity_name}"
+    if entity_id:
+        message += f" ID={entity_id}"
+    if details:
+        message += f" - {details}"
+
+    logger.info(message)
+
+
+def log_request():
+    """Log basic information about the current request"""
+    logger = current_app.logger
+
+    # Only run within a request context
+    if not hasattr(request, 'remote_addr'):
+        return
+
+    user_id = getattr(g, 'user_id', 'anonymous') if 'g' in globals() else 'anonymous'
+
+    message = f"Request: {request.method} {request.path} - User: {user_id} - IP: {request.remote_addr}"
+    logger.info(message)
+
+
+def log_error(error, context=None):
+    """
+    Log an error with optional context
+
+    Args:
+        error: Exception or error message
+        context: Additional context information (optional)
+    """
+    logger = current_app.logger
+
+    if isinstance(error, Exception):
+        error_message = f"{error.__class__.__name__}: {str(error)}"
+        logger.error(error_message)
+        logger.error(traceback.format_exc())
+    else:
+        error_message = str(error)
+        logger.error(error_message)
+
+    if context:
+        logger.error(f"Error context: {context}")
