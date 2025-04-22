@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from app import create_app, db
 from models import User, UserRole, Admin, CompanyOwner, Manager, Operator, Driver
 from models import Company, Task, TaskStatus, Route, RouteStatus, Document, Log, ActionType, Statistics
-from flask import send_from_directory
+import datetime
 
 # Load environment variables from .env file if it exists
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -43,6 +43,7 @@ def make_shell_context():
 @app.cli.command('create-admin')
 def create_admin():
     """Create admin user for initial setup"""
+    app.logger.info("Starting create-admin command")
     username = input('Admin username: ')
     email = input('Admin email: ')
     password = input('Admin password: ')
@@ -56,7 +57,9 @@ def create_admin():
         ).first()
 
         if existing_user:
-            print(f'Error: {"Username" if existing_user.username == username else "Email"} already exists.')
+            error_msg = f'Error: {"Username" if existing_user.username == username else "Email"} already exists.'
+            app.logger.error(error_msg)
+            print(error_msg)
             return
 
         # Create user
@@ -78,34 +81,52 @@ def create_admin():
         db.session.add(admin)
 
         db.session.commit()
-        print(f'Admin user {username} created successfully!')
+        success_msg = f'Admin user {username} created successfully!'
+        app.logger.info(success_msg)
+        print(success_msg)
     except Exception as e:
         db.session.rollback()
-        print(f'Error creating admin: {str(e)}')
+        error_msg = f'Error creating admin: {str(e)}'
+        app.logger.error(error_msg)
+        print(error_msg)
 
 
 @app.cli.command('init-db')
 def init_db():
     """Initialize database tables"""
+    app.logger.info("Starting init-db command")
     try:
         db.create_all()
-        print('Database tables created.')
+        success_msg = 'Database tables created.'
+        app.logger.info(success_msg)
+        print(success_msg)
     except Exception as e:
-        print(f'Error initializing database: {str(e)}')
+        error_msg = f'Error initializing database: {str(e)}'
+        app.logger.error(error_msg)
+        print(error_msg)
 
 
 @app.cli.command('create-test-data')
 def create_test_data():
     """Create test data for development (use only after init-db)"""
+    app.logger.info("Starting create-test-data command")
     # Import create_test_data function from init_db.py
-    from init_db import create_test_data
-    create_test_data()
-
-
-@app.route('/favicon.ico')
-def favicon():
-    return '', 204
+    try:
+        from init_db import create_test_data
+        create_test_data()
+        app.logger.info("Test data creation completed")
+    except Exception as e:
+        error_msg = f'Error creating test data: {str(e)}'
+        app.logger.error(error_msg)
+        print(error_msg)
 
 
 if __name__ == '__main__':
+    # Log startup information
+    now = datetime.datetime.now()
+    startup_message = f"============ CRM APPLICATION STARTED AT {now.strftime('%Y-%m-%d %H:%M:%S')} ============"
+    app.logger.info(startup_message)
+    app.logger.info(f"Running with configuration: {os.getenv('FLASK_CONFIG') or 'default'}")
+    app.logger.info(f"Database URI: {app.config['SQLALCHEMY_DATABASE_URI']}")
+
     app.run(host='0.0.0.0', debug=True)

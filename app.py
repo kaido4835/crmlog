@@ -1,6 +1,5 @@
 import os
 import logging
-from logging.handlers import RotatingFileHandler
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -30,21 +29,30 @@ def create_app(config_name='default'):
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(app.config['LOG_FOLDER'], exist_ok=True)
 
-    # Set up logging
+    # Set up logging - MODIFIED TO USE FileHandler WITH 'w' MODE
     if not app.debug and not app.testing:
-        file_handler = RotatingFileHandler(
-            os.path.join(app.config['LOG_FOLDER'], 'crm.log'),
-            maxBytes=10240,
-            backupCount=10
-        )
+        # Create log file path
+        log_file_path = os.path.join(app.config['LOG_FOLDER'], 'crm.log')
+
+        # Use FileHandler with 'w' mode to overwrite the file on each startup
+        file_handler = logging.FileHandler(log_file_path, mode='w')
+
         file_handler.setFormatter(logging.Formatter(
             '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
         ))
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
 
+        # Also add a stream handler to see logs in console
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(logging.Formatter(
+            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+        ))
+        stream_handler.setLevel(logging.INFO)
+        app.logger.addHandler(stream_handler)
+
         app.logger.setLevel(logging.INFO)
-        app.logger.info('CRM startup')
+        app.logger.info('CRM startup - Log file will be overwritten on each startup')
 
     # Import models to ensure they are registered with SQLAlchemy
     from models import users, operations
