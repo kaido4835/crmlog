@@ -187,36 +187,8 @@ def view_task(task_id):
 
     log_action(ActionType.VIEW, f"Viewed task {task.title}", db)
 
-    return render_template(
-        'tasks/view_task.html',
-        title=f'Task: {task.title}',
-        task=task,
-        upload_form=upload_form,
-        message_form=message_form,
-        now=datetime.utcnow()
-    )
-
-
-@tasks.route('/<int:task_id>')
-@login_required
-def view_task(task_id):
-    """
-    View task details
-    """
-    task = Task.query.get_or_404(task_id)
-
-    # Check if user has access to this task
-    if not _can_access_task(task):
-        flash('You do not have permission to access this task.', 'danger')
-        return redirect(url_for('tasks.list_tasks'))
-
-    # Forms for document upload and messaging
-    upload_form = DocumentUploadForm()
-    message_form = MessageForm()
-
-    log_action(ActionType.VIEW, f"Viewed task {task.title}", db)
-
-    now = datetime.utcnow()  # Add current time for template
+    # Add current time for template
+    now = datetime.utcnow()
 
     return render_template(
         'tasks/view_task.html',
