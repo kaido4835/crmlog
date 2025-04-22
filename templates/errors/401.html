@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Unauthorized | CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">Unauthorized Access</h4>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-1">401</h1>
+                <p class="lead">You need to be authenticated to access this page.</p>
+                <p>Please login to continue.</p>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-primary mt-3">Login</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="jumbotron text-center py-5 mb-4 bg-light rounded">
+    <h1 class="display-4">Welcome to Logistics CRM</h1>
+    <p class="lead">Comprehensive solution for managing your logistics and transportation company.</p>
+
+    {% if not current_user.is_authenticated %}
+        <p class="mt-4">
+            <a href="{{ url_for('auth.login') }}" class="btn btn-primary btn-lg me-2">
+                <i class="fas fa-sign-in-alt"></i> Login
+            </a>
+        </p>
+    {% endif %}
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-truck-loading fa-3x text-primary mb-3"></i>
+                <h4 class="card-title">Transportation Management</h4>
+                <p class="card-text">Streamline your logistics operations with our comprehensive transportation management features.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-users-cog fa-3x text-primary mb-3"></i>
+                <h4 class="card-title">Team Coordination</h4>
+                <p class="card-text">Efficiently manage your teams with roles and permissions for managers, operators, and drivers.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="fas fa-chart-line fa-3x text-primary mb-3"></i>
+                <h4 class="card-title">Performance Analytics</h4>
+                <p class="card-text">Track key metrics and analyze performance data to optimize your business operations.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+        <h4 class="mb-0">How It Works</h4>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3 text-center">
+                <div class="rounded-circle bg-light p-3 d-inline-block mb-3">
+                    <i class="fas fa-building fa-2x text-primary"></i>
+                </div>
+                <h5>1. Company Registration</h5>
+                <p>Admins register companies and company owners in the system.</p>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="rounded-circle bg-light p-3 d-inline-block mb-3">
+                    <i class="fas fa-user-tie fa-2x text-primary"></i>
+                </div>
+                <h5>2. Team Setup</h5>
+                <p>Company owners add managers who coordinate operators and drivers.</p>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="rounded-circle bg-light p-3 d-inline-block mb-3">
+                    <i class="fas fa-tasks fa-2x text-primary"></i>
+                </div>
+                <h5>3. Task Management</h5>
+                <p>Operators create tasks and assign them to drivers with routes.</p>
+            </div>
+            <div class="col-md-3 text-center">
+                <div class="rounded-circle bg-light p-3 d-inline-block mb-3">
+                    <i class="fas fa-chart-pie fa-2x text-primary"></i>
+                </div>
+                <h5>4. Performance Tracking</h5>
+                <p>Track completion rates, driver performance, and business metrics.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Features</h4>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <i class="fas fa-check text-success me-2"></i> User management with role-based permissions
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-check text-success me-2"></i> Task assignment and tracking
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-check text-success me-2"></i> Route planning and optimization
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-check text-success me-2"></i> Document management for shipments
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-check text-success me-2"></i> Real-time chat between operators and drivers
+                    </li>
+                    <li class="list-group-item">
+                        <i class="fas fa-check text-success me-2"></i> Performance analytics and reporting
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">User Roles</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Role</th>
+                                <th>Responsibilities</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge bg-danger">Admin</span></td>
+                                <td>System setup, user management, company registration</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-primary">Company Owner</span></td>
+                                <td>Manager oversight, company performance tracking</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-success">Manager</span></td>
+                                <td>Operator team management, task oversight</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-info">Operator</span></td>
+                                <td>Driver coordination, route planning, document handling</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge bg-warning">Driver</span></td>
+                                <td>Task execution, route navigation, status updates</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

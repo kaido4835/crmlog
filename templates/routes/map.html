@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<style>
+    #map {
+        height: 600px;
+        width: 100%;
+        border-radius: 8px;
+    }
+    
+    .route-details {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    
+    .waypoint-card {
+        border-left: 4px solid #0d6efd;
+        margin-bottom: 0.5rem;
+    }
+    
+    .waypoint-card.active {
+        border-left-color: #198754;
+        background-color: #f8f9fa;
+    }
+    
+    .waypoint-card.completed {
+        border-left-color: #198754;
+        background-color: #d1e7dd;
+    }
+    
+    .route-progress {
+        height: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h4 class="mb-0">Route Map: {{ route.start_point }} to {{ route.end_point }}</h4>
+        <div>
+            <a href="{{ url_for('routes.view_route', route_id=route.id) }}" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left"></i> Back to Route
+            </a>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <div id="map"></div>
+                
+                <div class="d-flex align-items-center justify-content-between mt-3">
+                    <div>
+                        <span class="badge bg-danger p-2 me-2"></span> Start
+                        <span class="badge bg-primary p-2 me-2 ms-3"></span> Waypoint
+                        <span class="badge bg-success p-2 me-2 ms-3"></span> End
+                    </div>
+                    
+                    {% if route.status.value == 'in_progress' and current_user.role.value == 'driver' and current_user.id == route.driver.user.id %}
+                    <div>
+                        <button type="button" class="btn btn-success" id="markWaypointBtn">
+                            <i class="fas fa-check"></i> Mark Current Waypoint Complete
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="route-details">
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h5 class="mb-0">Route Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Status:</strong> 
+                                {% if route.status.value == 'planned' %}
+                                    <span class="badge bg-info">Planned</span>
+                                {% elif route.status.value == 'in_progress' %}
+                                    <span class="badge bg-primary">In Progress</span>
+                                {% elif route.status.value == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                {% elif route.status.value == 'cancelled' %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Distance:</strong> {{ route.distance|round(2) if route.distance else 'N/A' }} km</p>
+                            <p><strong>Estimated Time:</strong> 
+                                {% if route.estimated_time %}
+                                    {% set hours = (route.estimated_time // 60) %}
+                                    {% set minutes = (route.estimated_time % 60) %}
+                                    {% if hours > 0 %}{{ hours }} hour{% if hours != 1 %}s{% endif %}{% endif %}
+                                    {% if minutes > 0 %}{% if hours > 0 %} {% endif %}{{ minutes }} minute{% if minutes != 1 %}s{% endif %}{% endif %}
+                                {% else %}
+                                    Not estimated
+                                {% endif %}
+                            </p>
+                            <p><strong>Driver:</strong> {{ route.driver.user.first_name }} {{ route.driver.user.last_name }}</p>
+                            <p><strong>Vehicle:</strong> {{ route.driver.vehicle_info }}</p>
+                            
+                            {% if route.start_time %}
+                            <p><strong>Scheduled Start:</strong> {{ route.start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                            {% endif %}
+                            
+                            {% if route.actual_start_time %}
+                            <p><strong>Actual Start:</strong> {{ route.actual_start_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                            {% endif %}
+                            
+                            {% if route.end_time %}
+                            <p><strong>Completed:</strong> {{ route.end_time.strftime('%Y-%m-%d %H:%M') }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Route Progress</h5>
+                            <span class="badge bg-primary">{{ waypoint_progress.completed }} / {{ waypoint_progress.total }}</span>
+                        </div>
+                        <div class="card-body">
+                            <div class="progress route-progress mb-3">
+                                <div class="progress-bar bg-success" role="progressbar" 
+                                     style="width: {{ waypoint_progress.percentage }}%;" 
+                                     aria-valuenow="{{ waypoint_progress.percentage }}" 
+                                     aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                            
+                            <div class="waypoint-list">
+                                <!-- Start point -->
+                                <div class="card waypoint-card {% if route.status.value != 'planned' %}completed{% endif %}">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong><i class="fas fa-map-marker-alt text-danger"></i> Start</strong>
+                                                <div>{{ route.start_point }}</div>
+                                            </div>
+                                            {% if route.actual_start_time %}
+                                            <small class="text-muted">{{ route.actual_start_time.strftime('%H:%M') }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Waypoints -->
+                                {% if route.waypoints %}
+                                    {% for waypoint in route.waypoints %}
+                                    <div class="card waypoint-card {% if waypoint.completed %}completed{% elif waypoint.active %}active{% endif %}" 
+                                         id="waypoint-{{ loop.index }}">
+                                        <div class="card-body py-2">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <strong><i class="fas fa-map-pin text-primary"></i> Waypoint {{ loop.index }}</strong>
+                                                    <div>{{ waypoint.location }}</div>
+                                                    {% if waypoint.type %}
+                                                    <span class="badge {% if waypoint.type == 'pickup' %}bg-info{% elif waypoint.type == 'delivery' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                                        {{ waypoint.type|capitalize }}
+                                                    </span>
+                                                    {% endif %}
+                                                </div>
+                                                {% if waypoint.completed and waypoint.timestamp %}
+                                                <small class="text-muted">{{ waypoint.timestamp }}</small>
+                                                {% endif %}
+                                            </div>
+                                            {% if waypoint.notes %}
+                                            <small class="text-muted">{{ waypoint.notes }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                                
+                                <!-- End point -->
+                                <div class="card waypoint-card {% if route.status.value == 'completed' %}completed{% endif %}">
+                                    <div class="card-body py-2">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong><i class="fas fa-flag-checkered text-success"></i> End</strong>
+                                                <div>{{ route.end_point }}</div>
+                                            </div>
+                                            {% if route.end_time %}
+                                            <small class="text-muted">{{ route.end_time.strftime('%H:%M') }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if route.task %}
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Related Task</h5>
+                        </div>
+                        <div class="card-body">
+                            <h6>{{ route.task.title }}</h6>
+                            <p class="text-muted small">{{ route.task.description|truncate(100) }}</p>
+                            <a href="{{ url_for('tasks.view_task', task_id=route.task.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-tasks"></i> View Task
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize map
+        const map = L.map('map').setView([51.505, -0.09], 13); // Default view
+        
+        // Add tile layer (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+        
+        // In a complete application, this would use real coordinates
+        // For demonstration, we'll use placeholder coordinates
+        const startPoint = [51.505, -0.09];
+        const endPoint = [51.515, -0.1];
+        const waypoints = [
+            [51.507, -0.095],
+            [51.51, -0.1],
+            [51.512, -0.095]
+        ];
+        
+        // Add markers
+        const startMarker = L.marker(startPoint, {
+            icon: L.divIcon({
+                className: 'custom-div-icon',
+                html: '<div style="background-color: #dc3545; width: 15px; height: 15px; border-radius: 50%;"></div>',
+                iconSize: [15, 15]
+            })
+        }).addTo(map);
+        startMarker.bindPopup('<strong>Start:</strong> {{ route.start_point }}');
+        
+        // Add waypoint markers
+        const waypointMarkers = [];
+        {% if route.waypoints %}
+            {% for waypoint in route.waypoints %}
+                // In a real application, you would use actual coordinates from waypoint data
+                const waypointMarker = L.marker(waypoints[{{ loop.index0 }}], {
+                    icon: L.divIcon({
+                        className: 'custom-div-icon',
+                        html: '<div style="background-color: #0d6efd; width: 15px; height: 15px; border-radius: 50%;"></div>',
+                        iconSize: [15, 15]
+                    })
+                }).addTo(map);
+                waypointMarker.bindPopup('<strong>Waypoint {{ loop.index }}:</strong> {{ waypoint.location }}');
+                waypointMarkers.push(waypointMarker);
+            {% endfor %}
+        {% endif %}
+        
+        const endMarker = L.marker(endPoint, {
+            icon: L.divIcon({
+                className: 'custom-div-icon',
+                html: '<div style="background-color: #198754; width: 15px; height: 15px; border-radius: 50%;"></div>',
+                iconSize: [15, 15]
+            })
+        }).addTo(map);
+        endMarker.bindPopup('<strong>End:</strong> {{ route.end_point }}');
+        
+        // Draw route line
+        const routePoints = [startPoint, ...waypoints, endPoint];
+        const routeLine = L.polyline(routePoints, {color: '#0d6efd'}).addTo(map);
+        
+        // Fit map to route bounds
+        map.fitBounds(routeLine.getBounds(), {padding: [50, 50]});
+        
+        // Handle waypoint completion button
+        const markWaypointBtn = document.getElementById('markWaypointBtn');
+        if (markWaypointBtn) {
+            markWaypointBtn.addEventListener('click', function() {
+                // In a real application, this would make an AJAX call to the server
+                alert('In a complete application, this would mark the current waypoint as completed.');
+            });
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

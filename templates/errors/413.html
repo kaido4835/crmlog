@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Request Entity Too Large | CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">Request Entity Too Large</h4>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-1">413</h1>
+                <p class="lead">The file you are trying to upload is too large.</p>
+                <p>Please try uploading a smaller file (maximum allowed size is 16MB).</p>
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary mt-3">Go to Homepage</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

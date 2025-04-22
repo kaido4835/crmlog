@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Statistics</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('statistics.dashboard') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-tachometer-alt"></i> Overview
+                </a>
+                <a href="{{ url_for('statistics.company') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-building"></i> Company Stats
+                </a>
+                <a href="{{ url_for('statistics.routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes & Deliveries
+                </a>
+                <a href="{{ url_for('statistics.users') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> User Performance
+                </a>
+                <a href="{{ url_for('statistics.reports') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-alt"></i> Reports
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Date Range</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('statistics.dashboard') }}">
+                    <div class="mb-3">
+                        <label for="dateRange" class="form-label">Select Period</label>
+                        <select class="form-select" id="dateRange" name="period">
+                            <option value="7" {% if period == 7 %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if period == 30 %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if period == 90 %}selected{% endif %}>Last 90 days</option>
+                            <option value="365" {% if period == 365 %}selected{% endif %}>Last year</option>
+                            <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom range</option>
+                        </select>
+                    </div>
+                    
+                    <div id="customDateFields" class="{% if period != 'custom' %}d-none{% endif %}">
+                        <div class="mb-3">
+                            <label for="startDate" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="endDate" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="endDate" name="end_date" value="{{ end_date }}">
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Performance Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> In a complete application, this would display interactive charts and real-time statistics.
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-tasks fa-3x text-primary mb-3"></i>
+                                <h2 class="display-4">{{ stats.task_count }}</h2>
+                                <p class="text-muted">Total Tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-route fa-3x text-success mb-3"></i>
+                                <h2 class="display-4">{{ stats.route_count }}</h2>
+                                <p class="text-muted">Total Routes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-map-marked-alt fa-3x text-info mb-3"></i>
+                                <h2 class="display-4">{{ stats.total_distance|round|int }}</h2>
+                                <p class="text-muted">Kilometers</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-check-circle fa-3x text-warning mb-3"></i>
+                                <h2 class="display-4">{{ stats.completion_rate|round|int }}%</h2>
+                                <p class="text-muted">Completion Rate</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">Task Status Distribution</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="chart-placeholder">
+                                    <i class="fas fa-chart-pie fa-4x text-muted mb-3"></i>
+                                    <p>Pie chart of task statuses would appear here</p>
+                                </div>
+                                
+                                <div class="row mt-3">
+                                    <div class="col-6 col-md-3">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-info p-2 me-2"></span>
+                                            <span>New: {{ stats.task_statuses.new }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-primary p-2 me-2"></span>
+                                            <span>In Progress: {{ stats.task_statuses.in_progress }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-success p-2 me-2"></span>
+                                            <span>Completed: {{ stats.task_statuses.completed }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-danger p-2 me-2"></span>
+                                            <span>Cancelled: {{ stats.task_statuses.cancelled }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">Routes over Time</h5>
+                            </div>
+                            <div class="card-body text-center">
+                                <div class="chart-placeholder">
+                                    <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+                                    <p>Line chart of routes over time would appear here</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0">Top Performing Drivers</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Driver</th>
+                                                <th>Routes Completed</th>
+                                                <th>Total Distance</th>
+                                                <th>Avg. Completion Time</th>
+                                                <th>On-Time %</th>
+                                                <th>Performance</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for driver in top_drivers %}
+                                            <tr>
+                                                <td>{{ driver.name }}</td>
+                                                <td>{{ driver.routes_completed }}</td>
+                                                <td>{{ driver.total_distance|round(1) }} km</td>
+                                                <td>{{ driver.avg_time }} min</td>
+                                                <td>{{ driver.on_time_percent }}%</td>
+                                                <td>
+                                                    <div class="progress">
+                                                        <div class="progress-bar bg-success" role="progressbar"
+                                                             style="width: {{ driver.performance_score }}%;"
+                                                             aria-valuenow="{{ driver.performance_score }}" 
+                                                             aria-valuemin="0" aria-valuemax="100">
+                                                            {{ driver.performance_score }}%
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const dateRangeSelect = document.getElementById('dateRange');
+        const customDateFields = document.getElementById('customDateFields');
+        
+        dateRangeSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateFields.classList.remove('d-none');
+            } else {
+                customDateFields.classList.add('d-none');
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .chart-placeholder {
+        height: 200px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: #f8f9fa;
+        border-radius: 8px;
+    }
+</style>
+{% endblock %}
+{% endblock %}

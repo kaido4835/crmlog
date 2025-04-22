@@ -1,0 +1,291 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-id-card"></i> Driver Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.driver_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> My Tasks
+                </a>
+                <a href="{{ url_for('driver.routes_dashboard') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-route"></i> My Routes
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="#" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Driver Stats</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Routes:</span>
+                    <span class="badge bg-primary rounded-pill">{{ stats.total_routes }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Completed:</span>
+                    <span class="badge bg-success rounded-pill">{{ stats.completed_routes }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Active:</span>
+                    <span class="badge bg-info rounded-pill">{{ stats.active_routes }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Planned:</span>
+                    <span class="badge bg-secondary rounded-pill">{{ stats.planned_routes }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Distance:</span>
+                    <span>{{ stats.total_distance|round(1) }} km</span>
+                </div>
+                <div class="progress mt-3">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                        style="width: {{ (stats.completed_routes / stats.total_routes * 100) if stats.total_routes > 0 else 0 }}%;" 
+                        aria-valuenow="{{ stats.completed_routes }}" aria-valuemin="0" aria-valuemax="{{ stats.total_routes }}">
+                        {{ ((stats.completed_routes / stats.total_routes * 100) if stats.total_routes > 0 else 0)|round(1) }}%
+                    </div>
+                </div>
+                <small class="text-muted">Completion rate</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">My Routes</h5>
+            </div>
+            <div class="card-body">
+                <!-- Active/In-Progress Route -->
+                {% if active_route %}
+                <div class="card mb-4 border-primary">
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Active Route</h5>
+                        <span class="badge bg-light text-primary">In Progress</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5>{{ active_route.start_point }} → {{ active_route.end_point }}</h5>
+                                <p class="text-muted">
+                                    <i class="fas fa-ruler-horizontal me-2"></i> {{ active_route.distance|round(1) }} km
+                                    <i class="fas fa-clock ms-3 me-2"></i> 
+                                    {% if active_route.estimated_time %}
+                                        {% set hours = (active_route.estimated_time // 60) %}
+                                        {% set minutes = (active_route.estimated_time % 60) %}
+                                        {% if hours > 0 %}{{ hours }} hour{% if hours != 1 %}s{% endif %}{% endif %}
+                                        {% if minutes > 0 %}{% if hours > 0 %} {% endif %}{{ minutes }} minute{% if minutes != 1 %}s{% endif %}{% endif %}
+                                    {% else %}
+                                        Not estimated
+                                    {% endif %}
+                                </p>
+                                
+                                <div class="d-flex mt-3">
+                                    <a href="{{ url_for('routes.view_route', route_id=active_route.id) }}" class="btn btn-primary me-2">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                    <form action="{{ url_for('routes.complete_route', route_id=active_route.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-success">
+                                            <i class="fas fa-check"></i> Complete Route
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-map-marked-alt fa-3x text-primary mb-3"></i>
+                                        <p class="mb-2">Started: {{ active_route.actual_start_time.strftime('%H:%M') if active_route.actual_start_time else 'Unknown' }}</p>
+                                        {% if active_route.task %}
+                                        <a href="{{ url_for('tasks.view_task', task_id=active_route.task.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-tasks"></i> View Task
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Next Planned Route -->
+                {% if next_route %}
+                <div class="card mb-4 border-info">
+                    <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Next Planned Route</h5>
+                        <span class="badge bg-light text-info">Upcoming</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <h5>{{ next_route.start_point }} → {{ next_route.end_point }}</h5>
+                                <p class="text-muted">
+                                    <i class="fas fa-ruler-horizontal me-2"></i> {{ next_route.distance|round(1) }} km
+                                    <i class="fas fa-clock ms-3 me-2"></i> 
+                                    {% if next_route.estimated_time %}
+                                        {% set hours = (next_route.estimated_time // 60) %}
+                                        {% set minutes = (next_route.estimated_time % 60) %}
+                                        {% if hours > 0 %}{{ hours }} hour{% if hours != 1 %}s{% endif %}{% endif %}
+                                        {% if minutes > 0 %}{% if hours > 0 %} {% endif %}{{ minutes }} minute{% if minutes != 1 %}s{% endif %}{% endif %}
+                                    {% else %}
+                                        Not estimated
+                                    {% endif %}
+                                </p>
+                                
+                                <div class="d-flex mt-3">
+                                    <a href="{{ url_for('routes.view_route', route_id=next_route.id) }}" class="btn btn-info me-2">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                    <form action="{{ url_for('routes.start_route', route_id=next_route.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-play"></i> Start Route
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-calendar-alt fa-3x text-info mb-3"></i>
+                                        <p class="mb-2">Scheduled: {{ next_route.start_time.strftime('%Y-%m-%d %H:%M') if next_route.start_time else 'Not scheduled' }}</p>
+                                        {% if next_route.task %}
+                                        <a href="{{ url_for('tasks.view_task', task_id=next_route.task.id) }}" class="btn btn-sm btn-outline-info">
+                                            <i class="fas fa-tasks"></i> View Task
+                                        </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Upcoming Routes -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Upcoming Routes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if upcoming_routes %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Start Point</th>
+                                        <th>End Point</th>
+                                        <th>Distance</th>
+                                        <th>Scheduled</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for route in upcoming_routes %}
+                                    <tr>
+                                        <td>{{ route.start_point }}</td>
+                                        <td>{{ route.end_point }}</td>
+                                        <td>{{ route.distance|round(1) }} km</td>
+                                        <td>
+                                            {% if route.start_time %}
+                                                {{ route.start_time.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Not scheduled</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('routes.view_route', route_id=route.id) }}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                            <p>No upcoming routes scheduled.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Recent Completed Routes -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Recently Completed Routes</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if completed_routes %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Start Point</th>
+                                        <th>End Point</th>
+                                        <th>Distance</th>
+                                        <th>Completed</th>
+                                        <th>Duration</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for route in completed_routes %}
+                                    <tr>
+                                        <td>{{ route.start_point }}</td>
+                                        <td>{{ route.end_point }}</td>
+                                        <td>{{ route.distance|round(1) }} km</td>
+                                        <td>{{ route.end_time.strftime('%Y-%m-%d %H:%M') if route.end_time else 'Unknown' }}</td>
+                                        <td>
+                                            {% if route.actual_start_time and route.end_time %}
+                                                {% set duration = (route.end_time - route.actual_start_time).total_seconds() // 60 %}
+                                                {% set hours = (duration // 60)|int %}
+                                                {% set minutes = (duration % 60)|int %}
+                                                {% if hours > 0 %}{{ hours }}h{% endif %} {{ minutes }}m
+                                            {% else %}
+                                                <span class="text-muted">Unknown</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <a href="{{ url_for('routes.view_route', route_id=route.id) }}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="text-center mt-3">
+                            <a href="{{ url_for('routes.list_routes') }}" class="btn btn-outline-primary">
+                                <i class="fas fa-history"></i> View All Routes
+                            </a>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-check-circle fa-3x text-muted mb-3"></i>
+                            <p>No completed routes yet.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

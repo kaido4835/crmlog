@@ -1,0 +1,310 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">User Profile</h5>
+            </div>
+            <div class="card-body text-center">
+                {% if user.profile_image %}
+                    <img src="{{ url_for('static', filename=user.profile_image) }}" alt="Profile image" class="profile-image mb-3">
+                {% else %}
+                    <div class="rounded-circle bg-primary d-inline-flex justify-content-center align-items-center mb-3" style="width: 150px; height: 150px;">
+                        <span class="text-white" style="font-size: 60px;">{{ user.first_name[0] }}{{ user.last_name[0] }}</span>
+                    </div>
+                {% endif %}
+
+                <h4>{{ user.first_name }} {{ user.last_name }}</h4>
+                <p class="text-muted mb-2">@{{ user.username }}</p>
+
+                <p>
+                    {% if user.role.value == 'admin' %}
+                        <span class="badge bg-danger">Administrator</span>
+                    {% elif user.role.value == 'company_owner' %}
+                        <span class="badge bg-primary">Company Owner</span>
+                    {% elif user.role.value == 'manager' %}
+                        <span class="badge bg-success">Manager</span>
+                    {% elif user.role.value == 'operator' %}
+                        <span class="badge bg-info">Operator</span>
+                    {% elif user.role.value == 'driver' %}
+                        <span class="badge bg-warning">Driver</span>
+                    {% endif %}
+                    
+                    {% if user.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                </p>
+
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{{ url_for('admin.edit_user', user_id=user.id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit"></i> Edit User
+                    </a>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash"></i> Delete User
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Contact Information</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <i class="fas fa-envelope me-2 text-muted"></i>
+                        <strong>Email:</strong>
+                        <a href="mailto:{{ user.email }}">{{ user.email }}</a>
+                    </li>
+                    {% if user.phone %}
+                    <li class="list-group-item">
+                        <i class="fas fa-phone me-2 text-muted"></i>
+                        <strong>Phone:</strong>
+                        <a href="tel:{{ user.phone }}">{{ user.phone }}</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+        
+        {% if user.role.value == 'admin' and user.admin %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Administrator Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Admin Level:</strong> {{ user.admin.admin_level }}</p>
+                <p class="text-muted mb-0">Higher level means more privileges.</p>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if user.role.value == 'company_owner' and user.company_owner and user.company_owner.company %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Company Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Company:</strong> {{ user.company_owner.company.name }}</p>
+                <a href="{{ url_for('admin.view_company', company_id=user.company_owner.company.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-building"></i> View Company
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if user.role.value == 'manager' and user.manager and user.manager.company %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Manager Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Company:</strong> {{ user.manager.company.name }}</p>
+                <a href="{{ url_for('admin.view_company', company_id=user.manager.company.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-building"></i> View Company
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if user.role.value == 'operator' and user.operator %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Operator Details</h5>
+            </div>
+            <div class="card-body">
+                {% if user.operator.company %}
+                <p><strong>Company:</strong> {{ user.operator.company.name }}</p>
+                <a href="{{ url_for('admin.view_company', company_id=user.operator.company.id) }}" class="btn btn-sm btn-outline-primary mb-2">
+                    <i class="fas fa-building"></i> View Company
+                </a>
+                {% endif %}
+                
+                {% if user.operator.manager %}
+                <p><strong>Manager:</strong> {{ user.operator.manager.user.first_name }} {{ user.operator.manager.user.last_name }}</p>
+                <a href="{{ url_for('admin.view_user', user_id=user.operator.manager.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-user-tie"></i> View Manager
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if user.role.value == 'driver' and user.driver %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Driver Details</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>License Number:</strong> {{ user.driver.license_number }}</p>
+                <p><strong>Vehicle Info:</strong> {{ user.driver.vehicle_info }}</p>
+                
+                {% if user.driver.company %}
+                <p><strong>Company:</strong> {{ user.driver.company.name }}</p>
+                <a href="{{ url_for('admin.view_company', company_id=user.driver.company.id) }}" class="btn btn-sm btn-outline-primary mb-2">
+                    <i class="fas fa-building"></i> View Company
+                </a>
+                {% endif %}
+                
+                {% if user.driver.operator %}
+                <p><strong>Operator:</strong> {{ user.driver.operator.user.first_name }} {{ user.driver.operator.user.last_name }}</p>
+                <a href="{{ url_for('admin.view_user', user_id=user.driver.operator.id) }}" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-user"></i> View Operator
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Account Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 30%">User ID</th>
+                            <td>{{ user.id }}</td>
+                        </tr>
+                        <tr>
+                            <th>Username</th>
+                            <td>{{ user.username }}</td>
+                        </tr>
+                        <tr>
+                            <th>Full Name</th>
+                            <td>{{ user.first_name }} {{ user.last_name }}</td>
+                        </tr>
+                        <tr>
+                            <th>Email</th>
+                            <td>{{ user.email }}</td>
+                        </tr>
+                        <tr>
+                            <th>Role</th>
+                            <td>
+                                {% if user.role.value == 'admin' %}
+                                    Administrator
+                                {% elif user.role.value == 'company_owner' %}
+                                    Company Owner
+                                {% elif user.role.value == 'manager' %}
+                                    Manager
+                                {% elif user.role.value == 'operator' %}
+                                    Operator
+                                {% elif user.role.value == 'driver' %}
+                                    Driver
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Account Status</th>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Account Created</th>
+                            <td>{{ user.created_at.strftime('%B %d, %Y at %H:%M') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Updated</th>
+                            <td>{{ user.updated_at.strftime('%B %d, %Y at %H:%M') }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Login</th>
+                            <td>
+                                {% if user.last_login %}
+                                    {{ user.last_login.strftime('%B %d, %Y at %H:%M') }}
+                                {% else %}
+                                    Never
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                {% if recent_logs %}
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Action</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for log in recent_logs %}
+                            <tr>
+                                <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                                <td>
+                                    {% if log.action_type.value == 'login' %}
+                                        <span class="badge bg-success">Login</span>
+                                    {% elif log.action_type.value == 'logout' %}
+                                        <span class="badge bg-secondary">Logout</span>
+                                    {% elif log.action_type.value == 'create' %}
+                                        <span class="badge bg-primary">Create</span>
+                                    {% elif log.action_type.value == 'update' %}
+                                        <span class="badge bg-info">Update</span>
+                                    {% elif log.action_type.value == 'delete' %}
+                                        <span class="badge bg-danger">Delete</span>
+                                    {% else %}
+                                        <span class="badge bg-dark">{{ log.action_type.value }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ log.description }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                    <p>No recent activity to display.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete user <strong>{{ user.username }}</strong>?
+                <p class="text-danger mt-2">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('admin.delete_user', user_id=user.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

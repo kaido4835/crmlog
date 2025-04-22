@@ -1,0 +1,197 @@
+{% extends "admin/base.html" %}
+
+{% block admin_content %}
+<div class="card mb-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">System Logs</h5>
+        <div>
+            <button type="button" class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#filterModal">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Action</th>
+                        <th>Description</th>
+                        <th>IP Address</th>
+                        <th>Company</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs.items %}
+                    <tr>
+                        <td>{{ log.id }}</td>
+                        <td>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.view_user', user_id=log.user.id) }}">
+                                {{ log.user.username }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if log.action_type.value == 'login' %}
+                                <span class="badge bg-success">Login</span>
+                            {% elif log.action_type.value == 'logout' %}
+                                <span class="badge bg-secondary">Logout</span>
+                            {% elif log.action_type.value == 'create' %}
+                                <span class="badge bg-primary">Create</span>
+                            {% elif log.action_type.value == 'update' %}
+                                <span class="badge bg-info">Update</span>
+                            {% elif log.action_type.value == 'delete' %}
+                                <span class="badge bg-danger">Delete</span>
+                            {% elif log.action_type.value == 'view' %}
+                                <span class="badge bg-light text-dark">View</span>
+                            {% elif log.action_type.value == 'download' %}
+                                <span class="badge bg-warning">Download</span>
+                            {% elif log.action_type.value == 'upload' %}
+                                <span class="badge bg-primary">Upload</span>
+                            {% elif log.action_type.value == 'assign' %}
+                                <span class="badge bg-info">Assign</span>
+                            {% else %}
+                                <span class="badge bg-dark">{{ log.action_type.value }}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ log.description }}</td>
+                        <td><small>{{ log.ip_address }}</small></td>
+                        <td>
+                            {% if log.company %}
+                                <a href="{{ url_for('admin.view_company', company_id=log.company.id) }}">
+                                    {{ log.company.name }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        {% if logs.items|length == 0 %}
+        <div class="text-center py-4">
+            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+            <p>No logs found.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+<nav aria-label="Logs pagination">
+    <ul class="pagination justify-content-center">
+        {% if logs.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.log_list', page=logs.prev_num) }}">
+                    Previous
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Previous</span>
+            </li>
+        {% endif %}
+        
+        {% for page_num in logs.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+                {% if page_num == logs.page %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_num }}</span>
+                    </li>
+                {% else %}
+                    <li class="page-item">
+                                                                <a class="page-link" href="{{ url_for('admin.log_list', page=page_num) }}">
+                            {{ page_num }}
+                        </a>
+                    </li>
+                {% endif %}
+            {% else %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if logs.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.log_list', page=logs.next_num) }}">
+                    Next
+                </a>
+            </li>
+        {% else %}
+            <li class="page-item disabled">
+                <span class="page-link">Next</span>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+
+<!-- Filter Modal -->
+<div class="modal fade" id="filterModal" tabindex="-1" aria-labelledby="filterModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filterModalLabel">Filter Logs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="GET" action="{{ url_for('admin.log_list') }}">
+                    <div class="mb-3">
+                        <label for="user_id" class="form-label">User</label>
+                        <select class="form-select" id="user_id" name="user_id">
+                            <option value="">All Users</option>
+                            <!-- This would be populated with users from the backend -->
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="action_type" class="form-label">Action Type</label>
+                        <select class="form-select" id="action_type" name="action_type">
+                            <option value="">All Actions</option>
+                            <option value="login">Login</option>
+                            <option value="logout">Logout</option>
+                            <option value="create">Create</option>
+                            <option value="update">Update</option>
+                            <option value="delete">Delete</option>
+                            <option value="view">View</option>
+                            <option value="download">Download</option>
+                            <option value="upload">Upload</option>
+                            <option value="assign">Assign</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="company_id" class="form-label">Company</label>
+                        <select class="form-select" id="company_id" name="company_id">
+                            <option value="">All Companies</option>
+                            <!-- This would be populated with companies from the backend -->
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="date_from" class="form-label">Date From</label>
+                        <input type="date" class="form-control" id="date_from" name="date_from">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="date_to" class="form-label">Date To</label>
+                        <input type="date" class="form-control" id="date_to" name="date_to">
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-filter"></i> Apply Filters
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

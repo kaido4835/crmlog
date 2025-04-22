@@ -1,0 +1,215 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Routes</h4>
+            {% if current_user.role.value in ['admin', 'company_owner', 'manager', 'operator'] %}
+            <a href="{{ url_for('routes.create_route') }}" class="btn btn-light">
+                <i class="fas fa-plus"></i> Create Route
+            </a>
+            {% endif %}
+        </div>
+        <div class="card-body">
+            <!-- Search and filters -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <form method="GET" action="{{ url_for('routes.list_routes') }}" class="d-flex">
+                        <input type="text" name="search" class="form-control me-2" placeholder="Search routes..." value="{{ search_term }}">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end">
+                        <div class="dropdown me-2">
+                            <button class="btn btn-outline-primary dropdown-toggle" type="button" id="statusFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Status: {{ current_status|capitalize if current_status else 'All' }}
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="statusFilterDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('routes.list_routes', search=search_term) }}">All</a></li>
+                                {% for status in statuses %}
+                                <li><a class="dropdown-item" href="{{ url_for('routes.list_routes', status=status, search=search_term) }}">{{ status|capitalize }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+
+                        {% if current_user.role.value in ['admin', 'company_owner', 'manager'] %}
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary dropdown-toggle" type="button" id="driverFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                Driver: {{ driver_name if driver_name else 'All' }}
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="driverFilterDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('routes.list_routes', status=current_status, search=search_term) }}">All</a></li>
+                                {% for driver in drivers %}
+                                <li><a class="dropdown-item" href="{{ url_for('routes.list_routes', driver_id=driver.id, status=current_status, search=search_term) }}">{{ driver.user.first_name }} {{ driver.user.last_name }}</a></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Routes table -->
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>From</th>
+                            <th>To</th>
+                            <th>Status</th>
+                            <th>Distance</th>
+                            <th>Start Time</th>
+                            <th>Driver</th>
+                            <th>Task</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for route in routes.items %}
+                        <tr>
+                            <td>{{ route.id }}</td>
+                            <td>{{ route.start_point }}</td>
+                            <td>{{ route.end_point }}</td>
+                            <td>
+                                {% if route.status.value == 'planned' %}
+                                    <span class="badge bg-info">Planned</span>
+                                {% elif route.status.value == 'in_progress' %}
+                                    <span class="badge bg-primary">In Progress</span>
+                                {% elif route.status.value == 'completed' %}
+                                    <span class="badge bg-success">Completed</span>
+                                {% elif route.status.value == 'cancelled' %}
+                                    <span class="badge bg-danger">Cancelled</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ route.distance|round(2) if route.distance else 'N/A' }} km</td>
+                            <td>
+                                {% if route.start_time %}
+                                    {{ route.start_time.strftime('%Y-%m-%d %H:%M') }}
+                                {% else %}
+                                    <span class="text-muted">Not set</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if route.driver %}
+                                    {{ route.driver.user.first_name }} {{ route.driver.user.last_name }}
+                                {% else %}
+                                    <span class="text-muted">Unassigned</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if route.task %}
+                                    <a href="{{ url_for('tasks.view_task', task_id=route.task.id) }}">{{ route.task.title }}</a>
+                                {% else %}
+                                    <span class="text-muted">No task</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <a href="{{ url_for('routes.view_route', route_id=route.id) }}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if current_user.role.value in ['admin', 'company_owner', 'manager', 'operator'] or 
+                                          (current_user.role.value == 'driver' and current_user.id == route.driver.user.id) %}
+                                    <a href="{{ url_for('routes.edit_route', route_id=route.id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if current_user.role.value in ['admin', 'company_owner', 'manager'] %}
+                                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ route.id }}">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Delete Modal -->
+                                <div class="modal fade" id="deleteModal{{ route.id }}" tabindex="-1" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Confirm Delete</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                Are you sure you want to delete this route from <strong>{{ route.start_point }}</strong> to <strong>{{ route.end_point }}</strong>?
+                                                <p class="text-danger mt-2">This action cannot be undone.</p>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                <form action="{{ url_for('routes.delete_route', route_id=route.id) }}" method="POST">
+                                                    <button type="submit" class="btn btn-danger">Delete</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if routes.items|length == 0 %}
+            <div class="text-center py-4">
+                <i class="fas fa-route fa-3x text-muted mb-3"></i>
+                <p>No routes found.</p>
+            </div>
+            {% endif %}
+
+            <!-- Pagination -->
+            <nav aria-label="Routes pagination">
+                <ul class="pagination justify-content-center">
+                    {% if routes.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('routes.list_routes', page=routes.prev_num, status=current_status, search=search_term, driver_id=request.args.get('driver_id')) }}">
+                                Previous
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Previous</span>
+                        </li>
+                    {% endif %}
+
+                    {% for page_num in routes.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                        {% if page_num %}
+                            {% if page_num == routes.page %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ page_num }}</span>
+                                </li>
+                            {% else %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('routes.list_routes', page=page_num, status=current_status, search=search_term, driver_id=request.args.get('driver_id')) }}">
+                                        {{ page_num }}
+                                    </a>
+                                </li>
+                            {% endif %}
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if routes.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('routes.list_routes', page=routes.next_num, status=current_status, search=search_term, driver_id=request.args.get('driver_id')) }}">
+                                Next
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">Next</span>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+{% endblock %}

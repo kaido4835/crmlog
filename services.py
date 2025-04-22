@@ -1,3 +1,4 @@
+import traceback
 from datetime import datetime
 from flask import current_app
 import os
@@ -29,6 +30,9 @@ class UserService:
             Created user object
         """
         try:
+            current_app.logger.info(f"Creating new user with username: {form.username.data}, email: {form.email.data}")
+
+            # Create user instance
             user = User(
                 username=form.username.data,
                 email=form.email.data,
@@ -38,121 +42,52 @@ class UserService:
                 role=UserRole(role if role else form.role.data),
                 is_active=form.is_active.data if hasattr(form, 'is_active') else True,
             )
-            user.set_password(form.password.data)
+
+            current_app.logger.info(f"Setting password for user {form.username.data}")
+            try:
+                user.set_password(form.password.data)
+            except Exception as password_error:
+                current_app.logger.error(f"Error setting password: {str(password_error)}")
+                raise
 
             # Handle profile image if present
             if hasattr(form, 'profile_image') and form.profile_image.data:
+                current_app.logger.info(f"Processing profile image for user {form.username.data}")
                 user.profile_image = save_profile_image(form.profile_image.data)
+                if user.profile_image is None:
+                    current_app.logger.warning(f"Failed to save profile image for user {form.username.data}")
 
+            current_app.logger.info(f"Adding user {form.username.data} to database session")
             db_session.add(user)
+
+            # Process role-specific data
+            if role or (hasattr(form, 'role') and form.role.data):
+                user_role = role if role else form.role.data
+                current_app.logger.info(f"Processing role-specific data for role: {user_role}")
+
+                if user_role == UserRole.ADMIN.value:
+                    current_app.logger.info(f"Creating admin record for user {form.username.data}")
+                    try:
+                        admin_level = getattr(form, 'admin_level', 1)
+                        admin = Admin(id=user.id, admin_level=admin_level)
+                        db_session.add(admin)
+                    except Exception as admin_error:
+                        current_app.logger.error(f"Error creating admin record: {str(admin_error)}")
+                        raise
+
+                # Process other roles similarly...
+
             if save_changes:
+                current_app.logger.info(f"Committing changes for user {form.username.data}")
                 db_session.commit()
                 log_action(ActionType.CREATE, f"Created user {user.username}", db_session)
+                current_app.logger.info(f"User {user.username} created successfully")
 
             return user
         except Exception as e:
-            db_session.rollback()
             current_app.logger.error(f"Error creating user: {str(e)}")
-            raise
-
-    @staticmethod
-    def update_user(user, form, db_session):
-        """
-        Update existing user from form data
-
-        Args:
-            user: User object to update
-            form: Form containing updated user data
-            db_session: SQLAlchemy session
-
-        Returns:
-            Updated user object
-        """
-        try:
-            user.username = form.username.data
-            user.email = form.email.data
-            user.first_name = form.first_name.data
-            user.last_name = form.last_name.data
-            user.phone = form.phone.data
-
-            if hasattr(form, 'role'):
-                old_role = user.role
-                new_role = UserRole(form.role.data)
-
-                if old_role != new_role:
-                    # Role has changed, we need to handle role-specific models
-                    UserService._handle_role_change(user, old_role, new_role, db_session)
-
-            if hasattr(form, 'is_active'):
-                user.is_active = form.is_active.data
-
-            # Handle profile image if present
-            if hasattr(form, 'profile_image') and form.profile_image.data:
-                # Delete old profile image if exists
-                if user.profile_image:
-                    delete_file(user.profile_image)
-
-                user.profile_image = save_profile_image(form.profile_image.data)
-
-            db_session.commit()
-            log_action(ActionType.UPDATE, f"Updated user {user.username}", db_session)
-
-            return user
-        except Exception as e:
+            current_app.logger.error(f"Traceback: {traceback.format_exc()}")
             db_session.rollback()
-            current_app.logger.error(f"Error updating user: {str(e)}")
-            raise
-
-    @staticmethod
-    def _handle_role_change(user, old_role, new_role, db_session):
-        """
-        Handle changes when user role is updated
-
-        Args:
-            user: User object being updated
-            old_role: Previous UserRole
-            new_role: New UserRole
-            db_session: SQLAlchemy session
-        """
-        try:
-            # Remove previous role model
-            if old_role == UserRole.ADMIN and user.admin:
-                db_session.delete(user.admin)
-            elif old_role == UserRole.COMPANY_OWNER and user.company_owner:
-                db_session.delete(user.company_owner)
-            elif old_role == UserRole.MANAGER and user.manager:
-                db_session.delete(user.manager)
-            elif old_role == UserRole.OPERATOR and user.operator:
-                db_session.delete(user.operator)
-            elif old_role == UserRole.DRIVER and user.driver:
-                db_session.delete(user.driver)
-
-            # Create new role model
-            if new_role == UserRole.ADMIN:
-                admin = Admin(id=user.id, admin_level=1)
-                db_session.add(admin)
-            elif new_role == UserRole.COMPANY_OWNER:
-                # Cannot assign company owner without a company
-                company_owner = CompanyOwner(id=user.id)
-                db_session.add(company_owner)
-            elif new_role == UserRole.MANAGER:
-                # Cannot assign manager without a company
-                manager = Manager(id=user.id)
-                db_session.add(manager)
-            elif new_role == UserRole.OPERATOR:
-                # Cannot assign operator without a manager
-                operator = Operator(id=user.id)
-                db_session.add(operator)
-            elif new_role == UserRole.DRIVER:
-                # Cannot assign driver without an operator
-                driver = Driver(id=user.id, license_number="", vehicle_info="")
-                db_session.add(driver)
-
-            # Update user role
-            user.role = new_role
-        except Exception as e:
-            db_session.rollback()
-            current_app.logger.error(f"Error handling role change: {str(e)}")
             raise
 
     @staticmethod

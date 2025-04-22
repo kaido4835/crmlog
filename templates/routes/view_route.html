@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">Route Details</h4>
+                    <div>
+                        {% if current_user.role.value in ['admin', 'company_owner', 'manager', 'operator'] or 
+                              (current_user.role.value == 'driver' and current_user.id == route.driver.user.id) %}
+                        <a href="{{ url_for('routes.edit_route', route_id=route.id) }}" class="btn btn-light btn-sm me-2">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        {% endif %}
+                        
+                        {% if current_user.role.value == 'driver' and current_user.id == route.driver.user.id and route.status.value == 'planned' %}
+                        <form action="{{ url_for('routes.start_route', route_id=route.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-success btn-sm me-2">
+                                <i class="fas fa-play"></i> Start Route
+                            </button>
+                        </form>
+                        {% endif %}
+                        
+                        {% if current_user.role.value == 'driver' and current_user.id == route.driver.user.id and route.status.value == 'in_progress' %}
+                        <form action="{{ url_for('routes.complete_route', route_id=route.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-success btn-sm me-2">
+                                <i class="fas fa-check"></i> Complete Route
+                            </button>
+                        </form>
+                        {% endif %}
+                        
+                        {% if current_user.role.value in ['admin', 'company_owner', 'manager'] %}
+                        <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <h5>Route Information</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <tr>
+                                        <th style="width: 30%">Route ID</th>
+                                        <td>{{ route.id }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Status</th>
+                                        <td>
+                                            {% if route.status.value == 'planned' %}
+                                                <span class="badge bg-info">Planned</span>
+                                            {% elif route.status.value == 'in_progress' %}
+                                                <span class="badge bg-primary">In Progress</span>
+                                            {% elif route.status.value == 'completed' %}
+                                                <span class="badge bg-success">Completed</span>
+                                            {% elif route.status.value == 'cancelled' %}
+                                                <span class="badge bg-danger">Cancelled</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Start Point</th>
+                                        <td>{{ route.start_point }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>End Point</th>
+                                        <td>{{ route.end_point }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Distance</th>
+                                        <td>{{ route.distance|round(2) if route.distance else 'N/A' }} km</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Estimated Time</th>
+                                        <td>
+                                            {% if route.estimated_time %}
+                                                {% set hours = (route.estimated_time // 60) %}
+                                                {% set minutes = (route.estimated_time % 60) %}
+                                                {% if hours > 0 %}{{ hours }} hour{% if hours != 1 %}s{% endif %}{% endif %}
+                                                {% if minutes > 0 %}{% if hours > 0 %} {% endif %}{{ minutes }} minute{% if minutes != 1 %}s{% endif %}{% endif %}
+                                            {% else %}
+                                                <span class="text-muted">Not estimated</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Schedule Information</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered">
+                                    <tr>
+                                        <th style="width: 30%">Planned Start</th>
+                                        <td>
+                                            {% if route.start_time %}
+                                                {{ route.start_time.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Not scheduled</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Actual Start</th>
+                                        <td>
+                                            {% if route.actual_start_time %}
+                                                {{ route.actual_start_time.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Not started</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>End Time</th>
+                                        <td>
+                                            {% if route.end_time %}
+                                                {{ route.end_time.strftime('%Y-%m-%d %H:%M') }}
+                                            {% else %}
+                                                <span class="text-muted">Not completed</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Driver</th>
+                                        <td>
+                                            {% if route.driver %}
+                                                <a href="{{ url_for('admin.view_user', user_id=route.driver.user.id) }}">
+                                                    {{ route.driver.user.first_name }} {{ route.driver.user.last_name }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Not assigned</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Task</th>
+                                        <td>
+                                            {% if route.task %}
+                                                <a href="{{ url_for('tasks.view_task', task_id=route.task.id) }}">
+                                                    {{ route.task.title }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">No task</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Company</th>
+                                        <td>
+                                            {% if route.company %}
+                                                <a href="{{ url_for('admin.view_company', company_id=route.company.id) }}">
+                                                    {{ route.company.name }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Unknown</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if route.waypoints %}
+                    <div class="mb-4">
+                        <h5>Waypoints</h5>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Location</th>
+                                        <th>Type</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for waypoint in route.waypoints %}
+                                    <tr>
+                                        <td>{{ loop.index }}</td>
+                                        <td>{{ waypoint.location }}</td>
+                                        <td>{{ waypoint.type }}</td>
+                                        <td>{{ waypoint.notes }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-4">
+                        <h5>Map</h5>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> In a complete application, this would display an interactive map with the route visualization.
+                                </div>
+                                <div class="text-center py-4 bg-light rounded">
+                                    <i class="fas fa-map-marked-alt fa-4x text-muted mb-3"></i>
+                                    <p>Route map from {{ route.start_point }} to {{ route.end_point }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <h5>Status Updates</h5>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="timeline">
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-info"></div>
+                                        <div class="timeline-content">
+                                            <h6 class="timeline-title">Route Created</h6>
+                                            <p class="timeline-text">{{ route.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if route.status.value in ['in_progress', 'completed', 'cancelled'] %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-primary"></div>
+                                        <div class="timeline-content">
+                                            <h6 class="timeline-title">Route Started</h6>
+                                            <p class="timeline-text">
+                                                {% if route.actual_start_time %}
+                                                    {{ route.actual_start_time.strftime('%Y-%m-%d %H:%M') }}
+                                                {% else %}
+                                                    Unknown time
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if route.status.value in ['completed'] %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-success"></div>
+                                        <div class="timeline-content">
+                                            <h6 class="timeline-title">Route Completed</h6>
+                                            <p class="timeline-text">
+                                                {% if route.end_time %}
+                                                    {{ route.end_time.strftime('%Y-%m-%d %H:%M') }}
+                                                {% else %}
+                                                    Unknown time
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    
+                                    {% if route.status.value in ['cancelled'] %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-danger"></div>
+                                        <div class="timeline-content">
+                                            <h6 class="timeline-title">Route Cancelled</h6>
+                                            <p class="timeline-text">
+                                                {% if route.updated_at %}
+                                                    {{ route.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                                                {% else %}
+                                                    Unknown time
+                                                {% endif %}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if current_user.role.value == 'driver' and current_user.id == route.driver.user.id and route.status.value == 'in_progress' %}
+                                <div class="mt-3">
+                                    <form action="{{ url_for('routes.add_status_update', route_id=route.id) }}" method="POST">
+                                        <div class="input-group">
+                                            <input type="text" name="status_message" class="form-control" placeholder="Add status update...">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-paper-plane"></i> Send
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{{ url_for('routes.list_routes') }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Routes
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Route</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this route from <strong>{{ route.start_point }}</strong> to <strong>{{ route.end_point }}</strong>?
+                <p class="text-danger mt-2">This action cannot be undone and may affect related tasks.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('routes.delete_route', route_id=route.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block styles %}
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 3rem;
+        margin-bottom: 1rem;
+    }
+    
+    .timeline:before {
+        content: '';
+        position: absolute;
+        left: 0.75rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -3rem;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+    }
+    
+    .timeline-content {
+        padding-bottom: 1rem;
+    }
+    
+    .timeline-title {
+        margin-bottom: 0.25rem;
+    }
+    
+    .timeline-text {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+</style>
+{% endblock %}
+{% endblock %}

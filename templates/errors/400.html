@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}Bad Request | CRM{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">Bad Request</h4>
+            </div>
+            <div class="card-body text-center">
+                <h1 class="display-1">400</h1>
+                <p class="lead">The server could not understand the request.</p>
+                <p>Please check your request parameters and try again.</p>
+                <a href="{{ url_for('main.index') }}" class="btn btn-primary mt-3">Go to Homepage</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

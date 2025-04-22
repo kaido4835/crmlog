@@ -67,7 +67,7 @@ def create_user():
 
     if form.validate_on_submit():
         try:
-            user = UserService.create_user(form, db)
+            user = UserService.create_user(form, db.session)
             flash(f'User {user.username} created successfully!', 'success')
             return redirect(url_for('admin.user_list'))
         except Exception as e:
@@ -93,7 +93,7 @@ def edit_user(user_id):
 
     if form.validate_on_submit():
         try:
-            UserService.update_user(user, form, db)
+            UserService.update_user(user, form, db.session)
             flash(f'User {user.username} updated successfully!', 'success')
             return redirect(url_for('admin.user_list'))
         except Exception as e:
@@ -145,7 +145,7 @@ def create_admin():
 
     if form.validate_on_submit():
         try:
-            user = UserService.create_admin(form, db)
+            user = UserService.create_admin(form, db.session)
             flash(f'Admin {user.username} created successfully!', 'success')
             return redirect(url_for('admin.user_list'))
         except Exception as e:
@@ -189,7 +189,7 @@ def create_company():
 
     if form.validate_on_submit():
         try:
-            company = CompanyService.create_company(form, db)
+            company = CompanyService.create_company(form, db.session)
             flash(f'Company {company.name} created successfully!', 'success')
             return redirect(url_for('admin.company_list'))
         except Exception as e:
@@ -215,7 +215,7 @@ def edit_company(company_id):
 
     if form.validate_on_submit():
         try:
-            CompanyService.update_company(company, form, db)
+            CompanyService.update_company(company, form, db.session)
             flash(f'Company {company.name} updated successfully!', 'success')
             return redirect(url_for('admin.company_list'))
         except Exception as e:
@@ -246,7 +246,7 @@ def delete_company(company_id):
 @admin_required
 def view_company(company_id):
     company = Company.query.get_or_404(company_id)
-    metrics = CompanyService.get_company_metrics(company, db)
+    metrics = CompanyService.get_company_metrics(company, db.session)
 
     return render_template(
         'admin/view_company.html',
@@ -268,7 +268,7 @@ def create_company_owner():
 
     if form.validate_on_submit():
         try:
-            user = UserService.create_company_owner(form, db)
+            user = UserService.create_company_owner(form, db.session)
             flash(f'Company owner {user.username} created successfully!', 'success')
             return redirect(url_for('admin.user_list'))
         except Exception as e:
