@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from app import create_app, db
 from models import User, UserRole, Admin, CompanyOwner, Manager, Operator, Driver
 from models import Company, Task, TaskStatus, Route, RouteStatus, Document, Log, ActionType, Statistics
+from flask import send_from_directory
 
 # Load environment variables from .env file if it exists
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
@@ -99,6 +100,11 @@ def create_test_data():
     # Import create_test_data function from init_db.py
     from init_db import create_test_data
     create_test_data()
+
+
+@app.route('/favicon.ico')
+def favicon():
+    return '', 204
 
 
 if __name__ == '__main__':
