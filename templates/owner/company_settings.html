@@ -1,0 +1,231 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Owner Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.owner_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('main.owner_managers') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> Managers
+                </a>
+                <a href="{{ url_for('statistics.dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-bar"></i> Reports
+                </a>
+                <a href="{{ url_for('main.owner_company_settings') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-cog"></i> Company Settings
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <!-- Company Details Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Company Details</h5>
+                <a href="{{ url_for('main.edit_company') }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-edit"></i> Edit Details
+                </a>
+            </div>
+            <div class="card-body">
+                {% if company %}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small">Company Name</label>
+                                <p class="mb-0 fw-bold">{{ company.name }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small">Legal Name</label>
+                                <p class="mb-0">{{ company.legal_name }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small">Tax ID</label>
+                                <p class="mb-0">{{ company.tax_id }}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="text-muted small">Email</label>
+                                <p class="mb-0">{{ company.email }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small">Phone</label>
+                                <p class="mb-0">{{ company.phone }}</p>
+                            </div>
+                            <div class="mb-3">
+                                <label class="text-muted small">Website</label>
+                                <p class="mb-0">{{ company.website or 'Not specified' }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <label class="text-muted small">Address</label>
+                        <p class="mb-0">{{ company.address }}</p>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-building fa-3x text-muted mb-3"></i>
+                        <p>No company details available.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Team Overview Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Team Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="display-5 mb-2">{{ manager_count if manager_count is defined else 0 }}</div>
+                            <div class="text-muted">Managers</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="display-5 mb-2">{{ operator_count if operator_count is defined else 0 }}</div>
+                            <div class="text-muted">Operators</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="display-5 mb-2">{{ driver_count if driver_count is defined else 0 }}</div>
+                            <div class="text-muted">Drivers</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="border rounded p-3">
+                            <div class="display-5 mb-2">{{ total_team_count if total_team_count is defined else 0 }}</div>
+                            <div class="text-muted">Total</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('main.owner_managers') }}" class="btn btn-outline-primary me-2">Manage Team</a>
+                    <a href="{{ url_for('statistics.users') }}" class="btn btn-outline-info">View Performance</a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- System Settings Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">System Settings</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('main.update_company_settings') }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="enableNotifications" name="enable_notifications" 
+                                    {{ 'checked' if company_settings and company_settings.enable_notifications else '' }}>
+                                <label class="form-check-label" for="enableNotifications">Email Notifications</label>
+                                <small class="form-text text-muted d-block">Receive email notifications for important events</small>
+                            </div>
+                            
+                            <div class="mb-3 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="taskAssignmentApproval" name="task_assignment_approval"
+                                    { { 'checked' if company_settings and company_settings.task_assignment_approval else '' }}>
+                                <label class="form-check-label" for="taskAssignmentApproval">Task Assignment Approval</label>
+                                <small class="form-text text-muted d-block">Require approval for task assignments</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="allowDriverMessaging" name="allow_driver_messaging"
+                                    {{ 'checked' if company_settings and company_settings.allow_driver_messaging else '' }}>
+                                <label class="form-check-label" for="allowDriverMessaging">Driver-to-Driver Messaging</label>
+                                <small class="form-text text-muted d-block">Allow drivers to message each other</small>
+                            </div>
+                            
+                            <div class="mb-3 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="autoRouteOptimization" name="auto_route_optimization"
+                                    {{ 'checked' if company_settings and company_settings.auto_route_optimization else '' }}>
+                                <label class="form-check-label" for="autoRouteOptimization">Automatic Route Optimization</label>
+                                <small class="form-text text-muted d-block">Optimize routes automatically</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="defaultTaskDeadline" class="form-label">Default Task Deadline (hours)</label>
+                        <input type="number" class="form-control" id="defaultTaskDeadline" name="default_task_deadline" min="1" max="168"
+                            value="{{ company_settings.default_task_deadline if company_settings and company_settings.default_task_deadline else 24 }}">
+                        <small class="form-text text-muted">Default deadline for new tasks in hours</small>
+                    </div>
+                    
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">Save Settings</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Subscription Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Subscription</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div>
+                        <h6 class="mb-1">Current Plan</h6>
+                        <p class="mb-0">
+                            <span class="badge bg-success">Professional</span>
+                            <span class="text-muted ms-2">$99/month</span>
+                        </p>
+                    </div>
+                    <div>
+                        <a href="#" class="btn btn-outline-primary btn-sm">Upgrade Plan</a>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <h6>Plan Features</h6>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item px-0">
+                            <i class="fas fa-check text-success me-2"></i> Unlimited tasks and routes
+                        </li>
+                        <li class="list-group-item px-0">
+                            <i class="fas fa-check text-success me-2"></i> Up to 25 team members
+                        </li>
+                        <li class="list-group-item px-0">
+                            <i class="fas fa-check text-success me-2"></i> Advanced reporting
+                        </li>
+                        <li class="list-group-item px-0">
+                            <i class="fas fa-check text-success me-2"></i> 10GB document storage
+                        </li>
+                        <li class="list-group-item px-0">
+                            <i class="fas fa-times text-danger me-2"></i> <span class="text-muted">Route optimization (Enterprise only)</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <div class="alert alert-info">
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="fas fa-info-circle fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="alert-heading mb-1">Need more features?</h6>
+                            <p class="mb-0">Contact our sales team to discuss custom enterprise solutions for your business.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Owner Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.owner_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('main.owner_managers') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-users"></i> Managers
+                </a>
+                <a href="{{ url_for('statistics.dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-bar"></i> Reports
+                </a>
+                <a href="{{ url_for('main.owner_company_settings') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-cog"></i> Company Settings
+                </a>
+            </div>
+        </div>
+
+        <!-- Manager Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('messages.chat', user_id=manager.user.id) }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-envelope me-2"></i> Send Message
+                </a>
+                <a href="{{ url_for('main.edit_manager', manager_id=manager.id) }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-edit me-2"></i> Edit Manager
+                </a>
+                <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#assignOperatorsModal">
+                    <i class="fas fa-user-plus me-2"></i> Assign Operators
+                </a>
+                <a href="{{ url_for('statistics.users', role='manager', user_id=manager.id) }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-line me-2"></i> Performance Report
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <!-- Manager Profile Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Manager Profile</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        {% if manager.user.profile_image %}
+                            <img src="{{ url_for('static', filename=manager.user.profile_image) }}" alt="Profile image" class="profile-image mb-3">
+                        {% else %}
+                            <div class="rounded-circle bg-primary d-inline-flex justify-content-center align-items-center mb-3" style="width: 150px; height: 150px;">
+                                <span class="text-white" style="font-size: 60px;">{{ manager.user.first_name[0] }}{{ manager.user.last_name[0] }}</span>
+                            </div>
+                        {% endif %}
+                        <h4>{{ manager.user.first_name }} {{ manager.user.last_name }}</h4>
+                        <p class="text-muted mb-2">@{{ manager.user.username }}</p>
+                        <p>
+                            <span class="badge bg-success">Manager</span>
+                            {% if manager.user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-8">
+                        <h5>Contact Information</h5>
+                        <table class="table">
+                            <tr>
+                                <th style="width: 30%"><i class="fas fa-envelope text-muted me-2"></i> Email</th>
+                                <td><a href="mailto:{{ manager.user.email }}">{{ manager.user.email }}</a></td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-phone text-muted me-2"></i> Phone</th>
+                                <td>
+                                    {% if manager.user.phone %}
+                                        <a href="tel:{{ manager.user.phone }}">{{ manager.user.phone }}</a>
+                                    {% else %}
+                                        <span class="text-muted">Not provided</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-calendar-alt text-muted me-2"></i> Joined</th>
+                                <td>{{ manager.user.created_at.strftime('%B %d, %Y') }}</td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-users text-muted me-2"></i> Team Size</th>
+                                <td>
+                                    <span class="badge bg-info">{{ manager.operators|length }} operators</span>
+                                    {% if driver_count %}
+                                        <span class="badge bg-warning ms-2">{{ driver_count }} drivers</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            <tr>
+                                <th><i class="fas fa-sign-in-alt text-muted me-2"></i> Last Login</th>
+                                <td>
+                                    {% if manager.user.last_login %}
+                                        {{ manager.user.last_login.strftime('%B %d, %Y at %H:%M') }}
+                                    {% else %}
+                                        <span class="text-muted">Never logged in</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manager Performance Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Performance Overview</h5>
+                <a href="{{ url_for('statistics.users', role='manager', user_id=manager.id) }}" class="btn btn-sm btn-light">Detailed Report</a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-4">
+                        <div class="p-3">
+                            <div class="display-6 mb-2">{{ completion_rate if completion_rate is defined else '85%' }}</div>
+                            <div class="text-muted">Task Completion Rate</div>
+                            <div class="progress mt-2" style="height: 8px;">
+                                <div class="progress-bar bg-success" role="progressbar" style="width: {{ completion_rate if completion_rate is defined else '85%' }};"
+                                    aria-valuenow="{{ completion_rate|replace('%', '') if completion_rate is defined else '85' }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center mb-4">
+                        <div class="p-3">
+                            <div class="display-6 mb-2">{{ on_time_rate if on_time_rate is defined else '92%' }}</div>
+                            <div class="text-muted">On-Time Delivery</div>
+                            <div class="progress mt-2" style="height: 8px;">
+                                <div class="progress-bar bg-primary" role="progressbar" style="width: {{ on_time_rate if on_time_rate is defined else '92%' }};"
+                                    aria-valuenow="{{ on_time_rate|replace('%', '') if on_time_rate is defined else '92' }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-center mb-4">
+                        <div class="p-3">
+                            <div class="display-6 mb-2">{{ efficiency_score if efficiency_score is defined else '88%' }}</div>
+                            <div class="text-muted">Efficiency Score</div>
+                            <div class="progress mt-2" style="height: 8px;">
+                                <div class="progress-bar bg-info" role="progressbar" style="width: {{ efficiency_score if efficiency_score is defined else '88%' }};"
+                                    aria-valuenow="{{ efficiency_score|replace('%', '') if efficiency_score is defined else '88' }}" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Tasks Overview</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Total Tasks</td>
+                                    <td class="text-end">{{ task_count if task_count is defined else 45 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Completed Tasks</td>
+                                    <td class="text-end">{{ completed_tasks if completed_tasks is defined else 38 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>In Progress</td>
+                                    <td class="text-end">{{ in_progress_tasks if in_progress_tasks is defined else 5 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Pending</td>
+                                    <td class="text-end">{{ pending_tasks if pending_tasks is defined else 2 }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Team Performance</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td>Operators</td>
+                                    <td class="text-end">{{ manager.operators|length }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Drivers</td>
+                                    <td class="text-end">{{ driver_count if driver_count is defined else 12 }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Avg. Task Completion</td>
+                                    <td class="text-end">{{ avg_task_completion if avg_task_completion is defined else '6.2 hours' }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Avg. Route Completion</td>
+                                    <td class="text-end">{{ avg_route_completion if avg_route_completion is defined else '3.5 hours' }}</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Operators Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Operators</h5>
+                <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#assignOperatorsModal">
+                    <i class="fas fa-user-plus"></i> Assign Operators
+                </button>
+            </div>
+            <div class="card-body p-0">
+                {% if manager.operators %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                    <th>Drivers</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for operator in manager.operators %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                {% if operator.user.profile_image %}
+                                                    <img src="{{ url_for('static', filename=operator.user.profile_image) }}" alt="Profile image" class="profile-image-sm me-2">
+                                                {% else %}
+                                                    <div class="rounded-circle bg-info d-inline-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
+                                                        <span class="text-white">{{ operator.user.first_name[0] }}{{ operator.user.last_name[0] }}</span>
+                                                    </div>
+                                                {% endif %}
+                                                {{ operator.user.first_name }} {{ operator.user.last_name }}
+                                            </div>
+                                        </td>
+                                        <td>{{ operator.user.email }}</td>
+                                        <td>{{ operator.user.phone or '-' }}</td>
+                                        <td>
+                                            {% if operator.drivers %}
+                                                <span class="badge bg-warning">{{ operator.drivers|length }} drivers</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">No drivers</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if operator.user.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="{{ url_for('messages.chat', user_id=operator.user.id) }}" class="btn btn-outline-primary">
+                                                    <i class="fas fa-envelope"></i>
+                                                </a>
+                                                <a href="{{ url_for('main.view_operator', operator_id=operator.id) }}" class="btn btn-outline-info">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#removeOperatorModal{{ operator.id }}">
+                                                    <i class="fas fa-user-minus"></i>
+                                                </button>
+                                            </div>
+
+                                            <!-- Remove Operator Modal -->
+                                            <div class="modal fade" id="removeOperatorModal{{ operator.id }}" tabindex="-1" aria-hidden="true">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header">
+                                                            <h5 class="modal-title">Remove Operator</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                        </div>
+                                                        <div class="modal-body">
+                                                            <p>Are you sure you want to remove <strong>{{ operator.user.first_name }} {{ operator.user.last_name }}</strong> from {{ manager.user.first_name }}'s team?</p>
+                                                            <p class="text-danger">This operator will need to be reassigned to another manager.</p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                            <form action="{{ url_for('main.remove_operator_from_manager', operator_id=operator.id, manager_id=manager.id) }}" method="post">
+                                                                <button type="submit" class="btn btn-danger">Remove</button>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-user-friends fa-3x text-muted mb-3"></i>
+                        <h5>No Operators Assigned</h5>
+                        <p class="text-muted">This manager doesn't have any operators assigned yet.</p>
+                        <button class="btn btn-primary mt-2" data-bs-toggle="modal" data-bs-target="#assignOperatorsModal">
+                            <i class="fas fa-user-plus"></i> Assign Operators
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Operators Modal -->
+<div class="modal fade" id="assignOperatorsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Assign Operators to {{ manager.user.first_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('main.assign_operators_to_manager', manager_id=manager.id) }}" method="post">
+                    <div class="mb-3">
+                        <label for="operatorSearch" class="form-label">Search Operators</label>
+                        <input type="text" class="form-control" id="operatorSearch" placeholder="Search by name or email">
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="selectAllOperators">Select All</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="deselectAllOperators">Deselect All</button>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Assignments</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Operator search functionality
+    const operatorSearch = document.getElementById('operatorSearch');
+    if (operatorSearch) {
+        operatorSearch.addEventListener('input', function() {
+            const searchText = this.value.toLowerCase();
+            const rows = document.querySelectorAll('.operator-checkbox').forEach(checkbox => {
+                const row = checkbox.closest('tr');
+                const name = row.cells[1].textContent.toLowerCase();
+                const email = row.cells[2].textContent.toLowerCase();
+
+                if (name.includes(searchText) || email.includes(searchText)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    // Select/Deselect all operators
+    document.getElementById('selectAllOperators')?.addEventListener('click', function() {
+        document.querySelectorAll('.operator-checkbox').forEach(checkbox => {
+            checkbox.checked = true;
+        });
+    });
+
+    document.getElementById('deselectAllOperators')?.addEventListener('click', function() {
+        document.querySelectorAll('.operator-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;"></th>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Current Manager</th>
+                                    <th>Drivers</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if available_operators %}
+                                    {% for operator in available_operators %}
+                                        <tr>
+                                            <td>
+                                                <input type="checkbox" class="form-check-input operator-checkbox" name="operator_ids[]" value="{{ operator.id }}"
+                                                    {{ 'checked' if operator.manager_id == manager.id else '' }}>
+                                            </td>
+                                            <td>{{ operator.user.first_name }} {{ operator.user.last_name }}</td>
+                                            <td>{{ operator.user.email }}</td>
+                                            <td>
+                                                {% if operator.manager %}
+                                                    {{ operator.manager.user.first_name }} {{ operator.manager.user.last_name }}
+                                                {% else %}
+                                                    <span class="text-muted">None</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if operator.drivers %}
+                                                    <span class="badge bg-warning">{{ operator.drivers|length }} drivers</span>
+                                                {% else %}
+                                                    <span class="badge bg-secondary">No drivers</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-3">
+                                            <span class="text-muted">No available operators found</span>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>

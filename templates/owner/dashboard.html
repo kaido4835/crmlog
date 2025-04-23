@@ -11,82 +11,224 @@
                 <a href="{{ url_for('main.owner_dashboard') }}" class="list-group-item list-group-item-action active">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('main.owner_managers') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-users"></i> Managers
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('statistics.dashboard') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-chart-bar"></i> Reports
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('main.owner_company_settings') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-cog"></i> Company Settings
                 </a>
             </div>
         </div>
-    </div>
-    
-    <div class="col-md-9">
+
+        <!-- Company Info Card -->
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
-                <h5 class="card-title mb-0">Company Owner Dashboard</h5>
+                <i class="fas fa-building"></i> Company Info
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> This is a placeholder for the Company Owner Dashboard. In a complete application, this would show company statistics, manager performance, and business metrics.
+                {% if current_user.company_owner and current_user.company_owner.company %}
+                    <h5>{{ current_user.company_owner.company.name }}</h5>
+                    <p class="text-muted mb-2">{{ current_user.company_owner.company.legal_name }}</p>
+                    <p class="small mb-1"><i class="fas fa-envelope text-muted me-2"></i> {{ current_user.company_owner.company.email }}</p>
+                    <p class="small mb-1"><i class="fas fa-phone text-muted me-2"></i> {{ current_user.company_owner.company.phone }}</p>
+                    {% if current_user.company_owner.company.website %}
+                        <p class="small mb-0"><i class="fas fa-globe text-muted me-2"></i> {{ current_user.company_owner.company.website }}</p>
+                    {% endif %}
+                {% else %}
+                    <p class="text-muted mb-0">No company information available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <!-- Overview Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card border-0 bg-primary text-white h-100">
+                    <div class="card-body text-center">
+                        <div class="stat-card">
+                            <div class="icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="count">
+                                {{ team_count if team_count is defined else 0 }}
+                            </div>
+                            <div class="label">Team Members</div>
+                        </div>
+                    </div>
                 </div>
-                
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-0 bg-success text-white h-100">
+                    <div class="card-body text-center">
+                        <div class="stat-card">
+                            <div class="icon">
+                                <i class="fas fa-tasks"></i>
+                            </div>
+                            <div class="count">
+                                {{ active_tasks if active_tasks is defined else 0 }}
+                            </div>
+                            <div class="label">Active Tasks</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card border-0 bg-warning text-white h-100">
+                    <div class="card-body text-center">
+                        <div class="stat-card">
+                            <div class="icon">
+                                <i class="fas fa-truck"></i>
+                            </div>
+                            <div class="count">
+                                {{ active_routes if active_routes is defined else 0 }}
+                            </div>
+                            <div class="label">Active Routes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
                 <div class="row">
-                    <div class="col-md-4">
-                        <div class="card text-center mb-4">
-                            <div class="card-body">
-                                <i class="fas fa-users fa-3x text-primary mb-3"></i>
-                                <h2 class="display-4">0</h2>
-                                <p class="text-muted">Total Managers</p>
+                    <div class="col-md-3 text-center mb-3">
+                        <a href="{{ url_for('main.owner_managers') }}" class="btn btn-outline-primary p-3 w-100 h-100">
+                            <i class="fas fa-user-plus fa-2x mb-2"></i><br>
+                            Add Manager
+                        </a>
+                    </div>
+                    <div class="col-md-3 text-center mb-3">
+                        <a href="{{ url_for('tasks.list_tasks') }}" class="btn btn-outline-success p-3 w-100 h-100">
+                            <i class="fas fa-tasks fa-2x mb-2"></i><br>
+                            View Tasks
+                        </a>
+                    </div>
+                    <div class="col-md-3 text-center mb-3">
+                        <a href="{{ url_for('routes.list_routes') }}" class="btn btn-outline-warning p-3 w-100 h-100">
+                            <i class="fas fa-route fa-2x mb-2"></i><br>
+                            View Routes
+                        </a>
+                    </div>
+                    <div class="col-md-3 text-center mb-3">
+                        <a href="{{ url_for('statistics.reports') }}" class="btn btn-outline-info p-3 w-100 h-100">
+                            <i class="fas fa-file-download fa-2x mb-2"></i><br>
+                            Download Reports
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Overview Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Performance Overview</h5>
+                <a href="{{ url_for('statistics.dashboard') }}" class="btn btn-sm btn-light">View Details</a>
+            </div>
+            <div class="card-body">
+                <!-- Task Status Distribution -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Task Status Distribution</h6>
+                        <div class="progress-stacked mb-4">
+                            {% set completed_percent = (completed_tasks / task_count * 100) if task_count > 0 and completed_tasks is defined else 0 %}
+                            {% set in_progress_percent = (in_progress_tasks / task_count * 100) if task_count > 0 and in_progress_tasks is defined else 0 %}
+                            {% set new_percent = (new_tasks / task_count * 100) if task_count > 0 and new_tasks is defined else 0 %}
+                            {% set other_percent = 100 - completed_percent - in_progress_percent - new_percent %}
+
+                            <div class="progress" role="progressbar" style="height: 20px">
+                                <div class="progress-bar bg-success" style="width: {{ completed_percent }}%" title="Completed: {{ completed_tasks if completed_tasks is defined else 0 }}"></div>
+                                <div class="progress-bar bg-warning" style="width: {{ in_progress_percent }}%" title="In Progress: {{ in_progress_tasks if in_progress_tasks is defined else 0 }}"></div>
+                                <div class="progress-bar bg-info" style="width: {{ new_percent }}%" title="New: {{ new_tasks if new_tasks is defined else 0 }}"></div>
+                                <div class="progress-bar bg-secondary" style="width: {{ other_percent }}%" title="Other"></div>
+                            </div>
+
+                            <div class="d-flex justify-content-between mt-2">
+                                <small class="text-success">Completed</small>
+                                <small class="text-warning">In Progress</small>
+                                <small class="text-info">New</small>
+                                <small class="text-secondary">Other</small>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="col-md-4">
-                        <div class="card text-center mb-4">
-                            <div class="card-body">
-                                <i class="fas fa-tasks fa-3x text-success mb-3"></i>
-                                <h2 class="display-4">0</h2>
-                                <p class="text-muted">Total Tasks</p>
+
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">Route Status Distribution</h6>
+                        <div class="progress-stacked mb-4">
+                            {% set completed_routes_percent = (completed_routes / route_count * 100) if route_count > 0 and completed_routes is defined else 0 %}
+                            {% set in_progress_routes_percent = (in_progress_routes / route_count * 100) if route_count > 0 and in_progress_routes is defined else 0 %}
+                            {% set planned_routes_percent = (planned_routes / route_count * 100) if route_count > 0 and planned_routes is defined else 0 %}
+                            {% set other_routes_percent = 100 - completed_routes_percent - in_progress_routes_percent - planned_routes_percent %}
+
+                            <div class="progress" role="progressbar" style="height: 20px">
+                                <div class="progress-bar bg-success" style="width: {{ completed_routes_percent }}%" title="Completed: {{ completed_routes if completed_routes is defined else 0 }}"></div>
+                                <div class="progress-bar bg-warning" style="width: {{ in_progress_routes_percent }}%" title="In Progress: {{ in_progress_routes if in_progress_routes is defined else 0 }}"></div>
+                                <div class="progress-bar bg-info" style="width: {{ planned_routes_percent }}%" title="Planned: {{ planned_routes if planned_routes is defined else 0 }}"></div>
+                                <div class="progress-bar bg-secondary" style="width: {{ other_routes_percent }}%" title="Other"></div>
                             </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-4">
-                        <div class="card text-center mb-4">
-                            <div class="card-body">
-                                <i class="fas fa-truck fa-3x text-warning mb-3"></i>
-                                <h2 class="display-4">0</h2>
-                                <p class="text-muted">Active Routes</p>
+
+                            <div class="d-flex justify-content-between mt-2">
+                                <small class="text-success">Completed</small>
+                                <small class="text-warning">In Progress</small>
+                                <small class="text-info">Planned</small>
+                                <small class="text-secondary">Other</small>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Performance Overview</h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-center text-muted py-5">
-                            <i class="fas fa-chart-line fa-3x mb-3 d-block"></i>
-                            Performance charts and metrics would be displayed here.
-                        </p>
+
+                <!-- Efficiency Score -->
+                <div class="mt-4">
+                    <h6 class="text-muted mb-3">Company Efficiency Score</h6>
+                    <div class="progress" style="height: 25px">
+                        {% set efficiency_score = efficiency_score if efficiency_score is defined else 0 %}
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ efficiency_score }}%"
+                            aria-valuenow="{{ efficiency_score }}" aria-valuemin="0" aria-valuemax="100">
+                            {{ efficiency_score }}%
+                        </div>
                     </div>
                 </div>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Recent Activity</h5>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-center text-muted py-4">
-                            No recent activities to display.
-                        </p>
-                    </div>
+            </div>
+        </div>
+
+        <!-- Recent Activity Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Activity</h5>
+                <a href="#" class="btn btn-sm btn-light">View All</a>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    {% if recent_logs %}
+                        {% for log in recent_logs %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <span class="badge bg-{{ log.action_type.value|lower }}">{{ log.action_type.value }}</span>
+                                        <span class="ms-2">{{ log.description }}</span>
+                                    </div>
+                                    <small class="text-muted">{{ log.timestamp.strftime('%B %d, %H:%M') }}</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                            <p>No recent activity to display.</p>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

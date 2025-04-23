@@ -145,7 +145,7 @@ def log_action(action_type, description, db_session):
     Args:
         action_type: Type of action (from ActionType enum)
         description: Description of the action
-        db_session: SQLAlchemy session
+        db_session: SQLAlchemy session or db instance
     """
     if current_user.is_authenticated:
         company_id = None
@@ -170,10 +170,19 @@ def log_action(action_type, description, db_session):
         )
 
         try:
-            db_session.add(log_entry)
-            db_session.commit()
+            # Handle both cases - when db instance or db.session is passed
+            if hasattr(db_session, 'session'):
+                db_session.session.add(log_entry)
+                db_session.session.commit()
+            else:
+                db_session.add(log_entry)
+                db_session.commit()
         except Exception as e:
-            db_session.rollback()
+            # Handle both cases for rollback as well
+            if hasattr(db_session, 'session'):
+                db_session.session.rollback()
+            else:
+                db_session.rollback()
             current_app.logger.error(f"Error logging action: {str(e)}")
 
 
