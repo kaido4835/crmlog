@@ -83,14 +83,14 @@ def dashboard():
     if company_id:
         route_query = route_query.filter(Route.company_id == company_id)
 
-    route_query = route_query.filter(Route.created_at.between(start_date, end_date))
+    route_query = route_query.filter(Route.start_time.between(start_date, end_date))
 
     route_count = route_query.count()
 
     # Calculate total distance of completed routes
     total_distance = db.session.query(func.sum(Route.distance)).filter(
         Route.status == RouteStatus.COMPLETED,
-        Route.created_at.between(start_date, end_date)
+        Route.start_time.between(start_date, end_date)
     )
 
     if company_id:
@@ -133,21 +133,21 @@ def dashboard():
         driver_distance = db.session.query(func.sum(Route.distance)).filter(
             Route.status == RouteStatus.COMPLETED,
             Route.driver_id == driver.id,
-            Route.created_at.between(start_date, end_date)
+            Route.start_time.between(start_date, end_date)
         ).scalar() or 0
 
         # Calculate average completion time
         avg_time_query = db.session.query(
             func.avg(
                 func.extract('epoch', Route.end_time) -
-                func.extract('epoch', Route.actual_start_time)
+                func.extract('epoch', Route.start_time)
             ) / 60  # Convert to minutes
         ).filter(
             Route.status == RouteStatus.COMPLETED,
             Route.driver_id == driver.id,
-            Route.actual_start_time.isnot(None),
+            Route.start_time.isnot(None),
             Route.end_time.isnot(None),
-            Route.created_at.between(start_date, end_date)
+            Route.start_time.between(start_date, end_date)
         )
 
         avg_time = avg_time_query.scalar() or 0
@@ -265,14 +265,14 @@ def company():
         avg_time_query = db.session.query(
             func.avg(
                 func.extract('epoch', Route.end_time) -
-                func.extract('epoch', Route.actual_start_time)
+                func.extract('epoch', Route.start_time)
             ) / 3600  # Convert to hours
         ).filter(
             Route.company_id == company_id,
             Route.status == RouteStatus.COMPLETED,
-            Route.actual_start_time.isnot(None),
+            Route.start_time.isnot(None),
             Route.end_time.isnot(None),
-            Route.created_at.between(start_date, end_date)
+            Route.start_time.between(start_date, end_date)
         )
 
         avg_completion_time = round(avg_time_query.scalar() or 0, 1)
@@ -385,7 +385,7 @@ def routes():
     if company_id:
         route_query = route_query.filter(Route.company_id == company_id)
 
-    route_query = route_query.filter(Route.created_at.between(start_date, end_date))
+    route_query = route_query.filter(Route.start_time.between(start_date, end_date))
 
     # Basic counts
     total_routes = route_query.count()
@@ -396,7 +396,7 @@ def routes():
 
     # Calculate total distance
     total_distance = db.session.query(func.sum(Route.distance)).filter(
-        Route.created_at.between(start_date, end_date)
+        Route.start_time.between(start_date, end_date)
     )
 
     if company_id:
@@ -411,13 +411,13 @@ def routes():
     avg_time_query = db.session.query(
         func.avg(
             func.extract('epoch', Route.end_time) -
-            func.extract('epoch', Route.actual_start_time)
+            func.extract('epoch', Route.start_time)
         ) / 60  # Convert to minutes
     ).filter(
         Route.status == RouteStatus.COMPLETED,
-        Route.actual_start_time.isnot(None),
+        Route.start_time.isnot(None),
         Route.end_time.isnot(None),
-        Route.created_at.between(start_date, end_date)
+        Route.start_time.between(start_date, end_date)
     )
 
     if company_id:
@@ -441,7 +441,7 @@ def routes():
     ).join(
         Route, Driver.id == Route.driver_id
     ).filter(
-        Route.created_at.between(start_date, end_date)
+        Route.start_time.between(start_date, end_date)
     )
 
     if company_id:
@@ -612,7 +612,7 @@ def users():
         if user.role == UserRole.DRIVER and user.driver:
             route_query = Route.query.filter(
                 Route.driver_id == user.driver.id,
-                Route.created_at.between(start_date, end_date)
+                Route.start_time.between(start_date, end_date)
             )
             route_count = route_query.count()
             completed_route_count = route_query.filter(Route.status == RouteStatus.COMPLETED).count()
@@ -621,7 +621,7 @@ def users():
             total_distance_query = db.session.query(func.sum(Route.distance)).filter(
                 Route.driver_id == user.driver.id,
                 Route.status == RouteStatus.COMPLETED,
-                Route.created_at.between(start_date, end_date)
+                Route.start_time.between(start_date, end_date)
             )
             total_distance = total_distance_query.scalar() or 0
 
@@ -906,7 +906,7 @@ def _generate_routes_report(company_id, start_date, end_date, format_type):
     Generate routes report based on specified parameters
     """
     # Get routes for report
-    route_query = Route.query.filter(Route.created_at.between(start_date, end_date))
+    route_query = Route.query.filter(Route.start_time.between(start_date, end_date))
 
     if company_id:
         route_query = route_query.filter(Route.company_id == company_id)
@@ -1005,7 +1005,7 @@ def _generate_drivers_report(company_id, start_date, end_date, format_type):
             # Get route statistics for this driver
             route_query = Route.query.filter(
                 Route.driver_id == driver.id,
-                Route.created_at.between(start_date, end_date)
+                Route.start_time.between(start_date, end_date)
             )
 
             total_routes = route_query.count()
@@ -1016,7 +1016,7 @@ def _generate_drivers_report(company_id, start_date, end_date, format_type):
             total_distance_query = db.session.query(func.sum(Route.distance)).filter(
                 Route.driver_id == driver.id,
                 Route.status == RouteStatus.COMPLETED,
-                Route.created_at.between(start_date, end_date)
+                Route.start_time.between(start_date, end_date)
             )
             total_distance = total_distance_query.scalar() or 0
 
@@ -1024,14 +1024,14 @@ def _generate_drivers_report(company_id, start_date, end_date, format_type):
             avg_duration_query = db.session.query(
                 func.avg(
                     func.extract('epoch', Route.end_time) -
-                    func.extract('epoch', Route.actual_start_time)
+                    func.extract('epoch', Route.start_time)
                 ) / 60  # Convert to minutes
             ).filter(
                 Route.driver_id == driver.id,
                 Route.status == RouteStatus.COMPLETED,
-                Route.actual_start_time.isnot(None),
+                Route.start_time.isnot(None),
                 Route.end_time.isnot(None),
-                Route.created_at.between(start_date, end_date)
+                Route.start_time.between(start_date, end_date)
             )
             avg_duration = avg_duration_query.scalar() or 0
 
@@ -1150,7 +1150,7 @@ def _generate_company_report(company_id, start_date, end_date, format_type):
         # Write route statistics
         route_query = Route.query.filter(
             Route.company_id == company_id,
-            Route.created_at.between(start_date, end_date)
+            Route.start_time.between(start_date, end_date)
         )
 
         total_routes = route_query.count()
@@ -1163,7 +1163,7 @@ def _generate_company_report(company_id, start_date, end_date, format_type):
         total_distance_query = db.session.query(func.sum(Route.distance)).filter(
             Route.company_id == company_id,
             Route.status == RouteStatus.COMPLETED,
-            Route.created_at.between(start_date, end_date)
+            Route.start_time.between(start_date, end_date)
         )
         total_distance = total_distance_query.scalar() or 0
 
@@ -1196,7 +1196,7 @@ def _generate_company_report(company_id, start_date, end_date, format_type):
         ).filter(
             Route.company_id == company_id,
             Route.status == RouteStatus.COMPLETED,
-            Route.created_at.between(start_date, end_date)
+            Route.start_time.between(start_date, end_date)
         ).group_by(
             Driver.id, User.first_name, User.last_name
         ).order_by(
@@ -1208,7 +1208,7 @@ def _generate_company_report(company_id, start_date, end_date, format_type):
             driver_distance_query = db.session.query(func.sum(Route.distance)).filter(
                 Route.driver_id == driver_id,
                 Route.status == RouteStatus.COMPLETED,
-                Route.created_at.between(start_date, end_date)
+                Route.start_time.between(start_date, end_date)
             )
             driver_distance = driver_distance_query.scalar() or 0
 
@@ -1216,14 +1216,14 @@ def _generate_company_report(company_id, start_date, end_date, format_type):
             avg_duration_query = db.session.query(
                 func.avg(
                     func.extract('epoch', Route.end_time) -
-                    func.extract('epoch', Route.actual_start_time)
+                    func.extract('epoch', Route.start_time)
                 ) / 60  # Convert to minutes
             ).filter(
                 Route.driver_id == driver_id,
                 Route.status == RouteStatus.COMPLETED,
-                Route.actual_start_time.isnot(None),
+                Route.start_time.isnot(None),
                 Route.end_time.isnot(None),
-                Route.created_at.between(start_date, end_date)
+                Route.start_time.between(start_date, end_date)
             )
             avg_duration = avg_duration_query.scalar() or 0
 
