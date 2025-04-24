@@ -1,0 +1,439 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Manager Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.manager_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('main.manager_operators') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-users"></i> My Operators
+                </a>
+                <a href="{{ url_for('main.manager_tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('main.manager_reports') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-line"></i> Reports
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('messages.chat', user_id=operator.user.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-comment"></i> Send Message
+                    </a>
+                    <a href="{{ url_for('tasks.list_tasks', creator_id=operator.user.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-list-check"></i> View Operator's Tasks
+                    </a>
+                    <button type="button" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#assignDriversModal">
+                        <i class="fas fa-user-plus"></i> Assign Drivers
+                    </button>
+                    <button type="button" class="list-group-item list-group-item-action text-danger" data-bs-toggle="modal" data-bs-target="#removeOperatorModal">
+                        <i class="fas fa-user-minus"></i> Remove Operator
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Operator Profile</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center">
+                        {% if operator.user.profile_image %}
+                            <img src="{{ url_for('static', filename=operator.user.profile_image) }}" class="profile-image mb-3" alt="Profile Image">
+                        {% else %}
+                            <div class="rounded-circle bg-primary d-inline-flex justify-content-center align-items-center mb-3" style="width: 150px; height: 150px;">
+                                <span class="text-white" style="font-size: 60px;">{{ operator.user.first_name[0] }}{{ operator.user.last_name[0] }}</span>
+                            </div>
+                        {% endif %}
+                        <h4>{{ operator.user.first_name }} {{ operator.user.last_name }}</h4>
+                        <p class="text-muted">@{{ operator.user.username }}</p>
+                        <span class="badge bg-info">Operator</span>
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <h5 class="border-bottom pb-2">Contact Information</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-4 text-muted">Email:</div>
+                            <div class="col-md-8">
+                                <a href="mailto:{{ operator.user.email }}">{{ operator.user.email }}</a>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4 text-muted">Phone:</div>
+                            <div class="col-md-8">
+                                {% if operator.user.phone %}
+                                    <a href="tel:{{ operator.user.phone }}">{{ operator.user.phone }}</a>
+                                {% else %}
+                                    <span class="text-muted">Not provided</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4 text-muted">Account Created:</div>
+                            <div class="col-md-8">{{ operator.user.created_at.strftime('%B %d, %Y') }}</div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4 text-muted">Last Login:</div>
+                            <div class="col-md-8">
+                                {% if operator.user.last_login %}
+                                    {{ operator.user.last_login.strftime('%B %d, %Y at %H:%M') }}
+                                {% else %}
+                                    <span class="text-muted">Never</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <h5 class="border-bottom pb-2 mt-4">Performance Metrics</h5>
+                        
+                        {% set task_count = operator.user.created_tasks|length %}
+                        {% set completed_tasks = namespace(count=0) %}
+                        {% for task in operator.user.created_tasks %}
+                            {% if task.status.value == 'completed' %}
+                                {% set completed_tasks.count = completed_tasks.count + 1 %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% set completion_rate = (completed_tasks.count / task_count * 100) if task_count > 0 else 0 %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4 text-muted">Task Completion:</div>
+                            <div class="col-md-8">
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-{{ 'success' if completion_rate >= 70 else 'warning' if completion_rate >= 40 else 'danger' }}" 
+                                         role="progressbar" 
+                                         style="width: {{ completion_rate }}%;" 
+                                         aria-valuenow="{{ completion_rate }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <div class="small text-muted mt-1">
+                                    {{ completed_tasks.count }}/{{ task_count }} tasks ({{ completion_rate|round }}% completion rate)
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4 text-muted">Team Size:</div>
+                            <div class="col-md-8">{{ operator.drivers|length }} drivers</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Assigned Drivers</h5>
+                <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#assignDriversModal">
+                    <i class="fas fa-plus"></i> Assign Drivers
+                </button>
+            </div>
+            <div class="card-body">
+                {% if operator.drivers %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Driver</th>
+                                    <th>Contact</th>
+                                    <th>Vehicle</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for driver in operator.drivers %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if driver.user.profile_image %}
+                                                <img src="{{ url_for('static', filename=driver.user.profile_image) }}" 
+                                                     alt="Profile" class="profile-image-sm me-2">
+                                            {% else %}
+                                                <div class="rounded-circle bg-warning d-inline-flex justify-content-center align-items-center me-2" 
+                                                     style="width: 40px; height: 40px;">
+                                                    <span class="text-white">{{ driver.user.first_name[0] }}{{ driver.user.last_name[0] }}</span>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                {{ driver.user.first_name }} {{ driver.user.last_name }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>{{ driver.license_number }}</td>
+                                    <td>{{ driver.vehicle_info }}</td>
+                                    <td>
+                                        {% if driver.operator_id %}
+                                            {% if driver.operator_id == operator.id %}
+                                                <span class="badge bg-primary">This operator</span>
+                                            {% else %}
+                                                {% for op in operators %}
+                                                    {% if op.id == driver.operator_id %}
+                                                        {{ op.user.first_name }} {{ op.user.last_name }}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="assignDriversForm" class="btn btn-primary">Assign Selected Drivers</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Driver search functionality
+        const searchInput = document.getElementById('driverSearch');
+        const searchButton = document.getElementById('searchButton');
+        const driverRows = document.querySelectorAll('.searchable-driver');
+        
+        function filterDrivers() {
+            const searchTerm = searchInput.value.toLowerCase();
+            
+            driverRows.forEach(row => {
+                const driverName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+                const licenseNumber = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
+                const vehicleInfo = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+                
+                if (driverName.includes(searchTerm) || 
+                    licenseNumber.includes(searchTerm) || 
+                    vehicleInfo.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        searchInput.addEventListener('keyup', filterDrivers);
+        searchButton.addEventListener('click', filterDrivers);
+        
+        // Select all drivers functionality
+        const selectAllCheckbox = document.getElementById('selectAllDrivers');
+        const driverCheckboxes = document.querySelectorAll('.driver-checkbox');
+        
+        selectAllCheckbox.addEventListener('change', function() {
+            const isChecked = this.checked;
+            
+            driverCheckboxes.forEach(checkbox => {
+                // Only change visible checkboxes
+                if (checkbox.closest('tr').style.display !== 'none') {
+                    checkbox.checked = isChecked;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}flex align-items-center">
+                                            {% if driver.user.profile_image %}
+                                                <img src="{{ url_for('static', filename=driver.user.profile_image) }}" 
+                                                     alt="Profile" class="profile-image-sm me-2">
+                                            {% else %}
+                                                <div class="rounded-circle bg-warning d-inline-flex justify-content-center align-items-center me-2" 
+                                                     style="width: 40px; height: 40px;">
+                                                    <span class="text-white">{{ driver.user.first_name[0] }}{{ driver.user.last_name[0] }}</span>
+                                                </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="fw-bold">{{ driver.user.first_name }} {{ driver.user.last_name }}</div>
+                                                <small class="text-muted">License: {{ driver.license_number }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div><i class="fas fa-envelope text-muted me-1"></i> {{ driver.user.email }}</div>
+                                        {% if driver.user.phone %}
+                                            <div><i class="fas fa-phone text-muted me-1"></i> {{ driver.user.phone }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ driver.vehicle_info }}</span>
+                                    </td>
+                                    <td>
+                                        {% set active_route = namespace(exists=false) %}
+                                        {% for route in driver.routes %}
+                                            {% if route.status.value in ['planned', 'in_progress'] %}
+                                                {% set active_route.exists = true %}
+                                            {% endif %}
+                                        {% endfor %}
+                                        
+                                        {% if active_route.exists %}
+                                            <span class="badge bg-warning">On Route</span>
+                                        {% else %}
+                                            <span class="badge bg-success">Available</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('tasks.create_task', assignee_id=driver.user.id) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-plus"></i> Task
+                                            </a>
+                                            <a href="{{ url_for('messages.chat', user_id=driver.user.id) }}" class="btn btn-outline-info">
+                                                <i class="fas fa-comment"></i>
+                                            </a>
+                                            <form action="{{ url_for('main.unassign_driver', operator_id=operator.id, driver_id=driver.id) }}" method="post" class="d-inline">
+                                                <button type="submit" class="btn btn-outline-danger">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-user-slash fa-3x text-muted mb-3"></i>
+                        <p>No drivers assigned to this operator yet.</p>
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#assignDriversModal">
+                            <i class="fas fa-plus"></i> Assign Drivers
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Recent Activity</h5>
+            </div>
+            <div class="card-body">
+                {% if activity_logs %}
+                    <div class="timeline">
+                        {% for log in activity_logs %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker bg-{{ 'primary' if log.action_type.value == 'create' else 'success' if log.action_type.value == 'update' else 'danger' if log.action_type.value == 'delete' else 'info' }}">
+                                    <i class="fas fa-{{ 'plus' if log.action_type.value == 'create' else 'edit' if log.action_type.value == 'update' else 'trash' if log.action_type.value == 'delete' else 'eye' }}"></i>
+                                </div>
+                                <div class="timeline-content">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="timeline-title">{{ log.description }}</div>
+                                        <div class="timeline-date text-muted small">{{ log.timestamp.strftime('%b %d, %H:%M') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                        <p>No recent activity logs for this operator.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remove Operator Modal -->
+<div class="modal fade" id="removeOperatorModal" tabindex="-1" aria-labelledby="removeOperatorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="removeOperatorModalLabel">Remove Operator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Warning: This action will remove 
+                    <strong>{{ operator.user.first_name }} {{ operator.user.last_name }}</strong> from your team.
+                </div>
+                <p>
+                    The operator will be unassigned from your management, but their account will remain in the system.
+                    Are you sure you want to proceed?
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('main.remove_operator', operator_id=operator.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Remove Operator</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Drivers Modal -->
+<div class="modal fade" id="assignDriversModal" tabindex="-1" aria-labelledby="assignDriversModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignDriversModalLabel">Assign Drivers to {{ operator.user.first_name }}</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form action="{{ url_for('main.assign_drivers', operator_id=operator.id) }}" method="post" id="assignDriversForm">
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="driverSearch" placeholder="Search for drivers...">
+                            <button class="btn btn-outline-secondary" type="button" id="searchButton">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="selectAllDrivers">
+                                        </div>
+                                    </th>
+                                    <th>Driver</th>
+                                    <th>License</th>
+                                    <th>Vehicle</th>
+                                    <th>Current Operator</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for driver in available_drivers %}
+                                <tr class="searchable-driver">
+                                    <td>
+                                        <div class="form-check">
+                                            <input class="form-check-input driver-checkbox" type="checkbox" 
+                                                   name="driver_ids[]" value="{{ driver.id }}"
+                                                   {% if driver.operator_id == operator.id %}checked{% endif %}>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="d-

@@ -1,0 +1,493 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Manager Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.manager_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('main.manager_operators') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> My Operators
+                </a>
+                <a href="{{ url_for('main.manager_tasks') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('main.manager_reports') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-line"></i> Reports
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+            </div>
+        </div>
+        
+        <!-- Task Filter Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('main.manager_tasks') }}">
+                    <div class="mb-3">
+                        <label for="status" class="form-label">Status</label>
+                        <select class="form-select" id="status" name="status">
+                            <option value="all" {% if not status %}selected{% endif %}>All Statuses</option>
+                            <option value="new" {% if status == 'new' %}selected{% endif %}>New</option>
+                            <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="on_hold" {% if status == 'on_hold' %}selected{% endif %}>On Hold</option>
+                            <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                            <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="viewMode" class="form-label">View Mode</label>
+                        <select class="form-select" id="viewMode" name="view">
+                            <option value="team" {% if view == 'team' %}selected{% endif %}>Team Tasks</option>
+                            <option value="my" {% if view == 'my' %}selected{% endif %}>My Tasks Only</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="sortBy" class="form-label">Sort By</label>
+                        <select class="form-select" id="sortBy" name="sort">
+                            <option value="deadline_asc" {% if sort == 'deadline_asc' %}selected{% endif %}>Deadline (Soonest)</option>
+                            <option value="deadline_desc" {% if sort == 'deadline_desc' %}selected{% endif %}>Deadline (Latest)</option>
+                            <option value="created_desc" {% if sort == 'created_desc' %}selected{% endif %}>Created (Newest)</option>
+                            <option value="created_asc" {% if sort == 'created_asc' %}selected{% endif %}>Created (Oldest)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="searchInput" class="form-label">Search</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="searchInput" name="search" value="{{ search_term }}">
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Tasks Management</h5>
+                <a href="{{ url_for('tasks.create_task') }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus"></i> Create Task
+                </a>
+            </div>
+            <div class="card-body">
+                {% if tasks %}
+                    <!-- Tasks list -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Title</th>
+                                    <th>Assignee</th>
+                                    <th>Status</th>
+                                    <th>Deadline</th>
+                                    <th>Created By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks.items %}
+                                <tr>
+                                    <td>{{ task.id }}</td>
+                                    <td>
+                                        <a href="{{ url_for('tasks.view_task', task_id=task.id) }}">
+                                            {{ task.title }}
+                                        </a>
+                                        {% if task.description %}
+                                            <button class="btn btn-sm text-muted" 
+                                                    data-bs-toggle="popover" 
+                                                    data-bs-placement="top" 
+                                                    data-bs-content="{{ task.description }}" 
+                                                    data-bs-trigger="focus">
+                                                <i class="fas fa-info-circle"></i>
+                                            </button>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.assignee %}
+                                            <div class="d-flex align-items-center">
+                                                {% if task.assignee.profile_image %}
+                                                    <img src="{{ url_for('static', filename=task.assignee.profile_image) }}" 
+                                                         alt="Profile" class="profile-image-sm me-2" style="width: 24px; height: 24px;">
+                                                {% else %}
+                                                    <div class="rounded-circle bg-warning d-inline-flex justify-content-center align-items-center me-2" 
+                                                         style="width: 24px; height: 24px;">
+                                                        <span class="text-white" style="font-size: 12px;">{{ task.assignee.first_name[0] }}</span>
+                                                    </div>
+                                                {% endif %}
+                                                <small>{{ task.assignee.first_name }} {{ task.assignee.last_name }}</small>
+                                            </div>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Unassigned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.status.value == 'new' %}
+                                            <span class="badge bg-info">New</span>
+                                        {% elif task.status.value == 'in_progress' %}
+                                            <span class="badge bg-primary">In Progress</span>
+                                        {% elif task.status.value == 'on_hold' %}
+                                            <span class="badge bg-warning">On Hold</span>
+                                        {% elif task.status.value == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif task.status.value == 'cancelled' %}
+                                            <span class="badge bg-danger">Cancelled</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.deadline %}
+                                            <div class="d-flex align-items-center">
+                                                {% set days_remaining = (task.deadline - now).total_seconds() / 86400 %}
+                                                {% if days_remaining < 0 %}
+                                                    <span class="badge bg-danger me-1">Overdue</span>
+                                                {% elif days_remaining < 1 %}
+                                                    <span class="badge bg-warning me-1">Today</span>
+                                                {% elif days_remaining < 2 %}
+                                                    <span class="badge bg-info me-1">Tomorrow</span>
+                                                {% endif %}
+                                                <small>{{ task.deadline.strftime('%d %b %Y') }}</small>
+                                            </div>
+                                        {% else %}
+                                            <span class="text-muted">No deadline</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.creator %}
+                                            {% if task.creator.id == current_user.id %}
+                                                <span class="text-primary">You</span>
+                                            {% else %}
+                                                {{ task.creator.first_name }} {{ task.creator.last_name }}
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Unknown</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if task.status.value != 'completed' and task.status.value != 'cancelled' %}
+                                                {% if task.creator_id == current_user.id or current_user.role.value == 'admin' %}
+                                                    <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="btn btn-outline-warning">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <!-- Pagination -->
+                    {% if tasks.pages > 1 %}
+                    <nav aria-label="Task pagination">
+                        <ul class="pagination justify-content-center">
+                            {% if tasks.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('main.manager_tasks', page=tasks.prev_num, status=status, view=view, sort=sort, search=search_term) }}">
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="fas fa-chevron-left"></i> Previous</span>
+                            </li>
+                            {% endif %}
+                            
+                            {% for page_num in tasks.iter_pages() %}
+                                {% if page_num %}
+                                    {% if page_num != tasks.page %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('main.manager_tasks', page=page_num, status=status, view=view, sort=sort, search=search_term) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                    {% else %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                    {% endif %}
+                                {% else %}
+                                    <li class="page-item disabled">
+                                        <span class="page-link">...</span>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if tasks.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('main.manager_tasks', page=tasks.next_num, status=status, view=view, sort=sort, search=search_term) }}">
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next <i class="fas fa-chevron-right"></i></span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                    
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-tasks fa-4x text-muted mb-3"></i>
+                        <h4>No Tasks Found</h4>
+                        <p class="text-muted">No tasks match your current filter criteria.</p>
+                        <div class="mt-3">
+                            <a href="{{ url_for('main.manager_tasks') }}" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-redo"></i> Reset Filters
+                            </a>
+                            <a href="{{ url_for('tasks.create_task') }}" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Create Task
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Task Summary Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Task Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h6 class="card-title">Status Distribution</h6>
+                                <div class="progress mb-3" style="height: 24px;">
+                                    {% if task_stats.total > 0 %}
+                                        {% set new_percent = (task_stats.new / task_stats.total * 100)|round %}
+                                        {% set in_progress_percent = (task_stats.in_progress / task_stats.total * 100)|round %}
+                                        {% set on_hold_percent = (task_stats.on_hold / task_stats.total * 100)|round %}
+                                        {% set completed_percent = (task_stats.completed / task_stats.total * 100)|round %}
+                                        {% set cancelled_percent = (task_stats.cancelled / task_stats.total * 100)|round %}
+                                        
+                                        {% if new_percent > 0 %}
+                                        <div class="progress-bar bg-info" role="progressbar" 
+                                             style="width: {{ new_percent }}%;" 
+                                             aria-valuenow="{{ new_percent }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100" 
+                                             title="New: {{ task_stats.new }}">
+                                            {% if new_percent >= 10 %}{{ new_percent }}%{% endif %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if in_progress_percent > 0 %}
+                                        <div class="progress-bar bg-primary" role="progressbar" 
+                                             style="width: {{ in_progress_percent }}%;" 
+                                             aria-valuenow="{{ in_progress_percent }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100" 
+                                             title="In Progress: {{ task_stats.in_progress }}">
+                                            {% if in_progress_percent >= 10 %}{{ in_progress_percent }}%{% endif %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if on_hold_percent > 0 %}
+                                        <div class="progress-bar bg-warning" role="progressbar" 
+                                             style="width: {{ on_hold_percent }}%;" 
+                                             aria-valuenow="{{ on_hold_percent }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100" 
+                                             title="On Hold: {{ task_stats.on_hold }}">
+                                            {% if on_hold_percent >= 10 %}{{ on_hold_percent }}%{% endif %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if completed_percent > 0 %}
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ completed_percent }}%;" 
+                                             aria-valuenow="{{ completed_percent }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100"
+                                             title="Completed: {{ task_stats.completed }}">
+                                            {% if completed_percent >= 10 %}{{ completed_percent }}%{% endif %}
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if cancelled_percent > 0 %}
+                                        <div class="progress-bar bg-danger" role="progressbar" 
+                                             style="width: {{ cancelled_percent }}%;" 
+                                             aria-valuenow="{{ cancelled_percent }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100"
+                                             title="Cancelled: {{ task_stats.cancelled }}">
+                                            {% if cancelled_percent >= 10 %}{{ cancelled_percent }}%{% endif %}
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="progress-bar" role="progressbar" 
+                                             style="width: 100%;" 
+                                             aria-valuenow="100" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            No tasks
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-info me-2" style="width: 20px;">&nbsp;</span>
+                                            <small>New: {{ task_stats.new }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-primary me-2" style="width: 20px;">&nbsp;</span>
+                                            <small>In Progress: {{ task_stats.in_progress }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-warning me-2" style="width: 20px;">&nbsp;</span>
+                                            <small>On Hold: {{ task_stats.on_hold }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-success me-2" style="width: 20px;">&nbsp;</span>
+                                            <small>Completed: {{ task_stats.completed }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-danger me-2" style="width: 20px;">&nbsp;</span>
+                                            <small>Cancelled: {{ task_stats.cancelled }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-body">
+                                <h6 class="card-title">Tasks by Priority</h6>
+                                <div class="mb-3">
+                                    <div class="row align-items-center mb-1">
+                                        <div class="col-6">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-angle-double-up text-danger me-2"></i>
+                                                <span>High Priority</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar bg-danger" role="progressbar" 
+                                                    style="width: {{ task_stats.high_priority_percent }}%;" 
+                                                    aria-valuenow="{{ task_stats.high_priority_percent }}" 
+                                                    aria-valuemin="0" 
+                                                    aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">{{ task_stats.high_priority }} tasks</small>
+                                        </div>
+                                    </div>
+                                    <div class="row align-items-center mb-1">
+                                        <div class="col-6">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-angle-up text-warning me-2"></i>
+                                                <span>Medium Priority</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar bg-warning" role="progressbar" 
+                                                    style="width: {{ task_stats.medium_priority_percent }}%;" 
+                                                    aria-valuenow="{{ task_stats.medium_priority_percent }}" 
+                                                    aria-valuemin="0" 
+                                                    aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">{{ task_stats.medium_priority }} tasks</small>
+                                        </div>
+                                    </div>
+                                    <div class="row align-items-center">
+                                        <div class="col-6">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-angle-down text-success me-2"></i>
+                                                <span>Low Priority</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-6">
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar bg-success" role="progressbar" 
+                                                    style="width: {{ task_stats.low_priority_percent }}%;" 
+                                                    aria-valuenow="{{ task_stats.low_priority_percent }}" 
+                                                    aria-valuemin="0" 
+                                                    aria-valuemax="100"></div>
+                                            </div>
+                                            <small class="text-muted">{{ task_stats.low_priority }} tasks</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <hr>
+                                <h6 class="card-title">Team Performance</h6>
+                                <div class="d-flex align-items-center">
+                                    <div class="progress flex-grow-1 me-3" style="height: 8px;">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ task_stats.completion_rate }}%;" 
+                                             aria-valuenow="{{ task_stats.completion_rate }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100"></div>
+                                    </div>
+                                    <span class="fw-bold">{{ task_stats.completion_rate }}%</span>
+                                </div>
+                                <div class="text-muted small text-center mt-1">Team Task Completion Rate</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-submit form when filters change
+        const filterSelect = document.getElementById('status');
+        const viewModeSelect = document.getElementById('viewMode');
+        const sortBySelect = document.getElementById('sortBy');
+        
+        filterSelect.addEventListener('change', function() {
+            this.form.submit();
+        });
+        
+        viewModeSelect.addEventListener('change', function() {
+            this.form.submit();
+        });
+        
+        sortBySelect.addEventListener('change', function() {
+            this.form.submit();
+        });
+        
+        // Initialize popovers for task descriptions
+        var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        popoverTriggerList.map(function (popoverTriggerEl) {
+            return new bootstrap.Popover(popoverTriggerEl);
+        });
+    });
+</script>
+{% endblock %}

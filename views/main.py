@@ -618,3 +618,96 @@ def update_company_settings():
 
     flash('Company settings updated successfully!', 'success')
     return redirect(url_for('main.owner_company_settings'))
+
+
+@main.route('/dashboard/manager')
+@login_required
+@role_required(UserRole.MANAGER.value)
+def manager_dashboard():
+    """
+    Dashboard for manager with team overview and tasks
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not associated with a company.', 'danger')
+        return redirect(url_for('main.index'))
+
+    company_id = current_user.manager.company_id
+
+    # Get operator statistics
+    operators = Operator.query.filter_by(
+        manager_id=current_user.manager.id
+    ).all()
+
+    operator_count = len(operators)
+
+    # Get driver statistics for operators managed by this manager
+    driver_query = Driver.query.filter(
+        Driver.operator_id.in_([op.id for op in operators]) if operators else False
+    )
+    driver_count = driver_query.count()
+
+    # Get task statistics
+    task_query = Task.query.filter_by(
+        company_id=company_id,
+        creator_id=current_user.id
+    )
+    active_tasks = task_query.filter(
+        Task.status.in_([TaskStatus.NEW, TaskStatus.IN_PROGRESS])
+    ).count()
+
+    # Get route statistics for drivers under this manager's operators
+    route_query = Route.query.filter(
+        Route.driver_id.in_([d.id for d in driver_query.all()]) if driver_count > 0 else False
+    )
+    active_routes = route_query.filter(
+        Route.status.in_([RouteStatus.PLANNED, RouteStatus.IN_PROGRESS])
+    ).count()
+
+    # Get team performance data
+    # In a real application, this would query actual performance data
+    # Here we'll generate sample data for demonstration
+    team_performance = []
+
+    for operator in operators:
+        if operator.user:
+            # Get tasks created by this operator
+            operator_tasks = Task.query.filter_by(
+                creator_id=operator.id
+            ).count()
+
+            operator_completed_tasks = Task.query.filter_by(
+                creator_id=operator.id,
+                status=TaskStatus.COMPLETED
+            ).count()
+
+            # Calculate completion rate
+            completion_rate = (operator_completed_tasks / operator_tasks * 100) if operator_tasks > 0 else 0
+
+            team_performance.append({
+                'name': f"{operator.user.first_name} {operator.user.last_name}",
+                'role': 'Operator',
+                'assigned_tasks': operator_tasks,
+                'completed_tasks': operator_completed_tasks,
+                'completion_rate': round(completion_rate, 1)
+            })
+
+    # Get recent tasks
+    recent_tasks = Task.query.filter_by(
+        company_id=company_id,
+        creator_id=current_user.id
+    ).order_by(
+        Task.created_at.desc()
+    ).limit(5).all()
+
+    log_action(ActionType.VIEW, "Viewed manager dashboard", db)
+
+    return render_template(
+        'manager/dashboard.html',
+        title='Manager Dashboard',
+        operator_count=operator_count,
+        driver_count=driver_count,
+        active_tasks=active_tasks,
+        active_routes=active_routes,
+        team_performance=team_performance,
+        recent_tasks=recent_tasks
+    )

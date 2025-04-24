@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-chart-bar"></i> Statistics
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('statistics.dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Overview Dashboard
+                </a>
+                <a href="{{ url_for('statistics.company') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-building"></i> Company Statistics
+                </a>
+                <a href="{{ url_for('statistics.routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes Statistics
+                </a>
+                <a href="{{ url_for('statistics.users') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> User Performance
+                </a>
+                <a href="{{ url_for('statistics.reports') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-file-download"></i> Reports
+                </a>
+            </div>
+        </div>
+
+        <!-- Date range filter card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Date Range</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{{ url_for('statistics.reports') }}" id="dateFilterForm">
+                    <div class="mb-3">
+                        <label for="period" class="form-label">Preset Periods</label>
+                        <select class="form-select" id="period" name="period">
+                            <option value="7">Last 7 days</option>
+                            <option value="30" selected>Last 30 days</option>
+                            <option value="90">Last 90 days</option>
+                            <option value="custom">Custom range</option>
+                        </select>
+                    </div>
+
+                    <div id="customDateRange" style="display: none;">
+                        <div class="mb-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date">
+                        </div>
+                        <div class="mb-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Apply Filter</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {% if current_user.role.value == 'admin' %}
+        <!-- Company filter (admin only) -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Company Filter</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{{ url_for('statistics.reports') }}" id="companyForm">
+                    <div class="mb-3">
+                        <label for="companySelect" class="form-label">Select Company</label>
+                        <select class="form-select" id="companySelect" name="company_id" onchange="this.form.submit();">
+                            <option value="0" {% if not company_id %}selected{% endif %}>All Companies</option>
+                            
+                            {% for company in companies %}
+                            <option value="{{ company.id }}" {% if company_id == company.id %}selected{% endif %}>
+                                {{ company.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Available Reports</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-4">
+                    Select a report to download. All reports include data for your selected date range and company filter.
+                </p>
+
+                {% if reports %}
+                    <div class="list-group mb-4">
+                        {% for report in reports %}
+                            <div class="list-group-item list-group-item-action p-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <h5 class="mb-1">{{ report.name }}</h5>
+                                        <p class="mb-1 text-muted">{{ report.description }}</p>
+                                    </div>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-primary dropdown-toggle" type="button" id="dropdown{{ report.id }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-download me-2"></i> Download
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="dropdown{{ report.id }}">
+                                            {% for format in report.formats %}
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ url_for('statistics.download_report', report_id=report.id, format=format) }}">
+                                                        {% if format == 'csv' %}
+                                                            <i class="fas fa-file-csv me-2 text-success"></i> CSV
+                                                        {% elif format == 'excel' %}
+                                                            <i class="fas fa-file-excel me-2 text-success"></i> Excel
+                                                        {% elif format == 'pdf' %}
+                                                            <i class="fas fa-file-pdf me-2 text-danger"></i> PDF
+                                                        {% endif %}
+                                                    </a>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                        <h5>No Reports Available</h5>
+                        <p class="text-muted">There are no reports available with your current filter settings.</p>
+                    </div>
+                {% endif %}
+
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6><i class="fas fa-info-circle me-2 text-primary"></i> Report Information</h6>
+                        <p class="mb-0">Reports are generated based on your current date range and company filter settings. 
+                           For larger data sets, report generation may take a few moments. All reports will download to 
+                           your device automatically.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Report Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Custom Report</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Need a custom report? Use the options below to configure exactly what you need.
+                </p>
+
+                <form method="get" action="{{ url_for('statistics.download_report', report_id='custom') }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Report Type</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="report_type" id="reportTasks" value="tasks" checked>
+                                    <label class="form-check-label" for="reportTasks">
+                                        Tasks Report
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="report_type" id="reportRoutes" value="routes">
+                                    <label class="form-check-label" for="reportRoutes">
+                                        Routes Report
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="report_type" id="reportDrivers" value="drivers">
+                                    <label class="form-check-label" for="reportDrivers">
+                                        Drivers Performance
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Report Format</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="format" id="formatCSV" value="csv" checked>
+                                    <label class="form-check-label" for="formatCSV">
+                                        <i class="fas fa-file-csv me-2 text-success"></i> CSV
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="format" id="formatExcel" value="excel">
+                                    <label class="form-check-label" for="formatExcel">
+                                        <i class="fas fa-file-excel me-2 text-success"></i> Excel
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="format" id="formatPDF" value="pdf">
+                                    <label class="form-check-label" for="formatPDF">
+                                        <i class="fas fa-file-pdf me-2 text-danger"></i> PDF
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customStartDate" class="form-label">Start Date</label>
+                                <input type="date" class="form-control" id="customStartDate" name="start_date">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="customEndDate" class="form-label">End Date</label>
+                                <input type="date" class="form-control" id="customEndDate" name="end_date">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-download me-2"></i> Generate Custom Report
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const periodSelect = document.getElementById('period');
+        const customDateRange = document.getElementById('customDateRange');
+        
+        periodSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.style.display = 'block';
+            } else {
+                customDateRange.style.display = 'none';
+                this.form.submit();
+            }
+        });
+
+        // Set current date in custom report form
+        const today = new Date();
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(today.getDate() - 30);
+
+        const formatDate = date => {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        const customStartDate = document.getElementById('customStartDate');
+        const customEndDate = document.getElementById('customEndDate');
+
+        if (customStartDate && customEndDate) {
+            customStartDate.value = formatDate(thirtyDaysAgo);
+            customEndDate.value = formatDate(today);
+        }
+    });
+</script>
+{% endblock %}

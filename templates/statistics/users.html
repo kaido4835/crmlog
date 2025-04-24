@@ -418,11 +418,13 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {% for user in user_stats|sort(attribute='task_count', reverse=true)[:5] %}
-                                                <tr>
-                                                    <td>{{ user.name }}</td>
-                                                    <td>{{ user.task_count }}</td>
-                                                </tr>
+                                            {% for user in user_stats|sort(attribute='task_count', reverse=true) %}
+                                                {% if loop.index <= 5 %}
+                                                    <tr>
+                                                        <td>{{ user.name }}</td>
+                                                        <td>{{ user.task_count }}</td>
+                                                    </tr>
+                                                {% endif %}
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -475,13 +477,15 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for user in user_stats|sort(attribute='login_count', reverse=true)[:10] %}
-                                            <tr>
-                                                <td>{{ user.name }}</td>
-                                                <td>{{ user.login_count }}</td>
-                                                <td>{{ user.message_count }}</td>
-                                                <td>{{ user.login_count + user.message_count }}</td>
-                                            </tr>
+                                        {% for user in user_stats|sort(attribute='login_count', reverse=true) %}
+                                            {% if loop.index <= 10 %}
+                                                <tr>
+                                                    <td>{{ user.name }}</td>
+                                                    <td>{{ user.login_count }}</td>
+                                                    <td>{{ user.message_count }}</td>
+                                                    <td>{{ user.login_count + user.message_count }}</td>
+                                                </tr>
+                                            {% endif %}
                                         {% endfor %}
                                     </tbody>
                                 </table>
