@@ -295,11 +295,13 @@
                                                     <td>Users</td>
                                                     <td class="text-end">{{ role_users|length }}</td>
                                                 </tr>
+                                        {% endif %}
                                                 {% if role == 'driver' %}
                                                     <tr>
                                                         <td>Total Routes</td>
                                                         <td class="text-end">{{ role_users|sum(attribute='route_count') }}</td>
                                                     </tr>
+                                        {% endif %}
                                                     <tr>
                                                         <td>Completion Rate</td>
                                                         <td class="text-end">
@@ -308,11 +310,13 @@
                                                             {{ (completed_routes * 100 / total_routes)|round|int if total_routes > 0 else 0 }}%
                                                         </td>
                                                     </tr>
+                                        {% endif %}
                                                 {% elif role in ['manager', 'operator'] %}
                                                     <tr>
                                                         <td>Total Tasks</td>
                                                         <td class="text-end">{{ role_users|sum(attribute='task_count') }}</td>
                                                     </tr>
+                                        {% endif %}
                                                     <tr>
                                                         <td>Completion Rate</td>
                                                         <td class="text-end">
@@ -321,6 +325,7 @@
                                                             {{ (completed_tasks * 100 / total_tasks)|round|int if total_tasks > 0 else 0 }}%
                                                         </td>
                                                     </tr>
+                                        {% endif %}
                                                 {% endif %}
                                             </table>
                                         </div>
@@ -360,13 +365,16 @@
                                                 <th>Driver</th>
                                                 <th>Distance (km)</th>
                                             </tr>
+                                        {% endif %}
                                         </thead>
                                         <tbody>
-                                            {% for user in user_stats|sort(attribute='total_distance', reverse=true)[:5] %}
+                                            {% for user in user_stats|sort(attribute='total_distance', reverse=true) %}
+                                        {% if loop.index <= 5 %}
                                                 <tr>
                                                     <td>{{ user.name }}</td>
                                                     <td>{{ user.total_distance|round(1) }}</td>
                                                 </tr>
+                                        {% endif %}
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -382,9 +390,11 @@
                                                 <th>Completion</th>
                                                 <th>Rate</th>
                                             </tr>
+                                        {% endif %}
                                         </thead>
                                         <tbody>
-                                            {% for user in user_stats|sort(attribute='performance_score', reverse=true)[:5] %}
+                                            {% for user in user_stats|sort(attribute='performance_score', reverse=true) %}
+                                        {% if loop.index <= 5 %}
                                                 <tr>
                                                     <td>{{ user.name }}</td>
                                                     <td>{{ user.completed_route_count }}/{{ user.route_count }}</td>
@@ -396,6 +406,7 @@
                                                         </div>
                                                     </td>
                                                 </tr>
+                                        {% endif %}
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -412,6 +423,7 @@
                                                 <th>{{ role_filter|title }}</th>
                                                 <th>Tasks</th>
                                             </tr>
+                                        {% endif %}
                                         </thead>
                                         <tbody>
                                             {% for user in user_stats|sort(attribute='task_count', reverse=true)[:5] %}
@@ -419,6 +431,7 @@
                                                     <td>{{ user.name }}</td>
                                                     <td>{{ user.task_count }}</td>
                                                 </tr>
+                                        {% endif %}
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -434,9 +447,11 @@
                                                 <th>Completion</th>
                                                 <th>Rate</th>
                                             </tr>
+                                        {% endif %}
                                         </thead>
                                         <tbody>
-                                            {% for user in user_stats|sort(attribute='performance_score', reverse=true)[:5] %}
+                                            {% for user in user_stats|sort(attribute='performance_score', reverse=true) %}
+                                        {% if loop.index <= 5 %}
                                                 <tr>
                                                     <td>{{ user.name }}</td>
                                                     <td>{{ user.completed_task_count }}/{{ user.task_count }}</td>
@@ -448,6 +463,7 @@
                                                         </div>
                                                     </td>
                                                 </tr>
+                                        {% endif %}
                                             {% endfor %}
                                         </tbody>
                                     </table>
@@ -476,6 +492,7 @@
                                                 <td>{{ user.message_count }}</td>
                                                 <td>{{ user.login_count + user.message_count }}</td>
                                             </tr>
+                                        {% endif %}
                                         {% endfor %}
                                     </tbody>
                                 </table>
