@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-chart-bar"></i> Statistics
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('statistics.dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Overview Dashboard
+                </a>
+                <a href="{{ url_for('statistics.company') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-building"></i> Company Statistics
+                </a>
+                <a href="{{ url_for('statistics.routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes Statistics
+                </a>
+                <a href="{{ url_for('statistics.users') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-users"></i> User Performance
+                </a>
+                <a href="{{ url_for('statistics.reports') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-download"></i> Reports
+                </a>
+            </div>
+        </div>
+
+        <!-- Date range filter card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Date Range</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{{ url_for('statistics.users') }}" id="dateFilterForm">
+                    <!-- Keep the current role filter when changing date range -->
+                    <input type="hidden" name="role" value="{{ role_filter }}">
+                    
+                    <div class="mb-3">
+                        <label for="period" class="form-label">Preset Periods</label>
+                        <select class="form-select" id="period" name="period" onchange="this.form.submit()">
+                            <option value="7" {% if period == 7 %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if period == 30 %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if period == 90 %}selected{% endif %}>Last 90 days</option>
+                            <option value="custom" {% if period == custom %}selected{% endif %}>Custom range</option>
+                        </select>
+                    </div>
+
+                    <div id="customDateRange" {% if period != 'custom' %}style="display: none;"{% endif %}>
+                        <div class="mb-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Apply Filter</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Role filter card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Role Filter</h5>
+            </div>
+            <div class="card-body">
+                <form method="get" action="{{ url_for('statistics.users') }}" id="roleFilterForm">
+                    <!-- Keep the current date range when changing role filter -->
+                    <input type="hidden" name="period" value="{{ period }}">
+                    {% if period == 'custom' %}
+                        <input type="hidden" name="start_date" value="{{ start_date }}">
+                        <input type="hidden" name="end_date" value="{{ end_date }}">
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="role" class="form-label">Select Role</label>
+                        <select class="form-select" id="role" name="role" onchange="this.form.submit()">
+                            <option value="all" {% if role_filter == all %}selected{% endif %}>All Roles</option>
+                            <option value="manager" {% if role_filter == manager %}selected{% endif %}>Managers</option>
+                            <option value="operator" {% if role_filter == operator %}selected{% endif %}>Operators</option>
+                            <option value="driver" {% if role_filter == driver %}selected{% endif %}>Drivers</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <!-- Performance Overview Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">User Performance Overview</h5>
+            </div>
+            <div class="card-body">
+                {% if user_stats %}
+                    <!-- Performance metrics summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-3 text-center">
+                            <div class="border rounded p-3">
+                                <div class="display-5 mb-2">{{ user_stats|length }}</div>
+                                <div class="text-muted">Total Users</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="border rounded p-3">
+                                <div class="display-5 mb-2">
+                                    {{ (user_stats|selectattr('performance_score', '>', 80)|list|length * 100 / user_stats|length)|round|int if user_stats|length > 0 else 0 }}%
+                                </div>
+                                <div class="text-muted">High Performance</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="border rounded p-3">
+                                {% set avg_score = (user_stats|sum(attribute='performance_score') / user_stats|length)|round|int if user_stats|length > 0 else 0 %}
+                                <div class="display-5 mb-2">{{ avg_score }}%</div>
+                                <div class="text-muted">Avg. Performance</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <div class="border rounded p-3">
+                                {% set active_count = user_stats|selectattr('login_count', '>', 0)|list|length %}
+                                <div class="display-5 mb-2">{{ (active_count * 100 / user_stats|length)|round|int if user_stats|length > 0 else 0 }}%</div>
+                                <div class="text-muted">Active Users</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User performance table -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Role</th>
+                                    {% if role_filter == 'driver' or role_filter == 'all' %}
+                                        <th>Routes</th>
+                                        <th>Distance</th>
+                                    {% endif %}
+                                    {% if role_filter == 'manager' or role_filter == 'operator' or role_filter == 'all' %}
+                                        <th>Tasks</th>
+                                    {% endif %}
+                                    <th>Activity</th>
+                                    <th>Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for user in user_stats %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="rounded-circle bg-primary d-inline-flex justify-content-center align-items-center me-2" style="width: 35px; height: 35px;">
+                                                    <span class="text-white">{{ user.name[:1] }}</span>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold">{{ user.name }}</div>
+                                                    <small class="text-muted">{{ user.email }}</small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {% if user.role == 'manager' %}
+                                                <span class="badge bg-success">Manager</span>
+                                            {% elif user.role == 'operator' %}
+                                                <span class="badge bg-info">Operator</span>
+                                            {% elif user.role == 'driver' %}
+                                                <span class="badge bg-warning">Driver</span>
+                                            {% elif user.role == 'company_owner' %}
+                                                <span class="badge bg-primary">Owner</span>
+                                            {% elif user.role == 'admin' %}
+                                                <span class="badge bg-danger">Admin</span>
+                                            {% endif %}
+                                        </td>
+                                        {% if role_filter == 'driver' or role_filter == 'all' %}
+                                            <td>
+                                                {% if user.role == 'driver' %}
+                                                    {{ user.completed_route_count }}/{{ user.route_count }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if user.role == 'driver' %}
+                                                    {{ user.total_distance|round(1) }} km
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        {% endif %}
+                                        {% if role_filter == 'manager' or role_filter == 'operator' or role_filter == 'all' %}
+                                            <td>
+                                                {% if user.role in ['manager', 'operator'] %}
+                                                    {{ user.completed_task_count }}/{{ user.task_count }}
+                                                {% else %}
+                                                    <span class="text-muted">-</span>
+                                                {% endif %}
+                                            </td>
+                                        {% endif %}
+                                        <td>
+                                            <div>Logins: {{ user.login_count }}</div>
+                                            <div>Messages: {{ user.message_count }}</div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="progress flex-grow-1 me-2" style="height: 8px;">
+                                                    <div class="progress-bar 
+                                                        {% if user.performance_score >= 80 %}bg-success
+                                                        {% elif user.performance_score >= 60 %}bg-warning
+                                                        {% else %}bg-danger{% endif %}" 
+                                                        role="progressbar" 
+                                                        style="width: {{ user.performance_score }}%;" 
+                                                        aria-valuenow="{{ user.performance_score }}" 
+                                                        aria-valuemin="0" 
+                                                        aria-valuemax="100">
+                                                    </div>
+                                                </div>
+                                                <span>{{ user.performance_score }}%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Export options -->
+                    <div class="text-end mt-3">
+                        <a href="{{ url_for('statistics.download_report', report_id='user_performance', format='csv', role=role_filter, period=period) }}" class="btn btn-outline-primary me-2">
+                            <i class="fas fa-download"></i> Export to CSV
+                        </a>
+                        <a href="{{ url_for('statistics.download_report', report_id='user_performance', format='excel', role=role_filter, period=period) }}" class="btn btn-outline-success">
+                            <i class="fas fa-file-excel"></i> Export to Excel
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h5>No User Data Available</h5>
+                        <p class="text-muted">There are no users matching your filter criteria or for the selected time period.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Performance by Role Card -->
+        {% if user_stats|length > 0 and role_filter == 'all' %}
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Performance by Role</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% set roles = ['manager', 'operator', 'driver'] %}
+                        {% for role in roles %}
+                            {% set role_users = user_stats|selectattr('role', 'equalto', role)|list %}
+                            {% if role_users|length > 0 %}
+                                <div class="col-md-4 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-header text-center">
+                                            {% if role == 'manager' %}
+                                                <span class="badge bg-success">Managers</span>
+                                            {% elif role == 'operator' %}
+                                                <span class="badge bg-info">Operators</span>
+                                            {% elif role == 'driver' %}
+                                                <span class="badge bg-warning">Drivers</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="card-body">
+                                            {% set avg_score = (role_users|sum(attribute='performance_score') / role_users|length)|round|int %}
+                                            <div class="text-center mb-3">
+                                                <div class="display-6">{{ avg_score }}%</div>
+                                                <small class="text-muted">Average Performance</small>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <div class="d-flex justify-content-between mb-1">
+                                                    <small>Top Performer</small>
+                                                    {% set top_performer = role_users|sort(attribute='performance_score')|last %}
+                                                    <small>{{ top_performer.name }}</small>
+                                                </div>
+                                                <div class="progress" style="height: 5px;">
+                                                    <div class="progress-bar bg-success" role="progressbar"
+                                                        style="width: {{ top_performer.performance_score }}%;">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <table class="table table-sm">
+                                                <tr>
+                                                    <td>Users</td>
+                                                    <td class="text-end">{{ role_users|length }}</td>
+                                                </tr>
+                                                {% if role == 'driver' %}
+                                                    <tr>
+                                                        <td>Total Routes</td>
+                                                        <td class="text-end">{{ role_users|sum(attribute='route_count') }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Completion Rate</td>
+                                                        <td class="text-end">
+                                                            {% set total_routes = role_users|sum(attribute='route_count') %}
+                                                            {% set completed_routes = role_users|sum(attribute='completed_route_count') %}
+                                                            {{ (completed_routes * 100 / total_routes)|round|int if total_routes > 0 else 0 }}%
+                                                        </td>
+                                                    </tr>
+                                                {% elif role in ['manager', 'operator'] %}
+                                                    <tr>
+                                                        <td>Total Tasks</td>
+                                                        <td class="text-end">{{ role_users|sum(attribute='task_count') }}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td>Completion Rate</td>
+                                                        <td class="text-end">
+                                                            {% set total_tasks = role_users|sum(attribute='task_count') %}
+                                                            {% set completed_tasks = role_users|sum(attribute='completed_task_count') %}
+                                                            {{ (completed_tasks * 100 / total_tasks)|round|int if total_tasks > 0 else 0 }}%
+                                                        </td>
+                                                    </tr>
+                                                {% endif %}
+                                            </table>
+                                        </div>
+                                        <div class="card-footer bg-white">
+                                            <a href="{{ url_for('statistics.users', role=role) }}" class="btn btn-sm btn-outline-primary d-block">View {{ role|title }}s</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Individual Role Performance Cards -->
+        {% if role_filter != 'all' and user_stats|length > 0 %}
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        {% if role_filter == 'manager' %}Managers
+                        {% elif role_filter == 'operator' %}Operators
+                        {% elif role_filter == 'driver' %}Drivers{% endif %}
+                        Detailed Performance
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% if role_filter == 'driver' %}
+                            <!-- Driver-specific metrics -->
+                            <div class="col-md-6 mb-4">
+                                <h6 class="card-title">Top Drivers by Distance</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Driver</th>
+                                                <th>Distance (km)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for user in user_stats|sort(attribute='total_distance', reverse=true)[:5] %}
+                                                <tr>
+                                                    <td>{{ user.name }}</td>
+                                                    <td>{{ user.total_distance|round(1) }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <h6 class="card-title">Top Drivers by Completion Rate</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Driver</th>
+                                                <th>Completion</th>
+                                                <th>Rate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for user in user_stats|sort(attribute='performance_score', reverse=true)[:5] %}
+                                                <tr>
+                                                    <td>{{ user.name }}</td>
+                                                    <td>{{ user.completed_route_count }}/{{ user.route_count }}</td>
+                                                    <td>
+                                                        <div class="progress" style="height: 5px;">
+                                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                                style="width: {{ user.performance_score }}%;">
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {% elif role_filter in ['manager', 'operator'] %}
+                            <!-- Manager/Operator-specific metrics -->
+                            <div class="col-md-6 mb-4">
+                                <h6 class="card-title">Top {{ role_filter|title }}s by Tasks Created</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ role_filter|title }}</th>
+                                                <th>Tasks</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for user in user_stats|sort(attribute='task_count', reverse=true)[:5] %}
+                                                <tr>
+                                                    <td>{{ user.name }}</td>
+                                                    <td>{{ user.task_count }}</td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <h6 class="card-title">Top {{ role_filter|title }}s by Completion Rate</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ role_filter|title }}</th>
+                                                <th>Completion</th>
+                                                <th>Rate</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for user in user_stats|sort(attribute='performance_score', reverse=true)[:5] %}
+                                                <tr>
+                                                    <td>{{ user.name }}</td>
+                                                    <td>{{ user.completed_task_count }}/{{ user.task_count }}</td>
+                                                    <td>
+                                                        <div class="progress" style="height: 5px;">
+                                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                                style="width: {{ user.performance_score }}%;">
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <!-- Activity metrics for all roles -->
+                        <div class="col-md-12">
+                            <h6 class="card-title">User Activity</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Logins</th>
+                                            <th>Messages</th>
+                                            <th>Total Activity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for user in user_stats|sort(attribute='login_count', reverse=true)[:10] %}
+                                            <tr>
+                                                <td>{{ user.name }}</td>
+                                                <td>{{ user.login_count }}</td>
+                                                <td>{{ user.message_count }}</td>
+                                                <td>{{ user.login_count + user.message_count }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const periodSelect = document.getElementById('period');
+        const customDateRange = document.getElementById('customDateRange');
+        
+        periodSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.style.display = 'block';
+            } else {
+                customDateRange.style.display = 'none';
+                this.form.submit();
+            }
+        });
+    });
+</script>
+{% endblock %}

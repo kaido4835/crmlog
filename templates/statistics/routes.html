@@ -36,10 +36,10 @@
                     <div class="mb-3">
                         <label for="period" class="form-label">Preset Periods</label>
                         <select class="form-select" id="period" name="period" onchange="this.form.submit()">
-                            <option value="7" {% if period == '7' %}selected{% endif %}>Last 7 days</option>
-                            <option value="30" {% if period == '30' %}selected{% endif %}>Last 30 days</option>
-                            <option value="90" {% if period == '90' %}selected{% endif %}>Last 90 days</option>
-                            <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom range</option>
+                            <option value="7" {% if period == 7 %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if period == 30 %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if period == 90 %}selected{% endif %}>Last 90 days</option>
+                            <option value="custom" {% if period == custom %}selected{% endif %}>Custom range</option>
                         </select>
                     </div>
 
