@@ -1,10 +1,10 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy import or_, func
 
 from app import db
-from models import UserRole, User, Manager, Operator, Driver, Company, CompanyOwner
+from models import UserRole, User, Manager, Operator, Driver, Company, CompanyOwner, Admin, Message
 from models import Task, TaskStatus, Route, RouteStatus, ActionType, Log
 from utils import role_required, log_action
 from forms import CompanyForm, UserForm, EditUserForm
@@ -710,4 +710,614 @@ def manager_dashboard():
         active_routes=active_routes,
         team_performance=team_performance,
         recent_tasks=recent_tasks
+    )
+
+
+@main.route('/dashboard/manager/operators')
+@login_required
+@role_required(UserRole.MANAGER.value)
+def manager_operators():
+    """
+    Show the operators assigned to this manager
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not associated with a company.', 'danger')
+        return redirect(url_for('main.index'))
+
+    company_id = current_user.manager.company_id
+    page = request.args.get('page', 1, type=int)
+
+    # Get operators assigned to this manager
+    operators_query = Operator.query.filter_by(
+        manager_id=current_user.manager.id
+    ).join(User, Operator.id == User.id)
+
+    # Apply sorting
+    operators_query = operators_query.order_by(User.first_name)
+
+    # Paginate results
+    pagination = operators_query.paginate(page=page, per_page=10)
+    operators = pagination.items
+
+    log_action(ActionType.VIEW, "Viewed operators list", db)
+
+    return render_template(
+        'manager/operators.html',
+        title='My Operators',
+        operators=operators,
+        pagination=pagination
+    )
+
+
+@main.route('/dashboard/manager/operators/<int:operator_id>')
+@login_required
+@role_required(UserRole.MANAGER.value)
+def view_operator(operator_id):
+    """
+    View details of a specific operator
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not associated with a company.', 'danger')
+        return redirect(url_for('main.index'))
+
+    # Get operator
+    operator = Operator.query.get_or_404(operator_id)
+
+    # Check if the operator is assigned to this manager
+    if operator.manager_id != current_user.manager.id:
+        flash('This operator is not assigned to you.', 'danger')
+        return redirect(url_for('main.manager_operators'))
+
+    # Get activity logs for this operator
+    activity_logs = Log.query.filter_by(
+        user_id=operator.id
+    ).order_by(Log.timestamp.desc()).limit(10).all()
+
+    # Get available drivers for assignment
+    available_drivers = Driver.query.filter_by(
+        company_id=current_user.manager.company_id
+    ).all()
+
+    # Get all operators for reassignment options
+    operators = Operator.query.filter_by(
+        company_id=current_user.manager.company_id
+    ).all()
+
+    log_action(ActionType.VIEW, f"Viewed operator {operator.user.username}", db)
+
+    return render_template(
+        'manager/view_operator.html',
+        title=f'Operator: {operator.user.first_name} {operator.user.last_name}',
+        operator=operator,
+        activity_logs=activity_logs,
+        available_drivers=available_drivers,
+        operators=operators
+    )
+
+
+@main.route('/dashboard/manager/operators/add', methods=['GET', 'POST'])
+@login_required
+@role_required(UserRole.MANAGER.value)
+def add_operator():
+    """
+    Add a new operator to the team
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not associated with a company.', 'danger')
+        return redirect(url_for('main.index'))
+
+    company_id = current_user.manager.company_id
+
+    # Get existing operators without a manager
+    available_users_query = User.query.join(
+        Operator, User.id == Operator.id
+    ).filter(
+        Operator.company_id == company_id,
+        Operator.manager_id == None
+    )
+
+    available_users = available_users_query.all()
+
+    if request.method == 'POST':
+        # Handle form submission
+        operator_id = request.form.get('operator_id')
+
+        if operator_id:
+            try:
+                # Assign existing operator to this manager
+                operator = Operator.query.get(operator_id)
+
+                if operator and operator.company_id == company_id:
+                    operator.manager_id = current_user.manager.id
+                    db.session.commit()
+
+                    log_action(ActionType.UPDATE, f"Added operator {operator.user.username} to team", db)
+                    flash(f'Operator {operator.user.first_name} {operator.user.last_name} added to your team!', 'success')
+                    return redirect(url_for('main.manager_operators'))
+                else:
+                    flash('Invalid operator selected.', 'danger')
+            except Exception as e:
+                db.session.rollback()
+                flash(f'Error adding operator: {str(e)}', 'danger')
+
+    log_action(ActionType.VIEW, "Viewed add operator page", db)
+
+    return render_template(
+        'manager/add_operator.html',
+        title='Add Operator',
+        available_users=available_users
+    )
+
+
+@main.route('/dashboard/manager/operators/request', methods=['POST'])
+@login_required
+@role_required(UserRole.MANAGER.value)
+def request_operator():
+    """
+    Request a new operator account to be created
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not associated with a company.', 'danger')
+        return redirect(url_for('main.index'))
+
+    company_id = current_user.manager.company_id
+
+    # Get form data
+    first_name = request.form.get('first_name')
+    last_name = request.form.get('last_name')
+    email = request.form.get('email')
+    phone = request.form.get('phone')
+    justification = request.form.get('justification')
+
+    if not first_name or not last_name or not email or not justification:
+        flash('Please fill out all required fields.', 'danger')
+        return redirect(url_for('main.add_operator'))
+
+    try:
+        # Find company owner
+        company_owner = CompanyOwner.query.filter_by(company_id=company_id).first()
+
+        if not company_owner or not company_owner.user:
+            # If no owner found, notify admin
+            admins = Admin.query.join(User, Admin.id == User.id).filter(User.is_active == True).all()
+
+            for admin in admins:
+                # Create notification message to admin
+                notification = Message(
+                    content=f"Manager {current_user.first_name} {current_user.last_name} requests a new operator account:\n\n"
+                            f"Name: {first_name} {last_name}\n"
+                            f"Email: {email}\n"
+                            f"Phone: {phone or 'Not provided'}\n\n"
+                            f"Justification: {justification}",
+                    sender_id=current_user.id,
+                    recipient_id=admin.id,
+                    task_id=None,
+                    company_id=company_id,
+                    is_read=False,
+                    sent_at=datetime.utcnow()
+                )
+
+                db.session.add(notification)
+
+            db.session.commit()
+            log_action(ActionType.CREATE, "Requested new operator account (to admins)", db)
+            flash('Your request has been sent to the system administrators.', 'success')
+        else:
+            # Create notification message to company owner
+            notification = Message(
+                content=f"Manager {current_user.first_name} {current_user.last_name} requests a new operator account:\n\n"
+                        f"Name: {first_name} {last_name}\n"
+                        f"Email: {email}\n"
+                        f"Phone: {phone or 'Not provided'}\n\n"
+                        f"Justification: {justification}",
+                sender_id=current_user.id,
+                recipient_id=company_owner.user.id,
+                task_id=None,
+                company_id=company_id,
+                is_read=False,
+                sent_at=datetime.utcnow()
+            )
+
+            db.session.add(notification)
+            db.session.commit()
+            log_action(ActionType.CREATE, "Requested new operator account (to company owner)", db)
+            flash('Your request has been sent to the company owner.', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error submitting request: {str(e)}', 'danger')
+
+    return redirect(url_for('main.manager_operators'))
+
+
+@main.route('/dashboard/manager/operators/<int:operator_id>/remove', methods=['POST'])
+@login_required
+@role_required(UserRole.MANAGER.value)
+def remove_operator(operator_id):
+    """
+    Remove an operator from this manager's team
+    """
+    if not current_user.manager:
+        flash('You are not authorized to perform this action.', 'danger')
+        return redirect(url_for('main.index'))
+
+    # Get operator
+    operator = Operator.query.get_or_404(operator_id)
+
+    # Check if operator is assigned to this manager
+    if operator.manager_id != current_user.manager.id:
+        flash('This operator is not assigned to you.', 'danger')
+        return redirect(url_for('main.manager_operators'))
+
+    try:
+        # Store operator name for flash message
+        operator_name = f"{operator.user.first_name} {operator.user.last_name}"
+
+        # Remove manager assignment
+        operator.manager_id = None
+        db.session.commit()
+
+        log_action(ActionType.UPDATE, f"Removed operator {operator.user.username} from team", db)
+        flash(f'Operator {operator_name} removed from your team.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error removing operator: {str(e)}', 'danger')
+
+    return redirect(url_for('main.manager_operators'))
+
+
+@main.route('/dashboard/manager/operators/<int:operator_id>/assign-drivers', methods=['POST'])
+@login_required
+@role_required(UserRole.MANAGER.value)
+def assign_drivers(operator_id):
+    """
+    Assign drivers to an operator
+    """
+    if not current_user.manager:
+        flash('You are not authorized to perform this action.', 'danger')
+        return redirect(url_for('main.index'))
+
+    # Get operator
+    operator = Operator.query.get_or_404(operator_id)
+
+    # Check if operator is assigned to this manager
+    if operator.manager_id != current_user.manager.id:
+        flash('This operator is not assigned to you.', 'danger')
+        return redirect(url_for('main.manager_operators'))
+
+    try:
+        # Get selected driver IDs
+        driver_ids = request.form.getlist('driver_ids[]')
+
+        # Get all drivers in the company
+        company_drivers = Driver.query.filter_by(
+            company_id=current_user.manager.company_id
+        ).all()
+
+        # Update driver assignments
+        for driver in company_drivers:
+            if str(driver.id) in driver_ids:
+                # Assign to this operator
+                driver.operator_id = operator.id
+            elif driver.operator_id == operator.id:
+                # Unassign from this operator
+                driver.operator_id = None
+
+        db.session.commit()
+        log_action(ActionType.UPDATE, f"Updated driver assignments for operator {operator.user.username}", db)
+
+        flash('Driver assignments updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating driver assignments: {str(e)}', 'danger')
+
+    return redirect(url_for('main.view_operator', operator_id=operator_id))
+
+
+@main.route('/dashboard/manager/operators/<int:operator_id>/drivers/<int:driver_id>/unassign', methods=['POST'])
+@login_required
+@role_required(UserRole.MANAGER.value)
+def unassign_driver(operator_id, driver_id):
+    """
+    Remove a driver from an operator
+    """
+    if not current_user.manager:
+        flash('You are not authorized to perform this action.', 'danger')
+        return redirect(url_for('main.index'))
+
+    # Get operator and driver
+    operator = Operator.query.get_or_404(operator_id)
+    driver = Driver.query.get_or_404(driver_id)
+
+    # Check if operator is assigned to this manager
+    if operator.manager_id != current_user.manager.id:
+        flash('This operator is not assigned to you.', 'danger')
+        return redirect(url_for('main.manager_operators'))
+
+    # Check if driver is assigned to this operator
+    if driver.operator_id != operator.id:
+        flash('This driver is not assigned to this operator.', 'danger')
+        return redirect(url_for('main.view_operator', operator_id=operator_id))
+
+    try:
+        # Store names for flash message
+        driver_name = f"{driver.user.first_name} {driver.user.last_name}"
+
+        # Remove operator assignment
+        driver.operator_id = None
+        db.session.commit()
+
+        log_action(ActionType.UPDATE, f"Unassigned driver {driver.user.username} from operator {operator.user.username}", db)
+        flash(f'Driver {driver_name} unassigned from operator.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error unassigning driver: {str(e)}', 'danger')
+
+    return redirect(url_for('main.view_operator', operator_id=operator_id))
+
+
+@main.route('/dashboard/manager/tasks')
+@login_required
+@role_required(UserRole.MANAGER.value)
+def manager_tasks():
+    """
+    Show task management interface for manager
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not associated with a company.', 'danger')
+        return redirect(url_for('main.index'))
+
+    company_id = current_user.manager.company_id
+    page = request.args.get('page', 1, type=int)
+    status = request.args.get('status')
+    view = request.args.get('view', 'team')  # team or my
+    sort = request.args.get('sort', 'deadline_asc')
+    search_term = request.args.get('search', '')
+
+    # Build query
+    task_query = Task.query.filter_by(company_id=company_id)
+
+    # Apply view filter
+    if view == 'my':
+        task_query = task_query.filter_by(creator_id=current_user.id)
+
+    # Apply status filter
+    if status:
+        try:
+            task_status = TaskStatus(status)
+            task_query = task_query.filter(Task.status == task_status)
+        except ValueError:
+            # Invalid status value, ignore filter
+            pass
+
+    # Apply search filter
+    if search_term:
+        search = f"%{search_term}%"
+        task_query = task_query.filter(
+            or_(
+                Task.title.ilike(search),
+                Task.description.ilike(search)
+            )
+        )
+
+    # Apply sorting
+    if sort == 'deadline_asc':
+        # Nulls last for deadline
+        task_query = task_query.order_by(
+            Task.deadline.is_(None).asc(),  # Not null deadlines first
+            Task.deadline.asc()  # Then by deadline (soonest first)
+        )
+    elif sort == 'deadline_desc':
+        task_query = task_query.order_by(
+            Task.deadline.is_(None).asc(),  # Not null deadlines first
+            Task.deadline.desc()  # Then by deadline (latest first)
+        )
+    elif sort == 'created_desc':
+        task_query = task_query.order_by(Task.created_at.desc())
+    elif sort == 'created_asc':
+        task_query = task_query.order_by(Task.created_at.asc())
+
+    # Paginate results
+    tasks = task_query.paginate(page=page, per_page=10)
+
+    # Get task statistics
+    all_tasks = Task.query.filter_by(company_id=company_id).all()
+
+    total_tasks = len(all_tasks)
+    new_tasks = sum(1 for t in all_tasks if t.status == TaskStatus.NEW)
+    in_progress_tasks = sum(1 for t in all_tasks if t.status == TaskStatus.IN_PROGRESS)
+    on_hold_tasks = sum(1 for t in all_tasks if t.status == TaskStatus.ON_HOLD)
+    completed_tasks = sum(1 for t in all_tasks if t.status == TaskStatus.COMPLETED)
+    cancelled_tasks = sum(1 for t in all_tasks if t.status == TaskStatus.CANCELLED)
+
+    # Calculate completion rate
+    completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+
+    # Calculate priorities (in a real app, these would be actual properties of tasks)
+    # For demo purposes, we'll use deadlines as a proxy for priority
+    high_priority = sum(1 for t in all_tasks if t.deadline and (t.deadline - datetime.utcnow()).total_seconds() < 86400)  # Within 24 hours
+    medium_priority = sum(1 for t in all_tasks if t.deadline and 86400 <= (t.deadline - datetime.utcnow()).total_seconds() < 259200)  # 1-3 days
+    low_priority = sum(1 for t in all_tasks if t.deadline and (t.deadline - datetime.utcnow()).total_seconds() >= 259200)  # 3+ days
+
+    high_priority_percent = (high_priority / total_tasks * 100) if total_tasks > 0 else 0
+    medium_priority_percent = (medium_priority / total_tasks * 100) if total_tasks > 0 else 0
+    low_priority_percent = (low_priority / total_tasks * 100) if total_tasks > 0 else 0
+
+    task_stats = {
+        'total': total_tasks,
+        'new': new_tasks,
+        'in_progress': in_progress_tasks,
+        'on_hold': on_hold_tasks,
+        'completed': completed_tasks,
+        'cancelled': cancelled_tasks,
+        'completion_rate': round(completion_rate),
+        'high_priority': high_priority,
+        'medium_priority': medium_priority,
+        'low_priority': low_priority,
+        'high_priority_percent': round(high_priority_percent),
+        'medium_priority_percent': round(medium_priority_percent),
+        'low_priority_percent': round(low_priority_percent)
+    }
+
+    log_action(ActionType.VIEW, "Viewed tasks management", db)
+
+    return render_template(
+        'manager/tasks.html',
+        title='Tasks Management',
+        tasks=tasks,
+        status=status,
+        view=view,
+        sort=sort,
+        search_term=search_term,
+        task_stats=task_stats,
+        now=datetime.utcnow()
+    )
+
+
+@main.route('/dashboard/manager/reports')
+@login_required
+@role_required(UserRole.MANAGER.value)
+def manager_reports():
+    """
+    Show performance reports for the manager's team
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not associated with a company.', 'danger')
+        return redirect(url_for('main.index'))
+
+    # Get date range from request, default to last 30 days
+    period = request.args.get('period', '30')
+
+    # Handle custom date range
+    if period == 'custom':
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+
+        if not start_date or not end_date:
+            # Default to last 30 days if dates not provided
+            end_date = datetime.utcnow()
+            start_date = end_date - timedelta(days=30)
+        else:
+            # Parse dates from string
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+            # Set end_date to end of day
+            end_date = end_date.replace(hour=23, minute=59, second=59)
+    else:
+        # Calculate date range based on period
+        days = int(period)
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+
+    company_id = current_user.manager.company_id
+
+    # Get key performance indicators
+    # In a real application, this would query the database for actual stats
+    # Here we'll generate sample data for demonstration
+
+    # Get task count
+    task_query = Task.query.filter(
+        Task.company_id == company_id,
+        Task.created_at.between(start_date, end_date)
+    )
+    total_tasks = task_query.count()
+    completed_tasks = task_query.filter(Task.status == TaskStatus.COMPLETED).count()
+
+    # Calculate completion rate
+    completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+
+    # Calculate average completion time
+    avg_completion_time = 0
+    completed_tasks_with_times = []
+    for task in task_query.filter(Task.status == TaskStatus.COMPLETED).all():
+        if task.updated_at and task.created_at:
+            completed_tasks_with_times.append((task.updated_at - task.created_at).total_seconds() / 3600)  # Hours
+
+    if completed_tasks_with_times:
+        avg_completion_time = sum(completed_tasks_with_times) / len(completed_tasks_with_times)
+
+    # Get route count
+    total_routes = Route.query.filter(
+        Route.company_id == company_id,
+        Route.start_time.between(start_date, end_date)
+    ).count()
+
+    # Create KPI object
+    kpi = {
+        'total_tasks': total_tasks,
+        'completion_rate': round(completion_rate),
+        'avg_completion_time': round(avg_completion_time, 1),
+        'total_routes': total_routes
+    }
+
+    # Get team performance data
+    # Get operators assigned to this manager
+    operators = Operator.query.filter_by(manager_id=current_user.manager.id).all()
+
+    team_performance = []
+
+    # Add manager's own performance
+    manager_tasks = Task.query.filter(
+        Task.creator_id == current_user.id,
+        Task.created_at.between(start_date, end_date)
+    ).all()
+
+    manager_assigned_tasks = len(manager_tasks)
+    manager_completed_tasks = sum(1 for t in manager_tasks if t.status == TaskStatus.COMPLETED)
+
+    team_performance.append({
+        'name': f"{current_user.first_name} {current_user.last_name} (You)",
+        'role': 'Manager',
+        'assigned_tasks': manager_assigned_tasks,
+        'completed_tasks': manager_completed_tasks
+    })
+
+    # Add operators' performance
+    for operator in operators:
+        if operator.user:
+            operator_tasks = Task.query.filter(
+                Task.creator_id == operator.id,
+                Task.created_at.between(start_date, end_date)
+            ).all()
+
+            operator_assigned_tasks = len(operator_tasks)
+            operator_completed_tasks = sum(1 for t in operator_tasks if t.status == TaskStatus.COMPLETED)
+
+            team_performance.append({
+                'name': f"{operator.user.first_name} {operator.user.last_name}",
+                'role': 'Operator',
+                'assigned_tasks': operator_assigned_tasks,
+                'completed_tasks': operator_completed_tasks
+            })
+
+    # Add drivers' performance
+    for operator in operators:
+        for driver in operator.drivers:
+            if driver.user:
+                # For drivers, use assigned tasks and routes
+                driver_tasks = Task.query.filter(
+                    Task.assignee_id == driver.id,
+                    Task.created_at.between(start_date, end_date)
+                ).all()
+
+                driver_assigned_tasks = len(driver_tasks)
+                driver_completed_tasks = sum(1 for t in driver_tasks if t.status == TaskStatus.COMPLETED)
+
+                team_performance.append({
+                    'name': f"{driver.user.first_name} {driver.user.last_name}",
+                    'role': 'Driver',
+                    'assigned_tasks': driver_assigned_tasks,
+                    'completed_tasks': driver_completed_tasks
+                })
+
+    log_action(ActionType.VIEW, "Viewed reports dashboard", db)
+
+    return render_template(
+        'manager/reports.html',
+        title='Performance Reports',
+        kpi=kpi,
+        team_performance=team_performance,
+        period=period,
+        start_date=start_date.strftime('%Y-%m-%d') if hasattr(start_date, 'strftime') else '',
+        end_date=end_date.strftime('%Y-%m-%d') if hasattr(end_date, 'strftime') else ''
     )

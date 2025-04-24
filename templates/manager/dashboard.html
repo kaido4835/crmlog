@@ -11,16 +11,16 @@
                 <a href="{{ url_for('main.manager_dashboard') }}" class="list-group-item list-group-item-action active">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('main.manager_operators') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-users"></i> My Operators
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('main.manager_tasks') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tasks"></i> Tasks
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('main.manager_reports') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-chart-line"></i> Reports
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-comments"></i> Messages
                 </a>
             </div>

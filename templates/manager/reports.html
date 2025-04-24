@@ -1,10 +1,281 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Manager Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.manager_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('main.manager_operators') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> My Operators
+                </a>
+                <a href="{{ url_for('main.manager_tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('main.manager_reports') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-chart-line"></i> Reports
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+            </div>
+        </div>
+        
+        <!-- Report Filter Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Date Range</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('main.manager_reports') }}" id="reportDateForm">
+                    <div class="mb-3">
+                        <label for="dateRange" class="form-label">Select Period</label>
+                        <select class="form-select" id="dateRange" name="period">
+                            <option value="7" {% if period == 7 %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if period == 30 %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if period == 90 %}selected{% endif %}>Last 90 days</option>
+                            <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom range</option>
+                        </select>
+                    </div>
+                    
+                    <div id="customDateFields" class="{% if period != 'custom' %}d-none{% endif %}">
+                        <div class="mb-3">
+                            <label for="startDate" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="startDate" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="endDate" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="endDate" name="end_date" value="{{ end_date }}">
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Apply</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Performance Reports</h5>
+            </div>
+            <div class="card-body">
+                <!-- Key Performance Indicators -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-tasks fa-3x text-primary mb-3"></i>
+                                <h2 class="display-4">{{ kpi.total_tasks }}</h2>
+                                <p class="text-muted">Total Tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                                <h2 class="display-4">{{ kpi.completion_rate }}%</h2>
+                                <p class="text-muted">Completion Rate</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-clock fa-3x text-warning mb-3"></i>
+                                <h2 class="display-4">{{ kpi.avg_completion_time }}</h2>
+                                <p class="text-muted">Avg. Completion (hrs)</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-route fa-3x text-info mb-3"></i>
+                                <h2 class="display-4">{{ kpi.total_routes }}</h2>
+                                <p class="text-muted">Total Routes</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Team Performance Chart -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Team Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Team Member</th>
+                                        <th>Role</th>
+                                        <th>Tasks Assigned</th>
+                                        <th>Tasks Completed</th>
+                                        <th>Completion Rate</th>
+                                        <th>Performance</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for member in team_performance %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="rounded-circle bg-{{ 'info' if member.role == 'Operator' else 'warning' }} d-inline-flex justify-content-center align-items-center me-2" 
+                                                     style="width: 30px; height: 30px;">
+                                                    <span class="text-white">{{ member.name[:1] }}</span>
+                                                </div>
+                                                {{ member.name }}
+                                            </div>
+                                        </td>
+                                        <td>{{ member.role }}</td>
+                                        <td>{{ member.assigned_tasks }}</td>
+                                        <td>{{ member.completed_tasks }}</td>
+                                        <td>
+                                            {% set completion_rate = (member.completed_tasks / member.assigned_tasks * 100) if member.assigned_tasks > 0 else 0 %}
+                                            {{ completion_rate|round }}%
+                                        </td>
+                                        <td>
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar bg-{{ 'success' if completion_rate >= 75 else 'warning' if completion_rate >= 50 else 'danger' }}" 
+                                                     role="progressbar" 
+                                                     style="width: {{ completion_rate }}%;" 
+                                                     aria-valuenow="{{ completion_rate }}" 
+                                                     aria-valuemin="0" 
+                                                     aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Task Trend Chart -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Task Trends</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> In a complete application, this would display an interactive chart showing task trends over time.
+                        </div>
+                        
+                        <div class="chart-placeholder" style="height: 300px; background-color: #f8f9fa; border-radius: 8px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                            <i class="fas fa-chart-line fa-4x text-muted mb-3"></i>
+                            <p>Task completion trend chart would appear here</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Available Reports -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Available Reports</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Team Performance Report</h5>
+                                        <p class="card-text text-muted">Detailed report of operator and driver performance metrics.</p>
+                                        <div class="d-grid gap-2">
+                                            <a href="{{ url_for('statistics.download_report', report_id='team_performance', format='excel', period=period) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-download"></i> Excel Report
+                                            </a>
+                                            <a href="{{ url_for('statistics.download_report', report_id='team_performance', format='pdf', period=period) }}" class="btn btn-outline-danger">
+                                                <i class="fas fa-file-pdf"></i> PDF Report
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Task Summary Report</h5>
+                                        <p class="card-text text-muted">Overview of all tasks, their status, and completion times.</p>
+                                        <div class="d-grid gap-2">
+                                            <a href="{{ url_for('statistics.download_report', report_id='tasks_summary', format='excel', period=period) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-download"></i> Excel Report
+                                            </a>
+                                            <a href="{{ url_for('statistics.download_report', report_id='tasks_summary', format='pdf', period=period) }}" class="btn btn-outline-danger">
+                                                <i class="fas fa-file-pdf"></i> PDF Report
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Route Analytics Report</h5>
+                                        <p class="card-text text-muted">Analysis of routes, distances, and completion times.</p>
+                                        <div class="d-grid gap-2">
+                                            <a href="{{ url_for('statistics.download_report', report_id='routes_performance', format='excel', period=period) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-download"></i> Excel Report
+                                            </a>
+                                            <a href="{{ url_for('statistics.download_report', report_id='routes_performance', format='pdf', period=period) }}" class="btn btn-outline-danger">
+                                                <i class="fas fa-file-pdf"></i> PDF Report
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Driver Performance Report</h5>
+                                        <p class="card-text text-muted">Detailed metrics for each driver's performance and route completion.</p>
+                                        <div class="d-grid gap-2">
+                                            <a href="{{ url_for('statistics.download_report', report_id='driver_performance', format='excel', period=period) }}" class="btn btn-outline-primary">
+                                                <i class="fas fa-download"></i> Excel Report
+                                            </a>
+                                            <a href="{{ url_for('statistics.download_report', report_id='driver_performance', format='pdf', period=period) }}" class="btn btn-outline-danger">
+                                                <i class="fas fa-file-pdf"></i> PDF Report
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show/hide custom date fields based on selection
+        const dateRangeSelect = document.getElementById('dateRange');
+        const customDateFields = document.getElementById('customDateFields');
+        
+        dateRangeSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateFields.classList.remove('d-none');
+            } else {
+                customDateFields.classList.add('d-none');
+                document.getElementById('reportDateForm').submit();
+            }
+        });
+    });
+</script>
+{% endblock %}
