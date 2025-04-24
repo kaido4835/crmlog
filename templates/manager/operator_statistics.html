@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Manager Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.manager_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('main.manager_operators') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-users"></i> My Operators
+                </a>
+                <a href="{{ url_for('main.manager_tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('main.manager_reports') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-line"></i> Reports
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Date Range</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('main.operator_statistics', operator_id=operator.id) }}" id="dateRangeForm">
+                    <div class="mb-3">
+                        <label for="period" class="form-label">Select Period</label>
+                        <select class="form-select" id="period" name="period">
+                            <option value="7" {% if period == 7 %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if period == 30 %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if period == 90 %}selected{% endif %}>Last 90 days</option>
+                            <option value="custom" {% if period == custom %}selected{% endif %}>Custom range</option>
+                        </select>
+                    </div>
+
+                    <div id="customDateRange" class="{% if period != 'custom' %}d-none{% endif %}">
+                        <div class="mb-3">
+                            <label for="start_date" class="form-label">Start Date</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+                        </div>
+                        <div class="mb-3">
+                            <label for="end_date" class="form-label">End Date</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Apply</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('main.view_operator', operator_id=operator.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-user"></i> View Profile
+                    </a>
+                    <a href="{{ url_for('messages.chat', user_id=operator.user.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-comment"></i> Send Message
+                    </a>
+                    <a href="{{ url_for('statistics.download_report', report_id='operator_performance', operator_id=operator.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-download"></i> Download Report
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ operator.user.first_name }} {{ operator.user.last_name }} - Performance Statistics</h5>
+                <span class="badge bg-info">Operator</span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-3 text-center">
+                        {% if operator.user.profile_image %}
+                            <img src="{{ url_for('static', filename=operator.user.profile_image) }}" alt="Profile" class="rounded-circle img-thumbnail mb-2" style="width: 80px; height: 80px; object-fit: cover;">
+                        {% else %}
+                            <div class="rounded-circle bg-primary d-inline-flex justify-content-center align-items-center mb-2" style="width: 80px; height: 80px;">
+                                <span class="text-white" style="font-size: 2rem;">{{ operator.user.first_name[0] }}{{ operator.user.last_name[0] }}</span>
+                            </div>
+                        {% endif %}
+                        <h5>{{ operator.user.first_name }} {{ operator.user.last_name }}</h5>
+                        <p class="text-muted">@{{ operator.user.username }}</p>
+                    </div>
+                    <div class="col-md-9">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="card text-center h-100">
+                                    <div class="card-body">
+                                        <div class="display-5 text-primary">{{ stats.task_count }}</div>
+                                        <p class="text-muted">Total Tasks Created</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card text-center h-100">
+                                    <div class="card-body">
+                                        <div class="display-5 text-success">{{ stats.completion_rate }}%</div>
+                                        <p class="text-muted">Task Completion Rate</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="card text-center h-100">
+                                    <div class="card-body">
+                                        <div class="display-5 text-warning">{{ stats.team_size }}</div>
+                                        <p class="text-muted">Team Size (Drivers)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="border-bottom pb-2 mb-3">Performance Overview</h5>
+
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Task Status Distribution</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <div class="progress" style="height: 25px;">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ stats.status_distribution.completed }}%;"
+                                             aria-valuenow="{{ stats.status_distribution.completed }}" aria-valuemin="0" aria-valuemax="100">
+                                            Completed
+                                        </div>
+                                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ stats.status_distribution.in_progress }}%;"
+                                             aria-valuenow="{{ stats.status_distribution.in_progress }}" aria-valuemin="0" aria-valuemax="100">
+                                            In Progress
+                                        </div>
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: {{ stats.status_distribution.new }}%;"
+                                             aria-valuenow="{{ stats.status_distribution.new }}" aria-valuemin="0" aria-valuemax="100">
+                                            New
+                                        </div>
+                                        <div class="progress-bar bg-warning" role="progressbar" style="width: {{ stats.status_distribution.on_hold }}%;"
+                                             aria-valuenow="{{ stats.status_distribution.on_hold }}" aria-valuemin="0" aria-valuemax="100">
+                                            On Hold
+                                        </div>
+                                        <div class="progress-bar bg-danger" role="progressbar" style="width: {{ stats.status_distribution.cancelled }}%;"
+                                             aria-valuenow="{{ stats.status_distribution.cancelled }}" aria-valuemin="0" aria-valuemax="100">
+                                            Cancelled
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-6">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-success me-2">&nbsp;</span>
+                                            <small>Completed: {{ stats.task_statuses.completed }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-primary me-2">&nbsp;</span>
+                                            <small>In Progress: {{ stats.task_statuses.in_progress }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-info me-2">&nbsp;</span>
+                                            <small>New: {{ stats.task_statuses.new }}</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-warning me-2">&nbsp;</span>
+                                            <small>On Hold: {{ stats.task_statuses.on_hold }}</small>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-danger me-2">&nbsp;</span>
+                                            <small>Cancelled: {{ stats.task_statuses.cancelled }}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Time-to-Completion Analysis</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info text-center">
+                                    <i class="fas fa-chart-line fa-2x mb-2"></i>
+                                    <p class="mb-0">Average task completion time: <strong>{{ stats.avg_completion_time }} hours</strong></p>
+                                </div>
+
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Time Range</th>
+                                            <th>Tasks</th>
+                                            <th>Percentage</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Same day (< 24h)</td>
+                                            <td>{{ stats.completion_times.same_day }}</td>
+                                            <td>
+                                                <div class="progress" style="height: 5px;">
+                                                    <div class="progress-bar bg-success" role="progressbar"
+                                                         style="width: {{ stats.completion_times.same_day_percent }}%;">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>1-2 days</td>
+                                            <td>{{ stats.completion_times.one_two_days }}</td>
+                                            <td>
+                                                <div class="progress" style="height: 5px;">
+                                                    <div class="progress-bar bg-primary" role="progressbar"
+                                                         style="width: {{ stats.completion_times.one_two_days_percent }}%;">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>3-7 days</td>
+                                            <td>{{ stats.completion_times.three_seven_days }}</td>
+                                            <td>
+                                                <div class="progress" style="height: 5px;">
+                                                    <div class="progress-bar bg-warning" role="progressbar"
+                                                         style="width: {{ stats.completion_times.three_seven_days_percent }}%;">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td>> 7 days</td>
+                                            <td>{{ stats.completion_times.more_than_seven }}</td>
+                                            <td>
+                                                <div class="progress" style="height: 5px;">
+                                                    <div class="progress-bar bg-danger" role="progressbar"
+                                                         style="width: {{ stats.completion_times.more_than_seven_percent }}%;">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h5 class="border-bottom pb-2 mb-3">Driver Team Performance</h5>
+
+                <div class="table-responsive mb-4">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Driver</th>
+                                <th>Assigned Tasks</th>
+                                <th>Completed</th>
+                                <th>In Progress</th>
+                                <th>Completion Rate</th>
+                                <th>Avg. Time</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for driver in driver_stats %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="rounded-circle bg-warning d-inline-flex justify-content-center align-items-center me-2" style="width: 32px; height: 32px;">
+                                            <span class="text-white">{{ driver.name[:1] }}</span>
+                                        </div>
+                                        <div>{{ driver.name }}</div>
+                                    </div>
+                                </td>
+                                <td>{{ driver.total_tasks }}</td>
+                                <td class="text-success">{{ driver.completed_tasks }}</td>
+                                <td class="text-primary">{{ driver.in_progress_tasks }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress flex-grow-1 me-2" style="height: 5px;">
+                                            <div class="progress-bar bg-{{ 'success' if driver.completion_rate >= 70 else 'warning' if driver.completion_rate >= 40 else 'danger' }}"
+                                                 role="progressbar"
+                                                 style="width: {{ driver.completion_rate }}%;">
+                                            </div>
+                                        </div>
+                                        <span>{{ driver.completion_rate }}%</span>
+                                    </div>
+                                </td>
+                                <td>{{ driver.avg_time }} hrs</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <h5 class="border-bottom pb-2 mb-3">Activity Timeline</h5>
+
+                <div class="timeline mb-4">
+                    {% if activity %}
+                        {% for entry in activity %}
+                            <div class="timeline-item mb-3 pb-3 border-start ps-3 border-4 border-{{ 'primary' if entry.type == 'create' else 'success' if entry.type == 'complete' else 'warning' if entry.type == 'update' else 'info' }}">
+                                <div class="d-flex justify-content-between">
+                                    <div>
+                                        <span class="badge bg-{{ 'primary' if entry.type == 'create' else 'success' if entry.type == 'complete' else 'warning' if entry.type == 'update' else 'info' }} me-2">
+                                            {{ entry.type|upper }}
+                                        </span>
+                                        <span>{{ entry.description }}</span>
+                                    </div>
+                                    <small class="text-muted">{{ entry.timestamp.strftime('%b %d, %H:%M') }}</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-history fa-3x text-muted mb-3"></i>
+                            <p>No activity data available for the selected time period.</p>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('statistics.download_report', report_id='operator_performance', operator_id=operator.id, format='excel') }}" class="btn btn-outline-success">
+                        <i class="fas fa-file-excel"></i> Export to Excel
+                    </a>
+                    <a href="{{ url_for('statistics.download_report', report_id='operator_performance', operator_id=operator.id, format='pdf') }}" class="btn btn-outline-danger">
+                        <i class="fas fa-file-pdf"></i> Export to PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const periodSelect = document.getElementById('period');
+        const customDateRange = document.getElementById('customDateRange');
+
+        periodSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.classList.remove('d-none');
+            } else {
+                customDateRange.classList.add('d-none');
+                document.getElementById('dateRangeForm').submit();
+            }
+        });
+    });
+</script>
+{% endblock %}

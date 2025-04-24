@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Manager Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.manager_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('main.manager_operators') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-users"></i> My Operators
+                </a>
+                <a href="{{ url_for('main.manager_tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('main.manager_reports') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-line"></i> Reports
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('main.view_operator', operator_id=operator.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-arrow-left"></i> Back to Operator Profile
+                    </a>
+                    <a href="{{ url_for('messages.chat', user_id=operator.user.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-comment"></i> Send Message
+                    </a>
+                    <button type="button" class="list-group-item list-group-item-action text-danger" data-bs-toggle="modal" data-bs-target="#removeOperatorModal">
+                        <i class="fas fa-user-minus"></i> Remove from Team
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Edit Operator: {{ operator.user.first_name }} {{ operator.user.last_name }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('main.edit_operator', operator_id=operator.id) }}" enctype="multipart/form-data">
+                    <!-- Note: In a real application, you would need to include a CSRF token here -->
+                    
+                    <div class="row mb-3">
+                        <label class="col-sm-3 col-form-label">Username:</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" value="{{ operator.user.username }}" readonly>
+                            <div class="form-text">Username cannot be changed.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <label for="email" class="col-sm-3 col-form-label">Email:</label>
+                        <div class="col-sm-9">
+                            <input type="email" class="form-control" id="email" name="email" value="{{ operator.user.email }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <label for="first_name" class="col-sm-3 col-form-label">First Name:</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ operator.user.first_name }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <label for="last_name" class="col-sm-3 col-form-label">Last Name:</label>
+                        <div class="col-sm-9">
+                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ operator.user.last_name }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <label for="phone" class="col-sm-3 col-form-label">Phone:</label>
+                        <div class="col-sm-9">
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ operator.user.phone or '' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <label for="profile_image" class="col-sm-3 col-form-label">Profile Image:</label>
+                        <div class="col-sm-9">
+                            <div class="mb-2">
+                                {% if operator.user.profile_image %}
+                                    <img src="{{ url_for('static', filename=operator.user.profile_image) }}" alt="Current profile image" class="rounded" style="max-width: 100px; max-height: 100px;">
+                                {% else %}
+                                    <div class="bg-secondary text-white rounded d-inline-flex justify-content-center align-items-center" style="width: 100px; height: 100px;">
+                                        <span style="font-size: 3rem;">{{ operator.user.first_name[0] }}{{ operator.user.last_name[0] }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <input type="file" class="form-control" id="profile_image" name="profile_image" accept="image/png, image/jpeg, image/jpg">
+                            <div class="form-text">Leave empty to keep current image. Maximum file size: 2MB.</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <label for="notes" class="col-sm-3 col-form-label">Manager Notes:</label>
+                        <div class="col-sm-9">
+                            <textarea class="form-control" id="notes" name="notes" rows="3">{{ operator.notes or '' }}</textarea>
+                            <div class="form-text">Private notes about this operator (only visible to you).</div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-sm-9 offset-sm-3">
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="is_active" name="is_active" {% if operator.user.is_active %}checked{% endif %}>
+                                <label class="form-check-label" for="is_active">
+                                    Active Account
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('main.view_operator', operator_id=operator.id) }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Password Reset Section -->
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Password Management</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">
+                    As a manager, you cannot directly change the operator's password. 
+                    If the operator needs to reset their password, you can request a password reset link be sent to their email.
+                </p>
+                
+                <form method="post" action="{{ url_for('main.request_password_reset', user_id=operator.user.id) }}">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-key"></i> Request Password Reset
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Remove Operator Modal -->
+<div class="modal fade" id="removeOperatorModal" tabindex="-1" aria-labelledby="removeOperatorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="removeOperatorModalLabel">Remove Operator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Warning: This action will remove 
+                    <strong>{{ operator.user.first_name }} {{ operator.user.last_name }}</strong> from your team.
+                </div>
+                <p>
+                    The operator will be unassigned from your management, but their account will remain in the system.
+                    Are you sure you want to proceed?
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('main.remove_operator', operator_id=operator.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Remove Operator</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

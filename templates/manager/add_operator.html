@@ -1,10 +1,147 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Manager Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.manager_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('main.manager_operators') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-users"></i> My Operators
+                </a>
+                <a href="{{ url_for('main.manager_tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('main.manager_reports') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-line"></i> Reports
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Add Operator to Your Team</h5>
+            </div>
+            <div class="card-body">
+                <!-- Tabs for different add methods -->
+                <ul class="nav nav-tabs mb-4" id="addOperatorTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="existing-tab" data-bs-toggle="tab" data-bs-target="#existing" 
+                                type="button" role="tab" aria-controls="existing" aria-selected="true">
+                            <i class="fas fa-user-plus"></i> Assign Existing Operator
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="request-tab" data-bs-toggle="tab" data-bs-target="#request" 
+                                type="button" role="tab" aria-controls="request" aria-selected="false">
+                            <i class="fas fa-user-edit"></i> Request New Operator
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="addOperatorTabsContent">
+                    <!-- Existing Operators Tab -->
+                    <div class="tab-pane fade show active" id="existing" role="tabpanel" aria-labelledby="existing-tab">
+                        {% if available_users %}
+                            <form method="post" action="{{ url_for('main.add_operator') }}">
+                                <div class="mb-4">
+                                    <label for="operator_id" class="form-label">Select an Operator:</label>
+                                    <select class="form-select" id="operator_id" name="operator_id" required>
+                                        <option value="">-- Select an Operator --</option>
+                                        {% for user in available_users %}
+                                            <option value="{{ user.id }}">
+                                                {{ user.first_name }} {{ user.last_name }} ({{ user.email }})
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="form-text">
+                                        These operators are already in the system but not assigned to any manager.
+                                    </div>
+                                </div>
+                                
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="{{ url_for('main.manager_operators') }}" class="btn btn-secondary me-md-2">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-user-plus"></i> Add to My Team
+                                    </button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> There are no available operators to assign. 
+                                Please request a new operator using the "Request New Operator" tab.
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Request New Operator Tab -->
+                    <div class="tab-pane fade" id="request" role="tabpanel" aria-labelledby="request-tab">
+                        <form method="post" action="{{ url_for('main.request_operator') }}">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="first_name" class="form-label">First Name:</label>
+                                    <input type="text" class="form-control" id="first_name" name="first_name" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="last_name" class="form-label">Last Name:</label>
+                                    <input type="text" class="form-control" id="last_name" name="last_name" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label">Email Address:</label>
+                                <input type="email" class="form-control" id="email" name="email" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="phone" class="form-label">Phone Number (Optional):</label>
+                                <input type="tel" class="form-control" id="phone" name="phone">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="justification" class="form-label">Justification:</label>
+                                <textarea class="form-control" id="justification" name="justification" rows="3" required
+                                          placeholder="Please explain why you need a new operator in your team..."></textarea>
+                            </div>
+                            
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <a href="{{ url_for('main.manager_operators') }}" class="btn btn-secondary me-md-2">
+                                    <i class="fas fa-times"></i> Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Submit Request
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-select the appropriate tab based on the URL parameter or availability
+        {% if not available_users %}
+            document.getElementById('request-tab').click();
+        {% endif %}
+        
+        // You can add more JavaScript functionality here if needed
+    });
+</script>
+{% endblock %}

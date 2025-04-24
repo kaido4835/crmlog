@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user-tie"></i> Manager Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.manager_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('main.manager_operators') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> My Operators
+                </a>
+                <a href="{{ url_for('main.manager_tasks') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('main.manager_reports') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-line"></i> Reports
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-arrow-left"></i> Back to Task
+                    </a>
+                    
+                    {% if task.assignee %}
+                    <a href="{{ url_for('messages.chat', user_id=task.assignee.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-comment"></i> Message Assignee
+                    </a>
+                    {% endif %}
+                    
+                    <a href="{{ url_for('documents.upload_document', task_id=task.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-file-upload"></i> Upload Document
+                    </a>
+                    
+                    <a href="{{ url_for('routes.create_route', task_id=task.id) }}" class="list-group-item list-group-item-action">
+                        <i class="fas fa-route"></i> Create Route
+                    </a>
+                    
+                    {% if task.status.value not in ['completed', 'cancelled'] %}
+                    <button type="button" class="list-group-item list-group-item-action text-success" data-bs-toggle="modal" data-bs-target="#completeTaskModal">
+                        <i class="fas fa-check"></i> Mark as Completed
+                    </button>
+                    {% endif %}
+                    
+                    <button type="button" class="list-group-item list-group-item-action text-danger" data-bs-toggle="modal" data-bs-target="#deleteTaskModal">
+                        <i class="fas fa-trash"></i> Delete Task
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Edit Task: {{ task.title }}</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('tasks.edit_task', task_id=task.id) }}" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="title" class="form-label">Task Title <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="title" name="title" value="{{ task.title }}" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="description" class="form-label">Description</label>
+                                <textarea class="form-control" id="description" name="description" rows="5">{{ task.description }}</textarea>
+                                <div class="form-text">Provide detailed information about the task requirements.</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status <span class="text-danger">*</span></label>
+                                <select class="form-select" id="status" name="status" required>
+                                    <option value="new" {% if task.status.value == 'new' %}selected{% endif %}>New</option>
+                                    <option value="in_progress" {% if task.status.value == 'in_progress' %}selected{% endif %}>In Progress</option>
+                                    <option value="on_hold" {% if task.status.value == 'on_hold' %}selected{% endif %}>On Hold</option>
+                                    <option value="completed" {% if task.status.value == 'completed' %}selected{% endif %}>Completed</option>
+                                    <option value="cancelled" {% if task.status.value == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="deadline" class="form-label">Deadline</label>
+                                <input type="datetime-local" class="form-control" id="deadline" name="deadline" 
+                                       value="{{ task.deadline.strftime('%Y-%m-%dT%H:%M') if task.deadline else '' }}">
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="priority" class="form-label">Priority</label>
+                                <select class="form-select" id="priority" name="priority">
+                                    <option value="low" {% if task.priority == 'low' %}selected{% endif %}>Low</option>
+                                    <option value="medium" {% if task.priority == 'medium' or not task.priority %}selected{% endif %}>Medium</option>
+                                    <option value="high" {% if task.priority == 'high' %}selected{% endif %}>High</option>
+                                    <option value="urgent" {% if task.priority == 'urgent' %}selected{% endif %}>Urgent</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="assignee_id" class="form-label">Assigned Driver</label>
+                                <select class="form-select" id="assignee_id" name="assignee_id">
+                                    <option value="">-- Unassigned --</option>
+                                    {% for driver_id, driver_name in drivers %}
+                                        <option value="{{ driver_id }}" {% if task.assignee_id == driver_id %}selected{% endif %}>
+                                            {{ driver_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="document" class="form-label">Attach Document</label>
+                                <input type="file" class="form-control" id="document" name="document">
+                                <div class="form-text">Max file size: 5MB. Supported formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Location Information (for Route Planning)</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="start_point" class="form-label">Start Point</label>
+                                    <input type="text" class="form-control" id="start_point" name="start_point" 
+                                           value="{{ task.start_point if hasattr(task, 'start_point') else '' }}">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="end_point" class="form-label">End Point</label>
+                                    <input type="text" class="form-control" id="end_point" name="end_point" 
+                                           value="{{ task.end_point if hasattr(task, 'end_point') else '' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notes" class="form-label">Internal Notes</label>
+                        <textarea class="form-control" id="notes" name="notes" rows="3">{{ task.notes if hasattr(task, 'notes') else '' }}</textarea>
+                        <div class="form-text">These notes are only visible to management, not to the assigned driver.</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-secondary me-md-2">
+                            <i class="fas fa-times"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Complete Task Modal -->
+<div class="modal fade" id="completeTaskModal" tabindex="-1" aria-labelledby="completeTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="completeTaskModalLabel">Mark Task as Completed</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Are you sure you want to mark this task as completed?
+                </div>
+                {% if task.route and task.route.status.value != 'completed' %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i> Warning: The route associated with this task is not yet marked as completed.
+                </div>
+                {% endif %}
+                <p>
+                    This will update the task status to "Completed" and notify the assigned driver.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('tasks.complete_task', task_id=task.id) }}" method="post">
+                    <button type="submit" class="btn btn-success">Mark as Completed</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Task Modal -->
+<div class="modal fade" id="deleteTaskModal" tabindex="-1" aria-labelledby="deleteTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteTaskModalLabel">Delete Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Warning: This action cannot be undone!
+                </div>
+                <p>
+                    Are you sure you want to delete the task "<strong>{{ task.title }}</strong>"?
+                </p>
+                <p>
+                    This will permanently remove the task and all associated documents and messages.
+                    {% if task.route %}
+                    The associated route will also be deleted.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="post">
+                    <button type="submit" class="btn btn-danger">Delete Task</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Status change handler
+        const statusSelect = document.getElementById('status');
+        
+        statusSelect.addEventListener('change', function() {
+            // Show warning if changing to completed
+            if (this.value === 'completed') {
+                if (confirm('Are you sure you want to mark this task as completed?')) {
+                    // Continue with status change
+                } else {
+                    // Revert to previous status
+                    this.value = "{{ task.status.value }}";
+                }
+            }
+        });
+        
+        // Priority effects on form
+        const prioritySelect = document.getElementById('priority');
+        const deadlineInput = document.getElementById('deadline');
+        
+        prioritySelect.addEventListener('change', function() {
+            // Highlight deadline field for high/urgent priority
+            if (this.value === 'high' || this.value === 'urgent') {
+                deadlineInput.classList.add('border-danger');
+                if (!deadlineInput.value) {
+                    deadlineInput.focus();
+                }
+            } else {
+                deadlineInput.classList.remove('border-danger');
+            }
+        });
+        
+        // File size validation
+        const fileInput = document.getElementById('document');
+        if (fileInput) {
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    const fileSize = this.files[0].size / 1024 / 1024; // Convert to MB
+                    if (fileSize > 5) {
+                        alert('File size exceeds 5MB limit. Please choose a smaller file.');
+                        this.value = '';
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
