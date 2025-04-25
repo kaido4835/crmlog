@@ -40,6 +40,47 @@ def inbox():
     # Get current datetime for relative time display
     now = datetime.utcnow()
 
+    log_action(ActionType.VIEW, "Viewed inbox", db)
+
+    return render_template(
+        'messages/inbox.html',
+        title='Inbox',
+        messages=messages_pagination,
+        unread_count=unread_count,
+        search_term=search_term,
+        now=now
+    )
+
+
+@messages.route('/sent')
+@login_required
+def sent():
+    """
+    Show sent messages
+    """
+    page = request.args.get('page', 1, type=int)
+    search_term = request.args.get('search', '')
+
+    # Build query for sent messages
+    query = Message.query.filter_by(sender_id=current_user.id)
+
+    # Apply search if provided
+    if search_term:
+        search = f"%{search_term}%"
+        query = query.filter(Message.content.ilike(search))
+
+    # Order by sent time (newest first)
+    query = query.order_by(Message.sent_at.desc())
+
+    # Paginate results
+    messages_pagination = query.paginate(page=page, per_page=10)
+
+    # Get unread message count for badge
+    unread_count = Message.query.filter_by(recipient_id=current_user.id, is_read=False).count()
+
+    # Get current datetime for relative time display
+    now = datetime.utcnow()
+
     log_action(ActionType.VIEW, "Viewed sent messages", db)
 
     return render_template(
@@ -340,6 +381,70 @@ def clear_chat(user_id):
     return redirect(url_for('messages.chat', user_id=user_id))
 
 
+@messages.route('/send_message/<int:user_id>', methods=['POST'])
+@login_required
+def send_message(user_id):
+    """
+    Send a message to a specific user
+    """
+    other_user = User.query.get_or_404(user_id)
+
+    # Check if users can message each other
+    # Simple validation instead of _can_message_user
+    if current_user.role == UserRole.DRIVER and other_user.role == UserRole.DRIVER:
+        flash('Drivers cannot message other drivers.', 'danger')
+        return redirect(url_for('messages.inbox'))
+
+    # Get form data
+    content = request.form.get('content')
+    task_id = request.form.get('task_id')
+
+    # Validate content
+    if not content or len(content.strip()) == 0:
+        flash('Message cannot be empty.', 'danger')
+        return redirect(url_for('messages.chat', user_id=user_id))
+
+    # Convert task_id to int or None
+    if task_id and task_id.isdigit():
+        task_id = int(task_id)
+    else:
+        task_id = None
+
+    # Get company ID based on user role
+    company_id = None
+    if current_user.role == UserRole.COMPANY_OWNER and current_user.company_owner:
+        company_id = current_user.company_owner.company_id
+    elif current_user.role == UserRole.MANAGER and current_user.manager:
+        company_id = current_user.manager.company_id
+    elif current_user.role == UserRole.OPERATOR and current_user.operator:
+        company_id = current_user.operator.company_id
+    elif current_user.role == UserRole.DRIVER and current_user.driver:
+        company_id = current_user.driver.company_id
+
+    try:
+        # Create and save message
+        message = Message(
+            content=content,
+            sender_id=current_user.id,
+            recipient_id=user_id,
+            sent_at=datetime.utcnow(),
+            is_read=False,
+            task_id=task_id,
+            company_id=company_id
+        )
+
+        db.session.add(message)
+        db.session.commit()
+        log_action(ActionType.CREATE, f"Sent message to user ID {user_id}", db)
+
+        # No flash message - users don't need confirmation for each sent message
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error sending message: {str(e)}', 'danger')
+
+    return redirect(url_for('messages.chat', user_id=user_id))
+
+
 # Helper functions
 def _can_message_user(other_user):
     """
@@ -465,152 +570,4 @@ def _get_user_contacts():
     # Sort by unread count (descending), then by last message time (descending)
     contacts.sort(key=lambda x: (-x['unread_count'], x['last_message_time'] or datetime.min), reverse=True)
 
-    return contacts  # Get unread message count for badge
-    unread_count = Message.query.filter_by(recipient_id=current_user.id, is_read=False).count()
-
-    # Get current datetime for relative time display
-    now = datetime.utcnow()
-
-    log_action(ActionType.VIEW, "Viewed inbox", db)
-
-    return render_template(
-        'messages/inbox.html',
-        title='Inbox',
-        messages=messages_pagination,
-        unread_count=unread_count,
-        search_term=search_term,
-        now=now
-    )
-
-
-@messages.route('/sent')
-@login_required
-def sent():
-    """
-    Show sent messages
-    """
-    page = request.args.get('page', 1, type=int)
-    search_term = request.args.get('search', '')
-
-    # Build query for sent messages
-    query = Message.query.filter_by(sender_id=current_user.id)
-
-    # Apply search if provided
-    if search_term:
-        search = f"%{search_term}%"
-        query = query.filter(Message.content.ilike(search))
-
-    # Order by sent time (newest first)
-    query = query.order_by(Message.sent_at.desc())
-
-    # Paginate results
-    messages_pagination = query.paginate(page=page, per_page=10)
-
-
-def _can_message_user(other_user):
-    """
-    Check if current user can message another user
-    """
-    # Admin can message anyone
-    if current_user.role == UserRole.ADMIN:
-        return True
-
-    # Get company IDs
-    current_company_id = None
-    other_company_id = None
-
-    if current_user.role == UserRole.COMPANY_OWNER and current_user.company_owner:
-        current_company_id = current_user.company_owner.company_id
-    elif current_user.role == UserRole.MANAGER and current_user.manager:
-        current_company_id = current_user.manager.company_id
-    elif current_user.role == UserRole.OPERATOR and current_user.operator:
-        current_company_id = current_user.operator.company_id
-    elif current_user.role == UserRole.DRIVER and current_user.driver:
-        current_company_id = current_user.driver.company_id
-
-    if other_user.role == UserRole.COMPANY_OWNER and other_user.company_owner:
-        other_company_id = other_user.company_owner.company_id
-    elif other_user.role == UserRole.MANAGER and other_user.manager:
-        other_company_id = other_user.manager.company_id
-    elif other_user.role == UserRole.OPERATOR and other_user.operator:
-        other_company_id = other_user.operator.company_id
-    elif other_user.role == UserRole.DRIVER and other_user.driver:
-        other_company_id = other_user.driver.company_id
-
-    # Users must be in the same company
-    if current_company_id is None or other_company_id is None or current_company_id != other_company_id:
-        return False
-
-    # Special case: Driver can only message their operator or managers
-    if current_user.role == UserRole.DRIVER:
-        if other_user.role == UserRole.DRIVER:
-            return False  # Drivers can't message other drivers
-
-        if other_user.role == UserRole.OPERATOR and current_user.driver.operator_id != other_user.id:
-            return False  # Driver can only message their assigned operator
-
-    return True
-
-
-@messages.route('/send_message/<int:user_id>', methods=['POST'])
-@login_required
-def send_message(user_id):
-    """
-    Send a message to a specific user
-    """
-    other_user = User.query.get_or_404(user_id)
-
-    # Check if users can message each other
-    # Simple validation instead of _can_message_user
-    if current_user.role == UserRole.DRIVER and other_user.role == UserRole.DRIVER:
-        flash('Drivers cannot message other drivers.', 'danger')
-        return redirect(url_for('messages.inbox'))
-
-    # Get form data
-    content = request.form.get('content')
-    task_id = request.form.get('task_id')
-
-    # Validate content
-    if not content or len(content.strip()) == 0:
-        flash('Message cannot be empty.', 'danger')
-        return redirect(url_for('messages.chat', user_id=user_id))
-
-    # Convert task_id to int or None
-    if task_id and task_id.isdigit():
-        task_id = int(task_id)
-    else:
-        task_id = None
-
-    # Get company ID based on user role
-    company_id = None
-    if current_user.role == UserRole.COMPANY_OWNER and current_user.company_owner:
-        company_id = current_user.company_owner.company_id
-    elif current_user.role == UserRole.MANAGER and current_user.manager:
-        company_id = current_user.manager.company_id
-    elif current_user.role == UserRole.OPERATOR and current_user.operator:
-        company_id = current_user.operator.company_id
-    elif current_user.role == UserRole.DRIVER and current_user.driver:
-        company_id = current_user.driver.company_id
-
-    try:
-        # Create and save message
-        message = Message(
-            content=content,
-            sender_id=current_user.id,
-            recipient_id=user_id,
-            sent_at=datetime.utcnow(),
-            is_read=False,
-            task_id=task_id,
-            company_id=company_id
-        )
-
-        db.session.add(message)
-        db.session.commit()
-        log_action(ActionType.CREATE, f"Sent message to user ID {user_id}", db)
-
-        # No flash message - users don't need confirmation for each sent message
-    except Exception as e:
-        db.session.rollback()
-        flash(f'Error sending message: {str(e)}', 'danger')
-
-    return redirect(url_for('messages.chat', user_id=user_id))
+    return contacts
