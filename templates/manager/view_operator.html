@@ -229,8 +229,7 @@
                                             <a href="{{ url_for('messages.chat', user_id=driver.user.id) }}" class="btn btn-outline-info">
                                                 <i class="fas fa-comment"></i>
                                             </a>
-                                            <form action="{{ url_for('main.unassign_driver', operator_id=operator.id, driver_id=driver.id) }}" method="post" class="d-inline">
-                                                <button type="submit" class="btn btn-outline-danger">
+<form action="{{ url_for('main.unassign_driver_from_operator', operator_id=operator.id, driver_id=driver.id) }}" method="post" class="d-inline">                                                <button type="submit" class="btn btn-outline-danger">
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </form>
@@ -331,7 +330,7 @@
                     </div>
                 </div>
 
-                <form action="{{ url_for('main.assign_drivers', operator_id=operator.id) }}" method="post" id="assignDriversForm">
+<form action="{{ url_for('main.assign_drivers_to_operator', operator_id=operator.id) }}" method="post" id="assignDriversForm">
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>

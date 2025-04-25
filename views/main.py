@@ -1321,3 +1321,225 @@ def manager_reports():
         start_date=start_date.strftime('%Y-%m-%d') if hasattr(start_date, 'strftime') else '',
         end_date=end_date.strftime('%Y-%m-%d') if hasattr(end_date, 'strftime') else ''
     )
+
+@main.route('/dashboard/manager/operators/<int:operator_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required(UserRole.MANAGER.value)
+def edit_operator(operator_id):
+    """
+    Edit operator details
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not associated with a company.', 'danger')
+        return redirect(url_for('main.index'))
+
+    # Get operator
+    operator = Operator.query.get_or_404(operator_id)
+
+    # Check if operator is assigned to this manager
+    if operator.manager_id != current_user.manager.id:
+        flash('This operator is not assigned to you.', 'danger')
+        return redirect(url_for('main.manager_operators'))
+
+    # Create form
+    form = EditUserForm(
+        original_username=operator.user.username,
+        original_email=operator.user.email
+    )
+
+    if request.method == 'GET':
+        form.username.data = operator.user.username
+        form.email.data = operator.user.email
+        form.first_name.data = operator.user.first_name
+        form.last_name.data = operator.user.last_name
+        form.phone.data = operator.user.phone
+        form.is_active.data = operator.user.is_active
+
+    if form.validate_on_submit():
+        try:
+            # Update user details
+            operator.user.username = form.username.data
+            operator.user.email = form.email.data
+            operator.user.first_name = form.first_name.data
+            operator.user.last_name = form.last_name.data
+            operator.user.phone = form.phone.data
+            operator.user.is_active = form.is_active.data
+
+            # Handle profile image if provided
+            if form.profile_image.data:
+                from utils import save_profile_image
+                operator.user.profile_image = save_profile_image(form.profile_image.data)
+
+            # Update operator notes if present in the form
+            if hasattr(form, 'notes'):
+                operator.notes = form.notes.data
+
+            db.session.commit()
+            log_action(ActionType.UPDATE, f"Updated operator {operator.user.username}", db)
+
+            flash(f'Operator {operator.user.first_name} {operator.user.last_name} updated successfully!', 'success')
+            return redirect(url_for('main.view_operator', operator_id=operator_id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating operator: {str(e)}', 'danger')
+
+    return render_template(
+        'manager/edit_operator.html',
+        title='Edit Operator',
+        form=form,
+        operator=operator
+    )
+
+
+@main.route('/dashboard/manager/request-password-reset/<int:user_id>', methods=['POST'])
+@login_required
+@role_required(UserRole.MANAGER.value)
+def request_password_reset(user_id):
+    """
+    Request password reset for an operator
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not associated with a company.', 'danger')
+        return redirect(url_for('main.index'))
+
+    # Get user
+    user = User.query.get_or_404(user_id)
+
+    # Check if user is an operator assigned to this manager
+    operator = Operator.query.get(user_id)
+    if not operator or operator.manager_id != current_user.manager.id:
+        flash('You do not have permission to reset this user\'s password.', 'danger')
+        return redirect(url_for('main.manager_operators'))
+
+    try:
+        # In a real application, this would send a password reset email
+        # For this demo, we'll just generate a random password and notify the manager
+        import random
+        import string
+
+        # Generate random password
+        temp_password = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(10))
+
+        # Set new password
+        user.set_password(temp_password)
+        db.session.commit()
+
+        # Create system message to notify operator
+        message = Message(
+            content=f"Your password has been reset by your manager. Please contact them for your temporary password.",
+            sender_id=current_user.id,
+            recipient_id=user.id,
+            task_id=None,
+            company_id=current_user.manager.company_id,
+            is_read=False,
+            sent_at=datetime.utcnow()
+        )
+        db.session.add(message)
+        db.session.commit()
+
+        log_action(ActionType.UPDATE, f"Requested password reset for {user.username}", db)
+
+        flash(
+            f'Password for {user.first_name} {user.last_name} has been reset to: {temp_password}. Please provide this to the operator securely.',
+            'success')
+
+        # Redirect back to operator's profile
+        if operator:
+            return redirect(url_for('main.view_operator', operator_id=operator.id))
+        else:
+            return redirect(url_for('main.manager_operators'))
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error resetting password: {str(e)}', 'danger')
+        return redirect(url_for('main.manager_operators'))
+
+
+@main.route('/dashboard/manager/operators/<int:operator_id>/drivers/<int:driver_id>/unassign', methods=['POST'])
+@login_required
+@role_required(UserRole.MANAGER.value)
+def unassign_driver_from_operator(operator_id, driver_id):
+    """
+    Remove a driver from an operator
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not authorized to perform this action.', 'danger')
+        return redirect(url_for('main.index'))
+
+    # Get operator and driver
+    operator = Operator.query.get_or_404(operator_id)
+    driver = Driver.query.get_or_404(driver_id)
+
+    # Check if operator is assigned to this manager
+    if operator.manager_id != current_user.manager.id:
+        flash('This operator is not assigned to you.', 'danger')
+        return redirect(url_for('main.manager_operators'))
+
+    # Check if driver is assigned to this operator
+    if driver.operator_id != operator.id:
+        flash('This driver is not assigned to this operator.', 'danger')
+        return redirect(url_for('main.view_operator', operator_id=operator_id))
+
+    try:
+        # Store names for flash message
+        driver_name = f"{driver.user.first_name} {driver.user.last_name}"
+
+        # Remove operator assignment
+        driver.operator_id = None
+        db.session.commit()
+
+        log_action(ActionType.UPDATE, f"Unassigned driver {driver.user.username} from operator {operator.user.username}", db)
+        flash(f'Driver {driver_name} unassigned from operator.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error unassigning driver: {str(e)}', 'danger')
+
+    return redirect(url_for('main.view_operator', operator_id=operator_id))
+
+
+@main.route('/dashboard/manager/operators/<int:operator_id>/assign-drivers', methods=['POST'])
+@main.route('/dashboard/manager/operators/<int:operator_id>/assign-drivers', methods=['POST'])
+@login_required
+@role_required(UserRole.MANAGER.value)
+def assign_drivers_to_operator(operator_id):
+    """
+    Assign drivers to an operator
+    """
+    if not current_user.manager or not current_user.manager.company_id:
+        flash('You are not authorized to perform this action.', 'danger')
+        return redirect(url_for('main.index'))
+
+    # Get operator
+    operator = Operator.query.get_or_404(operator_id)
+
+    # Check if operator is assigned to this manager
+    if operator.manager_id != current_user.manager.id:
+        flash('This operator is not assigned to you.', 'danger')
+        return redirect(url_for('main.manager_operators'))
+
+    try:
+        # Get selected driver IDs
+        driver_ids = request.form.getlist('driver_ids[]')
+
+        # Get all drivers in the company
+        company_drivers = Driver.query.filter_by(
+            company_id=current_user.manager.company_id
+        ).all()
+
+        # Update driver assignments
+        for driver in company_drivers:
+            if str(driver.id) in driver_ids:
+                # Assign to this operator
+                driver.operator_id = operator.id
+            elif driver.operator_id == operator.id:
+                # Unassign from this operator
+                driver.operator_id = None
+
+        db.session.commit()
+        log_action(ActionType.UPDATE, f"Updated driver assignments for operator {operator.user.username}", db)
+
+        flash('Driver assignments updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating driver assignments: {str(e)}', 'danger')
+
+    return redirect(url_for('main.view_operator', operator_id=operator_id))
