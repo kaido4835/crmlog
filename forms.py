@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from wtforms import (
     StringField, PasswordField, BooleanField, SubmitField,
     SelectField, TextAreaField, FileField, DateTimeField,
-    IntegerField, FloatField, DateField
+    IntegerField, FloatField, DateField, HiddenField
 )
 from wtforms.validators import (
     DataRequired, Email, EqualTo, Length,
@@ -243,6 +243,7 @@ class DocumentUploadForm(FlaskForm):
 
 class MessageForm(FlaskForm):
     content = TextAreaField('Message', validators=[DataRequired(), Length(max=1000)])
+    task_id = HiddenField('Task ID')
     submit = SubmitField('Send')
 
 
