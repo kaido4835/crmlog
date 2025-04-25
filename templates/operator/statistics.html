@@ -667,4 +667,284 @@ document.addEventListener('DOMContentLoaded', function() {
                     'rgba(108, 117, 125, 0.7)'
                 ],
                 borderColor: [
+                    'rgba(25, 135, 84, 1)','rgba(255, 193, 7, 1)',
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(108, 117, 125, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+
+    // Daily Routes Chart
+    const dailyRoutesCtx = document.getElementById('dailyRoutesChart').getContext('2d');
+    new Chart(dailyRoutesCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for day in daily_routes %}'{{ day.date }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Created Routes',
+                data: [{% for day in daily_routes %}{{ day.created }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1,
+                tension: 0.3
+            }, {
+                label: 'Completed Routes',
+                data: [{% for day in daily_routes %}{{ day.completed }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(25, 135, 84, 0.2)',
+                borderColor: 'rgba(25, 135, 84, 1)',
+                borderWidth: 1,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Route Time Chart
+    const routeTimeCtx = document.getElementById('routeTimeChart').getContext('2d');
+    new Chart(routeTimeCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for driver in route_time_stats %}'{{ driver.name }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Average Completion Time (min)',
+                data: [{% for driver in route_time_stats %}{{ driver.avg_time }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+    {% endif %}
+
+    {% if report_type == 'tasks' %}
+    // Task Status Chart
+    const taskStatusCtx = document.getElementById('taskStatusChart').getContext('2d');
+    new Chart(taskStatusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['New', 'In Progress', 'On Hold', 'Completed', 'Cancelled'],
+            datasets: [{
+                data: [
+                    {{ task_stats.new }},
+                    {{ task_stats.in_progress }},
+                    {{ task_stats.on_hold }},
+                    {{ task_stats.completed }},
+                    {{ task_stats.cancelled }}
+                ],
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(108, 117, 125, 0.7)',
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(220, 53, 69, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(108, 117, 125, 1)',
                     'rgba(25, 135, 84, 1)',
+                    'rgba(220, 53, 69, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+
+    // Task Creation Chart
+    const taskCreationCtx = document.getElementById('taskCreationChart').getContext('2d');
+    new Chart(taskCreationCtx, {
+        type: 'line',
+        data: {
+            labels: [{% for day in daily_tasks %}'{{ day.date }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Created Tasks',
+                data: [{% for day in daily_tasks %}{{ day.created }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1,
+                tension: 0.3
+            }, {
+                label: 'Completed Tasks',
+                data: [{% for day in daily_tasks %}{{ day.completed }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(25, 135, 84, 0.2)',
+                borderColor: 'rgba(25, 135, 84, 1)',
+                borderWidth: 1,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Task Time Chart
+    const taskTimeCtx = document.getElementById('taskTimeChart').getContext('2d');
+    new Chart(taskTimeCtx, {
+        type: 'bar',
+        data: {
+            labels: ['< 4h', '4-8h', '8-24h', '1-2 days', '2-5 days', '> 5 days'],
+            datasets: [{
+                label: 'Task Completion Time Distribution',
+                data: [
+                    {{ task_time_stats.less_than_4h }},
+                    {{ task_time_stats.four_to_8h }},
+                    {{ task_time_stats.eight_to_24h }},
+                    {{ task_time_stats.one_to_2d }},
+                    {{ task_time_stats.two_to_5d }},
+                    {{ task_time_stats.more_than_5d }}
+                ],
+                backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Task Distribution Chart
+    const taskDistCtx = document.getElementById('taskDistributionChart').getContext('2d');
+    new Chart(taskDistCtx, {
+        type: 'pie',
+        data: {
+            labels: [{% for driver in task_distribution %}'{{ driver.name }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                data: [{% for driver in task_distribution %}{{ driver.count }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(108, 117, 125, 0.7)',
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(13, 202, 240, 0.7)',
+                    'rgba(102, 16, 242, 0.7)',
+                    'rgba(253, 126, 20, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(25, 135, 84, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(108, 117, 125, 1)',
+                    'rgba(220, 53, 69, 1)',
+                    'rgba(13, 202, 240, 1)',
+                    'rgba(102, 16, 242, 1)',
+                    'rgba(253, 126, 20, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+    {% endif %}
+
+    {% if not report_type %}
+    // Overall Performance Chart
+    const overallCtx = document.getElementById('overallPerformanceChart').getContext('2d');
+    new Chart(overallCtx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+            datasets: [{
+                label: 'Task Completion Rate',
+                data: [65, 68, 72, 75, 79, 82, 80, 83, 85, 88, 90, 92],
+                backgroundColor: 'rgba(13, 110, 253, 0.2)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1,
+                tension: 0.3
+            }, {
+                label: 'On-Time Delivery Rate',
+                data: [70, 72, 75, 78, 80, 83, 85, 88, 90, 92, 94, 95],
+                backgroundColor: 'rgba(25, 135, 84, 0.2)',
+                borderColor: 'rgba(25, 135, 84, 1)',
+                borderWidth: 1,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    min: 50,
+                    max: 100
+                }
+            }
+        }
+    });
+
+    // Task Distribution Pie Chart
+    const taskDistPieCtx = document.getElementById('taskDistributionPieChart').getContext('2d');
+    new Chart(taskDistPieCtx, {
+        type: 'pie',
+        data: {
+            labels: ['New', 'In Progress', 'On Hold', 'Completed', 'Cancelled'],
+            datasets: [{
+                data: [
+                    {{ task_stats.new }},
+                    {{ task_stats.in_progress }},
+                    {{ task_stats.on_hold }},
+                    {{ task_stats.completed }},
+                    {{ task_stats.cancelled }}
+                ],
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(108, 117, 125, 0.7)',
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(220, 53, 69, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(108, 117, 125, 1)',
+                    'rgba(25, 135, 84, 1)',
+                    'rgba(220, 53, 69, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+    {% endif %}
+});
+</script>
+{% endblock %}
+{% endblock %}
