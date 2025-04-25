@@ -1,0 +1,446 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user"></i> Operator Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> My Drivers
+                </a>
+                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </div>
+        
+        {% if document.task %}
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Related Task</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6>{{ document.task.title }}</h6>
+                    <span class="badge 
+                        {% if document.task.status.value == 'new' %}bg-primary
+                        {% elif document.task.status.value == 'in_progress' %}bg-warning
+                        {% elif document.task.status.value == 'on_hold' %}bg-secondary
+                        {% elif document.task.status.value == 'completed' %}bg-success
+                        {% elif document.task.status.value == 'cancelled' %}bg-danger{% endif %}">
+                        {{ document.task.status.value|replace('_', ' ')|title }}
+                    </span>
+                </div>
+                
+                {% if document.task.assignee %}
+                <div class="mb-3">
+                    <small>Assigned to:</small>
+                    <div>{{ document.task.assignee.first_name }} {{ document.task.assignee.last_name }}</div>
+                </div>
+                {% endif %}
+                
+                {% if document.task.deadline %}
+                <div class="mb-3">
+                    <small>Deadline:</small>
+                    <div class="{% if document.task.deadline < now %}text-danger{% endif %}">
+                        {{ document.task.deadline.strftime('%b %d, %Y %H:%M') }}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="d-grid">
+                    <a href="{{ url_for('tasks.view_task', task_id=document.task.id) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-tasks"></i> View Task
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Document Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('documents.download_document', document_id=document.id) }}" class="btn btn-primary">
+                        <i class="fas fa-download"></i> Download Document
+                    </a>
+                    <a href="{{ url_for('documents.edit_document', document_id=document.id) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit"></i> Edit Details
+                    </a>
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="fas fa-trash"></i> Delete Document
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">{{ document.title }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <div class="document-preview p-3 border rounded text-center mb-3" style="min-height: 300px;">
+                            {% if document.file_type in ['jpg', 'jpeg', 'png', 'gif'] %}
+                                <img src="{{ url_for('documents.download_document', document_id=document.id) }}" alt="{{ document.title }}" class="img-fluid" style="max-height: 500px;">
+                            {% elif document.file_type == 'pdf' %}
+                                <div class="d-flex align-items-center justify-content-center h-100">
+                                    <div>
+                                        <i class="fas fa-file-pdf text-danger fa-5x mb-3"></i>
+                                        <h5>PDF Document</h5>
+                                        <p class="text-muted">{{ document.title }}</p>
+                                        <a href="{{ url_for('documents.download_document', document_id=document.id) }}" class="btn btn-primary">
+                                            <i class="fas fa-download"></i> Download to View
+                                        </a>
+                                    </div>
+                                </div>
+                            {% elif document.file_type in ['doc', 'docx'] %}
+                                <div class="d-flex align-items-center justify-content-center h-100">
+                                    <div>
+                                        <i class="fas fa-file-word text-primary fa-5x mb-3"></i>
+                                        <h5>Word Document</h5>
+                                        <p class="text-muted">{{ document.title }}</p>
+                                        <a href="{{ url_for('documents.download_document', document_id=document.id) }}" class="btn btn-primary">
+                                            <i class="fas fa-download"></i> Download to View
+                                        </a>
+                                    </div>
+                                </div>
+                            {% elif document.file_type in ['xls', 'xlsx'] %}
+                                <div class="d-flex align-items-center justify-content-center h-100">
+                                    <div>
+                                        <i class="fas fa-file-excel text-success fa-5x mb-3"></i>
+                                        <h5>Excel Spreadsheet</h5>
+                                        <p class="text-muted">{{ document.title }}</p>
+                                        <a href="{{ url_for('documents.download_document', document_id=document.id) }}" class="btn btn-primary">
+                                            <i class="fas fa-download"></i> Download to View
+                                        </a>
+                                    </div>
+                                </div>
+                            {% elif document.file_type == 'txt' %}
+                                <div class="d-flex align-items-center justify-content-center h-100">
+                                    <div>
+                                        <i class="fas fa-file-alt text-secondary fa-5x mb-3"></i>
+                                        <h5>Text Document</h5>
+                                        <p class="text-muted">{{ document.title }}</p>
+                                        <a href="{{ url_for('documents.download_document', document_id=document.id) }}" class="btn btn-primary">
+                                            <i class="fas fa-download"></i> Download to View
+                                        </a>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="d-flex align-items-center justify-content-center h-100">
+                                    <div>
+                                        <i class="fas fa-file text-secondary fa-5x mb-3"></i>
+                                        <h5>{{ document.file_type|upper }} File</h5>
+                                        <p class="text-muted">{{ document.title }}</p>
+                                        <a href="{{ url_for('documents.download_document', document_id=document.id) }}" class="btn btn-primary">
+                                            <i class="fas fa-download"></i> Download to View
+                                        </a>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="mb-0">Document Information</h6>
+                            </div>
+                            <div class="card-body">
+                                <ul class="list-group list-group-flush">
+                                    <li class="list-group-item d-flex justify-content-between align-items-center p-2">
+                                        <span>File Type:</span>
+                                        <span class="badge bg-secondary">{{ document.file_type|upper }}</span>
+                                    </li>
+                                    
+                                    <li class="list-group-item d-flex justify-content-between align-items-center p-2">
+                                        <span>Size:</span>
+                                        <span>
+                                            {% if document.size < 1024 %}
+                                                {{ document.size }} B
+                                            {% elif document.size < 1024 * 1024 %}
+                                                {{ (document.size / 1024)|round(1) }} KB
+                                            {% else %}
+                                                {{ (document.size / (1024 * 1024))|round(1) }} MB
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                    
+                                    <li class="list-group-item d-flex justify-content-between align-items-center p-2">
+                                        <span>Uploaded:</span>
+                                        <span>{{ document.uploaded_at.strftime('%b %d, %Y') }}</span>
+                                    </li>
+                                    
+                                    <li class="list-group-item d-flex justify-content-between align-items-center p-2">
+                                        <span>Uploaded by:</span>
+                                        <span>
+                                            {% if document.uploader %}
+                                                {{ document.uploader.first_name }} {{ document.uploader.last_name }}
+                                            {% else %}
+                                                <span class="text-muted">Unknown</span>
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                    
+                                    <li class="list-group-item d-flex justify-content-between align-items-center p-2">
+                                        <span>Related Task:</span>
+                                        <span>
+                                            {% if document.task %}
+                                                <a href="{{ url_for('tasks.view_task', task_id=document.task.id) }}">
+                                                    Task #{{ document.task.id }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">None</span>
+                                            {% endif %}
+                                        </span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Document sharing section -->
+                <div class="mb-4">
+                    <h5 class="mb-3">Share Document</h5>
+                    <div class="card">
+                        <div class="card-body">
+                            <p>Share this document with drivers or other team members.</p>
+                            
+                            <form id="shareForm" action="{{ url_for('documents.share_document', document_id=document.id) }}" method="POST">
+                                <div class="mb-3">
+                                    <label class="form-label">Select Recipients</label>
+                                    <select class="form-select" name="recipient_ids" multiple>
+                                        <optgroup label="Drivers">
+                                            {% for driver in drivers %}
+                                            <option value="{{ driver.user.id }}">
+                                                {{ driver.user.first_name }} {{ driver.user.last_name }} (Driver)
+                                            </option>
+                                            {% endfor %}
+                                        </optgroup>
+                                        <optgroup label="Operators">
+                                            {% for operator in operators %}
+                                            <option value="{{ operator.user.id }}">
+                                                {{ operator.user.first_name }} {{ operator.user.last_name }} (Operator)
+                                            </option>
+                                            {% endfor %}
+                                        </optgroup>
+                                        <optgroup label="Managers">
+                                            {% for manager in managers %}
+                                            <option value="{{ manager.user.id }}">
+                                                {{ manager.user.first_name }} {{ manager.user.last_name }} (Manager)
+                                            </option>
+                                            {% endfor %}
+                                        </optgroup>
+                                    </select>
+                                    <small class="form-text text-muted">Hold Ctrl (or Cmd on Mac) to select multiple recipients</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">Message (Optional)</label>
+                                    <textarea class="form-control" name="message" rows="2" placeholder="Add a message about this document..."></textarea>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-share-alt"></i> Share Document
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Document history section -->
+                <div>
+                    <h5 class="mb-3">Document History</h5>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="timeline">
+                                <div class="timeline-item">
+                                    <div class="timeline-marker bg-primary"></div>
+                                    <div class="timeline-content">
+                                        <h6 class="timeline-title">Document Uploaded</h6>
+                                        <div class="timeline-date">{{ document.uploaded_at.strftime('%B %d, %Y at %H:%M') }}</div>
+                                        <p>
+                                            Uploaded by 
+                                            {% if document.uploader %}
+                                                {{ document.uploader.first_name }} {{ document.uploader.last_name }}
+                                            {% else %}
+                                                Unknown
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                {% if document_shares %}
+                                    {% for share in document_shares %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-info"></div>
+                                        <div class="timeline-content">
+                                            <h6 class="timeline-title">Document Shared</h6>
+                                            <div class="timeline-date">{{ share.timestamp.strftime('%B %d, %Y at %H:%M') }}</div>
+                                            <p>
+                                                Shared with {{ share.recipient.first_name }} {{ share.recipient.last_name }}
+                                                by {{ share.sender.first_name }} {{ share.sender.last_name }}
+                                            </p>
+                                            {% if share.message %}
+                                            <p class="text-muted">
+                                                "{{ share.message }}"
+                                            </p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                                
+                                {% if document_downloads %}
+                                    {% for download in document_downloads %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-success"></div>
+                                        <div class="timeline-content">
+                                            <h6 class="timeline-title">Document Downloaded</h6>
+                                            <div class="timeline-date">{{ download.timestamp.strftime('%B %d, %Y at %H:%M') }}</div>
+                                            <p>
+                                                Downloaded by {{ download.user.first_name }} {{ download.user.last_name }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                                
+                                {% if document_edits %}
+                                    {% for edit in document_edits %}
+                                    <div class="timeline-item">
+                                        <div class="timeline-marker bg-warning"></div>
+                                        <div class="timeline-content">
+                                            <h6 class="timeline-title">Document Details Edited</h6>
+                                            <div class="timeline-date">{{ edit.timestamp.strftime('%B %d, %Y at %H:%M') }}</div>
+                                            <p>
+                                                Edited by {{ edit.user.first_name }} {{ edit.user.last_name }}
+                                            </p>
+                                            {% if edit.changes %}
+                                            <p class="text-muted small">
+                                                {{ edit.changes }}
+                                            </p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="{{ url_for('operator.documents') }}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Documents
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the document "{{ document.title }}"?</p>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> This action cannot be undone.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('documents.delete_document', document_id=document.id) }}" method="POST">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block styles %}
+<style>
+    .timeline {
+        position: relative;
+        padding-left: 30px;
+    }
+    
+    .timeline:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 9px;
+        bottom: 0;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 20px;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        top: 0;
+        left: -30px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+    }
+    
+    .timeline-content {
+        padding-bottom: 10px;
+    }
+    
+    .timeline-title {
+        margin-bottom: 5px;
+    }
+    
+    .timeline-date {
+        color: #6c757d;
+        font-size: 12px;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Enable tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

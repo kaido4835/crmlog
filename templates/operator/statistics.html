@@ -1,10 +1,670 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user"></i> Operator Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> My Drivers
+                </a>
+                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+                <a href="{{ url_for('operator.statistics') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-chart-bar"></i> Statistics
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Report Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('operator.statistics') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <select class="form-select" name="period" id="period-select">
+                            <option value="7" {% if period == '7' %}selected{% endif %}>Last 7 days</option>
+                            <option value="30" {% if period == '30' %}selected{% endif %}>Last 30 days</option>
+                            <option value="90" {% if period == '90' %}selected{% endif %}>Last 90 days</option>
+                            <option value="custom" {% if period == 'custom' %}selected{% endif %}>Custom range</option>
+                        </select>
+                    </div>
+                    
+                    <div id="custom-date-range" class="mb-3" {% if period != 'custom' %}style="display: none;"{% endif %}>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-label">From</label>
+                                <input type="date" class="form-control" name="start_date" value="{{ start_date }}">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">To</label>
+                                <input type="date" class="form-control" name="end_date" value="{{ end_date }}">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Driver</label>
+                        <select class="form-select" name="driver_id">
+                            <option value="">All Drivers</option>
+                            {% for driver in drivers %}
+                                <option value="{{ driver.id }}" {% if driver_id == driver.id %}selected{% endif %}>
+                                    {{ driver.user.first_name }} {{ driver.user.last_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Report Type</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="report_type" id="report_type_drivers" value="drivers" 
+                                  {% if report_type == 'drivers' %}checked{% endif %}>
+                            <label class="form-check-label" for="report_type_drivers">
+                                Driver Performance
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="report_type" id="report_type_routes" value="routes" 
+                                  {% if report_type == 'routes' %}checked{% endif %}>
+                            <label class="form-check-label" for="report_type_routes">
+                                Route Analysis
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="report_type" id="report_type_tasks" value="tasks" 
+                                  {% if report_type == 'tasks' %}checked{% endif %}>
+                            <label class="form-check-label" for="report_type_tasks">
+                                Task Metrics
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Generate Report
+                    </button>
+                    
+                    <div class="mt-3">
+                        <a href="{{ url_for('operator.download_report', format='csv') }}?{{ request.query_string.decode() }}" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-download"></i> Download CSV
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    {% if report_type == 'drivers' %}
+                        Driver Performance Report
+                    {% elif report_type == 'routes' %}
+                        Route Analysis Report
+                    {% elif report_type == 'tasks' %}
+                        Task Metrics Report
+                    {% else %}
+                        Performance Statistics
+                    {% endif %}
+                </h5>
+                <div>
+                    <span class="badge bg-light text-dark">
+                        {{ start_date_display }} to {{ end_date_display }}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- KPI Summary Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-tasks fa-2x text-primary mb-3"></i>
+                                <h2 class="display-5">{{ kpi.total_tasks }}</h2>
+                                <p class="text-muted">Total Tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-check-circle fa-2x text-success mb-3"></i>
+                                <h2 class="display-5">{{ kpi.completed_tasks }}</h2>
+                                <p class="text-muted">Completed Tasks</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-route fa-2x text-warning mb-3"></i>
+                                <h2 class="display-5">{{ kpi.total_routes }}</h2>
+                                <p class="text-muted">Total Routes</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="fas fa-truck fa-2x text-info mb-3"></i>
+                                <h2 class="display-5">{{ kpi.total_distance|int }}</h2>
+                                <p class="text-muted">Total Distance (km)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if report_type == 'drivers' %}
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Driver Performance Comparison</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="driverPerformanceChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Task Completion Rate</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="taskCompletionChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">On-Time Delivery Rate</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="onTimeDeliveryChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Driver Performance Details</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Driver</th>
+                                        <th>Tasks</th>
+                                        <th>Completion Rate</th>
+                                        <th>Avg. Time</th>
+                                        <th>Distance</th>
+                                        <th>On-Time Rate</th>
+                                        <th>Rating</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for driver in driver_stats %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('operator.view_driver', driver_id=driver.id) }}">
+                                                {{ driver.user.first_name }} {{ driver.user.last_name }}
+                                            </a>
+                                        </td>
+                                        <td>{{ driver.stats.completed_tasks }}/{{ driver.stats.total_tasks }}</td>
+                                        <td>
+                                            <div class="progress" style="height: 6px;">
+                                                <div class="progress-bar 
+                                                    {% if driver.stats.completion_rate >= 85 %}bg-success
+                                                    {% elif driver.stats.completion_rate >= 70 %}bg-info
+                                                    {% elif driver.stats.completion_rate >= 50 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}" 
+                                                    role="progressbar" 
+                                                    style="width: {{ driver.stats.completion_rate }}%;" 
+                                                    aria-valuenow="{{ driver.stats.completion_rate }}" 
+                                                    aria-valuemin="0" 
+                                                    aria-valuemax="100">
+                                                </div>
+                                            </div>
+                                            <small>{{ driver.stats.completion_rate }}%</small>
+                                        </td>
+                                        <td>{{ driver.stats.avg_completion_time }} min</td>
+                                        <td>{{ driver.stats.total_distance|int }} km</td>
+                                        <td>{{ driver.stats.on_time_rate }}%</td>
+                                        <td>
+                                            <div class="stars">
+                                                {% set rating = (driver.stats.on_time_rate / 20)|round(0) %}
+                                                {% for i in range(5) %}
+                                                    {% if i < rating %}
+                                                        <i class="fas fa-star text-warning"></i>
+                                                    {% else %}
+                                                        <i class="far fa-star text-muted"></i>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if report_type == 'routes' %}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Routes by Status</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="routeStatusChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Daily Routes</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="dailyRoutesChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Route Completion Time Analysis</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="routeTimeChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Recent Routes</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Route</th>
+                                        <th>Driver</th>
+                                        <th>Distance</th>
+                                        <th>Duration</th>
+                                        <th>Status</th>
+                                        <th>On-Time</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for route in recent_routes %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('routes.view_route', route_id=route.id) }}">
+                                                {{ route.start_point }} to {{ route.end_point }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% if route.driver and route.driver.user %}
+                                                {{ route.driver.user.first_name }} {{ route.driver.user.last_name }}
+                                            {% else %}
+                                                <span class="text-muted">Unassigned</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ route.distance|round(1) if route.distance else 'N/A' }} km</td>
+                                        <td>
+                                            {% if route.actual_start_time and route.end_time %}
+                                                {% set duration = ((route.end_time - route.actual_start_time).total_seconds() / 60)|int %}
+                                                {{ duration }} min
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if route.status.value == 'planned' %}bg-primary
+                                                {% elif route.status.value == 'in_progress' %}bg-warning
+                                                {% elif route.status.value == 'completed' %}bg-success
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ route.status.value|replace('_', ' ')|title }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if route.status.value == 'completed' and route.is_on_time is defined %}
+                                                {% if route.is_on_time %}
+                                                    <span class="text-success"><i class="fas fa-check"></i> Yes</span>
+                                                {% else %}
+                                                    <span class="text-danger"><i class="fas fa-times"></i> No</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="text-muted">N/A</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                {% if report_type == 'tasks' %}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Tasks by Status</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="taskStatusChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Tasks Created vs. Completed</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="taskCreationChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Task Completion Time</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="taskTimeChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Task Distribution by Driver</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="taskDistributionChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0">Task Performance Summary</h6>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Metric</th>
+                                        <th>Last 7 Days</th>
+                                        <th>Last 30 Days</th>
+                                        <th>Trend</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Tasks Created</td>
+                                        <td>{{ task_metrics.created_7_days }}</td>
+                                        <td>{{ task_metrics.created_30_days }}</td>
+                                        <td>
+                                            {% if task_metrics.created_trend > 0 %}
+                                                <span class="text-success"><i class="fas fa-arrow-up"></i> {{ task_metrics.created_trend }}%</span>
+                                            {% elif task_metrics.created_trend < 0 %}
+                                                <span class="text-danger"><i class="fas fa-arrow-down"></i> {{ task_metrics.created_trend|abs }}%</span>
+                                            {% else %}
+                                                <span class="text-muted"><i class="fas fa-minus"></i> 0%</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Tasks Completed</td>
+                                        <td>{{ task_metrics.completed_7_days }}</td>
+                                        <td>{{ task_metrics.completed_30_days }}</td>
+                                        <td>
+                                            {% if task_metrics.completed_trend > 0 %}
+                                                <span class="text-success"><i class="fas fa-arrow-up"></i> {{ task_metrics.completed_trend }}%</span>
+                                            {% elif task_metrics.completed_trend < 0 %}
+                                                <span class="text-danger"><i class="fas fa-arrow-down"></i> {{ task_metrics.completed_trend|abs }}%</span>
+                                            {% else %}
+                                                <span class="text-muted"><i class="fas fa-minus"></i> 0%</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Completion Rate</td>
+                                        <td>{{ task_metrics.completion_rate_7_days }}%</td>
+                                        <td>{{ task_metrics.completion_rate_30_days }}%</td>
+                                        <td>
+                                            {% if task_metrics.completion_rate_trend > 0 %}
+                                                <span class="text-success"><i class="fas fa-arrow-up"></i> {{ task_metrics.completion_rate_trend }}%</span>
+                                            {% elif task_metrics.completion_rate_trend < 0 %}
+                                                <span class="text-danger"><i class="fas fa-arrow-down"></i> {{ task_metrics.completion_rate_trend|abs }}%</span>
+                                            {% else %}
+                                                <span class="text-muted"><i class="fas fa-minus"></i> 0%</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Average Completion Time</td>
+                                        <td>{{ task_metrics.avg_time_7_days }} hours</td>
+                                        <td>{{ task_metrics.avg_time_30_days }} hours</td>
+                                        <td>
+                                            {% if task_metrics.avg_time_trend < 0 %}
+                                                <span class="text-success"><i class="fas fa-arrow-down"></i> {{ task_metrics.avg_time_trend|abs }}%</span>
+                                            {% elif task_metrics.avg_time_trend > 0 %}
+                                                <span class="text-danger"><i class="fas fa-arrow-up"></i> {{ task_metrics.avg_time_trend }}%</span>
+                                            {% else %}
+                                                <span class="text-muted"><i class="fas fa-minus"></i> 0%</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Default view if no specific report type selected -->
+                {% if not report_type %}
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Overall Performance</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="overallPerformanceChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h6 class="mb-0">Task Distribution</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="taskDistributionPieChart" height="250"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Please select a report type from the sidebar to view detailed statistics.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle custom date range visibility
+    const periodSelect = document.getElementById('period-select');
+    const customDateRange = document.getElementById('custom-date-range');
+    
+    if (periodSelect && customDateRange) {
+        periodSelect.addEventListener('change', function() {
+            if (this.value === 'custom') {
+                customDateRange.style.display = 'block';
+            } else {
+                customDateRange.style.display = 'none';
+            }
+        });
+    }
+    
+    // Initialize charts based on report type
+    {% if report_type == 'drivers' %}
+    // Driver Performance Chart
+    const driverCtx = document.getElementById('driverPerformanceChart').getContext('2d');
+    new Chart(driverCtx, {
+        type: 'bar',
+        data: {
+            labels: [{% for driver in driver_stats %}'{{ driver.user.first_name }} {{ driver.user.last_name }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Completion Rate (%)',
+                data: [{% for driver in driver_stats %}{{ driver.stats.completion_rate }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                borderColor: 'rgba(13, 110, 253, 1)',
+                borderWidth: 1
+            }, {
+                label: 'On-Time Rate (%)',
+                data: [{% for driver in driver_stats %}{{ driver.stats.on_time_rate }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: 'rgba(25, 135, 84, 0.7)',
+                borderColor: 'rgba(25, 135, 84, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            }
+        }
+    });
+    
+    // Task Completion Chart
+    const taskCompletionCtx = document.getElementById('taskCompletionChart').getContext('2d');
+    new Chart(taskCompletionCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completed', 'In Progress', 'New'],
+            datasets: [{
+                data: [{{ task_stats.completed }}, {{ task_stats.in_progress }}, {{ task_stats.new }}],
+                backgroundColor: [
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(13, 110, 253, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(25, 135, 84, 1)',
+                    'rgba(255, 193, 7, 1)',
+                    'rgba(13, 110, 253, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+    
+    // On-Time Delivery Chart
+    const onTimeCtx = document.getElementById('onTimeDeliveryChart').getContext('2d');
+    new Chart(onTimeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['On Time', 'Late'],
+            datasets: [{
+                data: [{{ on_time_stats.on_time }}, {{ on_time_stats.late }}],
+                backgroundColor: [
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(220, 53, 69, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(25, 135, 84, 1)',
+                    'rgba(220, 53, 69, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+    {% endif %}
+    
+    {% if report_type == 'routes' %}
+    // Route Status Chart
+    const routeStatusCtx = document.getElementById('routeStatusChart').getContext('2d');
+    new Chart(routeStatusCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completed', 'In Progress', 'Planned', 'Cancelled'],
+            datasets: [{
+                data: [
+                    {{ route_stats.completed }}, 
+                    {{ route_stats.in_progress }}, 
+                    {{ route_stats.planned }}, 
+                    {{ route_stats.cancelled }}
+                ],
+                backgroundColor: [
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(108, 117, 125, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(25, 135, 84, 1)',

@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user"></i> Operator Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-users"></i> My Drivers
+                </a>
+                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Driver Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    {% if driver.user.profile_image %}
+                        <img src="{{ url_for('static', filename=driver.user.profile_image) }}" alt="Profile image" class="rounded-circle mb-2" style="width: 80px; height: 80px;">
+                    {% else %}
+                        <div class="rounded-circle bg-secondary d-inline-flex justify-content-center align-items-center mb-2" style="width: 80px; height: 80px;">
+                            <span class="text-white" style="font-size: 30px;">{{ driver.user.first_name[0] }}{{ driver.user.last_name[0] }}</span>
+                        </div>
+                    {% endif %}
+                    <h5>{{ driver.user.first_name }} {{ driver.user.last_name }}</h5>
+                    <p class="text-muted mb-0">{{ driver.user.email }}</p>
+                </div>
+                
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{{ url_for('operator.view_driver', driver_id=driver.id) }}" class="btn btn-outline-primary">
+                        <i class="fas fa-eye"></i> View Profile
+                    </a>
+                    <a href="{{ url_for('messages.chat', user_id=driver.user.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-comment"></i> Message Driver
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Edit Driver Information</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('operator.edit_driver', driver_id=driver.id) }}" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.first_name.label }}</label>
+                                {{ form.first_name(class="form-control") }}
+                                {% for error in form.first_name.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.last_name.label }}</label>
+                                {{ form.last_name(class="form-control") }}
+                                {% for error in form.last_name.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.email.label }}</label>
+                                {{ form.email(class="form-control") }}
+                                {% for error in form.email.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">{{ form.phone.label }}</label>
+                                {{ form.phone(class="form-control") }}
+                                {% for error in form.phone.errors %}
+                                    <span class="text-danger">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.license_number.label }}</label>
+                        {{ form.license_number(class="form-control") }}
+                        {% for error in form.license_number.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                        <small class="form-text text-muted">Driver's license or commercial driving license number</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.vehicle_info.label }}</label>
+                        {{ form.vehicle_info(class="form-control") }}
+                        {% for error in form.vehicle_info.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                        <small class="form-text text-muted">Vehicle make, model, year, license plate, etc.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.profile_image.label }}</label>
+                        {{ form.profile_image(class="form-control") }}
+                        {% for error in form.profile_image.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                        <small class="form-text text-muted">Upload a new profile image (JPG, PNG only)</small>
+                        
+                        {% if driver.user.profile_image %}
+                        <div class="mt-2">
+                            <div class="form-check">
+                                {{ form.remove_image(class="form-check-input") }}
+                                <label class="form-check-label" for="remove_image">
+                                    Remove current profile image
+                                </label>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.notes.label }}</label>
+                        {{ form.notes(class="form-control", rows=3) }}
+                        {% for error in form.notes.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                        <small class="form-text text-muted">Additional notes about the driver (only visible to operators and managers)</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_active(class="form-check-input") }}
+                            <label class="form-check-label" for="is_active">
+                                {{ form.is_active.label }}
+                            </label>
+                        </div>
+                        <small class="form-text text-muted">Uncheck to temporarily deactivate this driver's account</small>
+                    </div>
+                    
+                    <h5 class="mt-4 mb-3">Account Management</h5>
+                    
+                    <div class="card mb-3 bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">Reset Password</h6>
+                            <p class="card-text small">Use this option to reset the driver's password. A new temporary password will be generated.</p>
+                            
+                            <div class="form-check mb-3">
+                                {{ form.reset_password(class="form-check-input") }}
+                                <label class="form-check-label" for="reset_password">
+                                    {{ form.reset_password.label }}
+                                </label>
+                            </div>
+                            
+                            <div class="alert alert-info small">
+                                <i class="fas fa-info-circle"></i> After resetting the password, you'll need to securely communicate the new password to the driver.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 d-flex justify-content-between">
+                        <a href="{{ url_for('operator.view_driver', driver_id=driver.id) }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Cancel
+                        </a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Preview uploaded image
+    const profileImageInput = document.getElementById('profile_image');
+    if (profileImageInput) {
+        profileImageInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const profileImage = document.querySelector('.rounded-circle');
+                    if (profileImage.tagName === 'IMG') {
+                        profileImage.src = e.target.result;
+                    } else {
+                        // Replace div placeholder with actual image
+                        const parentDiv = profileImage.parentNode;
+                        const newImg = document.createElement('img');
+                        newImg.src = e.target.result;
+                        newImg.alt = 'Profile image';
+                        newImg.className = 'rounded-circle mb-2';
+                        newImg.style.width = '80px';
+                        newImg.style.height = '80px';
+                        parentDiv.replaceChild(newImg, profileImage);
+                    }
+                }
+                
+                reader.readAsDataURL(this.files[0]);
+            }
+        });
+    }
+    
+    // If remove image is checked, disable file upload
+    const removeImageCheckbox = document.getElementById('remove_image');
+    if (removeImageCheckbox) {
+        removeImageCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                profileImageInput.disabled = true;
+            } else {
+                profileImageInput.disabled = false;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

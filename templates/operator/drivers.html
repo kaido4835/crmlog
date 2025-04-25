@@ -1,10 +1,420 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends "base.html" %}
 
-</body>
-</html>
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user"></i> Operator Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-users"></i> My Drivers
+                </a>
+                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Driver Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('operator.drivers') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_all" value="" 
+                                       {% if not status %}checked{% endif %}>
+                                <label class="form-check-label" for="status_all">All</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_active" value="active" 
+                                       {% if status == 'active' %}checked{% endif %}>
+                                <label class="form-check-label" for="status_active">Active</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_idle" value="idle" 
+                                       {% if status == 'idle' %}checked{% endif %}>
+                                <label class="form-check-label" for="status_idle">Idle</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_on_route" value="on_route" 
+                                       {% if status == 'on_route' %}checked{% endif %}>
+                                <label class="form-check-label" for="status_on_route">On Route</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Sort By</label>
+                        <select class="form-select" name="sort">
+                            <option value="name_asc" {% if sort == 'name_asc' %}selected{% endif %}>Name (A-Z)</option>
+                            <option value="name_desc" {% if sort == 'name_desc' %}selected{% endif %}>Name (Z-A)</option>
+                            <option value="tasks_desc" {% if sort == 'tasks_desc' %}selected{% endif %}>Most Tasks</option>
+                            <option value="last_active_desc" {% if sort == 'last_active_desc' %}selected{% endif %}>Recently Active</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Search</label>
+                        <input type="text" class="form-control" name="search" value="{{ search_term }}" placeholder="Search drivers...">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">My Drivers</h5>
+                <div>
+                    <a href="{{ url_for('operator.request_driver') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus"></i> Request New Driver
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if drivers %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Driver</th>
+                                <th>Status</th>
+                                <th>Current Task/Route</th>
+                                <th>Vehicle</th>
+                                <th>Performance</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for driver in drivers.items %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('operator.view_driver', driver_id=driver.id) }}" class="d-flex align-items-center text-decoration-none">
+                                        {% if driver.user.profile_image %}
+                                            <img src="{{ url_for('static', filename=driver.user.profile_image) }}" alt="Profile image" class="rounded-circle me-2" style="width: 40px; height: 40px;">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-2" style="width: 40px; height: 40px;">
+                                                <span class="text-white" style="font-size: 16px;">{{ driver.user.first_name[0] }}{{ driver.user.last_name[0] }}</span>
+                                            </div>
+                                        {% endif %}
+                                        <div>
+                                            <div>{{ driver.user.first_name }} {{ driver.user.last_name }}</div>
+                                            <small class="text-muted">{{ driver.user.phone or 'No phone' }}</small>
+                                        </div>
+                                    </a>
+                                </td>
+                                <td>
+                                    {% set active_route = driver.get_active_route() %}
+                                    {% if active_route %}
+                                        <span class="badge bg-warning">On Route</span>
+                                    {% elif driver.user.is_active %}
+                                        <span class="badge bg-success">Available</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% set active_task = driver.get_active_task() %}
+                                    {% set active_route = driver.get_active_route() %}
+                                    
+                                    {% if active_task %}
+                                        <a href="{{ url_for('tasks.view_task', task_id=active_task.id) }}" class="text-primary">
+                                            <i class="fas fa-tasks"></i> {{ active_task.title|truncate(20) }}
+                                        </a>
+                                    {% elif active_route %}
+                                        <a href="{{ url_for('routes.view_route', route_id=active_route.id) }}" class="text-warning">
+                                            <i class="fas fa-route"></i> {{ active_route.start_point|truncate(10) }} to {{ active_route.end_point|truncate(10) }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">No active task</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <small>{{ driver.vehicle_info|truncate(20) }}</small>
+                                </td>
+                                <td>
+                                    {% set performance = driver.get_performance_stats() %}
+                                    <div class="progress" style="height: 6px;">
+                                        <div class="progress-bar 
+                                            {% if performance.completion_rate >= 85 %}bg-success
+                                            {% elif performance.completion_rate >= 70 %}bg-info
+                                            {% elif performance.completion_rate >= 50 %}bg-warning
+                                            {% else %}bg-danger{% endif %}" 
+                                            role="progressbar" 
+                                            style="width: {{ performance.completion_rate }}%;"
+                                            aria-valuenow="{{ performance.completion_rate }}" 
+                                            aria-valuemin="0" 
+                                            aria-valuemax="100">
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between">
+                                        <small>{{ performance.completion_rate }}%</small>
+                                        <small class="text-muted">{{ performance.completed_tasks }}/{{ performance.total_tasks }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('operator.view_driver', driver_id=driver.id) }}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('tasks.create_task', driver_id=driver.id) }}" class="btn btn-sm btn-outline-success" title="Assign Task">
+                                            <i class="fas fa-tasks"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ url_for('routes.create_route', driver_id=driver.id) }}">
+                                                    <i class="fas fa-route"></i> Create Route
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="{{ url_for('messages.chat', user_id=driver.user.id) }}">
+                                                    <i class="fas fa-comment"></i> Message Driver
+                                                </a>
+                                            </li>
+                                            <li>
+                                                <a class="dropdown-item" href="{{ url_for('operator.edit_driver', driver_id=driver.id) }}">
+                                                    <i class="fas fa-edit"></i> Edit Details
+                                                </a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if drivers.pages > 1 %}
+                <nav aria-label="Driver pagination" class="p-3">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if drivers.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('operator.drivers', page=drivers.prev_num, status=status, sort=sort, search=search_term) }}">
+                                    Previous
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Previous</span>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page_num in drivers.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == drivers.page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('operator.drivers', page=page_num, status=status, sort=sort, search=search_term) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if drivers.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('operator.drivers', page=drivers.next_num, status=status, sort=sort, search=search_term) }}">
+                                    Next
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="display-1 text-muted mb-3">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h4 class="text-muted mb-3">No drivers found</h4>
+                    <p class="text-muted">
+                        {% if search_term %}
+                            No drivers matching "{{ search_term }}"
+                            <a href="{{ url_for('operator.drivers') }}" class="btn btn-outline-primary mt-2">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </a>
+                        {% else %}
+                            You don't have any drivers assigned to you.
+                            <a href="{{ url_for('operator.request_driver') }}" class="btn btn-primary mt-2">
+                                <i class="fas fa-plus"></i> Request New Driver
+                            </a>
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Driver Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="driverPerformanceChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Active Drivers Overview</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if active_drivers %}
+                        <div class="list-group list-group-flush">
+                            {% for driver in active_drivers %}
+                            <a href="{{ url_for('operator.view_driver', driver_id=driver.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        {% if driver.user.profile_image %}
+                                            <img src="{{ url_for('static', filename=driver.user.profile_image) }}" alt="Profile image" class="rounded-circle me-2" style="width: 32px; height: 32px;">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-2" style="width: 32px; height: 32px;">
+                                                <span class="text-white" style="font-size: 12px;">{{ driver.user.first_name[0] }}{{ driver.user.last_name[0] }}</span>
+                                            </div>
+                                        {% endif %}
+                                        {{ driver.user.first_name }} {{ driver.user.last_name }}
+                                    </div>
+                                    
+                                    {% set active_route = driver.get_active_route() %}
+                                    {% if active_route %}
+                                        <span class="badge bg-warning">On Route</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Available</span>
+                                    {% endif %}
+                                </div>
+                                
+                                {% if active_route %}
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        {{ active_route.start_point }} → {{ active_route.end_point }}
+                                        {% if active_route.estimated_time %}
+                                            ({{ (active_route.estimated_time // 60) }}h {{ (active_route.estimated_time % 60) }}m)
+                                        {% endif %}
+                                    </small>
+                                    <div class="progress mt-1" style="height: 4px;">
+                                        {% set progress = active_route.get_completion_percentage() %}
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress }}%;" 
+                                             aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-user-clock fa-2x text-muted mb-3"></i>
+                            <p class="mb-0">No active drivers at the moment</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Driver Performance Chart
+    var ctx = document.getElementById('driverPerformanceChart').getContext('2d');
+    var driverPerformanceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: [{% for driver in top_drivers %}'{{ driver.user.first_name }} {{ driver.user.last_name }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+            datasets: [{
+                label: 'Completion Rate (%)',
+                data: [{% for driver in top_drivers %}{{ driver.stats.completion_rate }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                backgroundColor: [
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(13, 110, 253, 0.7)'
+                ],
+                borderColor: [
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(13, 110, 253, 1)',
+                    'rgba(13, 110, 253, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.dataset.label || '';
+                            var value = context.raw || 0;
+                            return label + ': ' + value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}
