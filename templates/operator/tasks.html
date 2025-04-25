@@ -1,0 +1,412 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user"></i> Operator Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> My Drivers
+                </a>
+                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Task Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('operator.tasks') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_all" value="" 
+                                       {% if not status %}checked{% endif %}>
+                                <label class="form-check-label" for="status_all">All</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_new" value="new" 
+                                       {% if status == 'new' %}checked{% endif %}>
+                                <label class="form-check-label" for="status_new">New</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_in_progress" value="in_progress" 
+                                       {% if status == 'in_progress' %}checked{% endif %}>
+                                <label class="form-check-label" for="status_in_progress">In Progress</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_completed" value="completed" 
+                                       {% if status == 'completed' %}checked{% endif %}>
+                                <label class="form-check-label" for="status_completed">Completed</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Driver</label>
+                        <select class="form-select" name="driver_id">
+                            <option value="">All Drivers</option>
+                            {% for driver in drivers %}
+                                <option value="{{ driver.id }}" {% if driver_id == driver.id %}selected{% endif %}>
+                                    {{ driver.user.first_name }} {{ driver.user.last_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Sort By</label>
+                        <select class="form-select" name="sort">
+                            <option value="deadline_asc" {% if sort == 'deadline_asc' %}selected{% endif %}>Deadline (Earliest First)</option>
+                            <option value="deadline_desc" {% if sort == 'deadline_desc' %}selected{% endif %}>Deadline (Latest First)</option>
+                            <option value="created_desc" {% if sort == 'created_desc' %}selected{% endif %}>Created (Newest First)</option>
+                            <option value="created_asc" {% if sort == 'created_asc' %}selected{% endif %}>Created (Oldest First)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Search</label>
+                        <input type="text" class="form-control" name="search" value="{{ search_term }}" placeholder="Search tasks...">
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-filter"></i> Apply Filters
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Tasks Management</h5>
+                <a href="{{ url_for('tasks.create_task') }}" class="btn btn-light btn-sm">
+                    <i class="fas fa-plus"></i> Create Task
+                </a>
+            </div>
+            <div class="card-body p-0">
+                {% if tasks %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Status</th>
+                                <th>Assigned To</th>
+                                <th>Deadline</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for task in tasks.items %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('tasks.view_task', task_id=task.id) }}">{{ task.title }}</a>
+                                    {% if task.description %}
+                                    <button class="btn btn-sm text-muted border-0 p-0 ms-1" type="button" 
+                                            data-bs-toggle="tooltip" data-bs-placement="right" 
+                                            title="{{ task.description|truncate(100) }}">
+                                        <i class="fas fa-info-circle"></i>
+                                    </button>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.status.value == 'new' %}
+                                        <span class="badge bg-primary">New</span>
+                                    {% elif task.status.value == 'in_progress' %}
+                                        <span class="badge bg-warning">In Progress</span>
+                                    {% elif task.status.value == 'on_hold' %}
+                                        <span class="badge bg-secondary">On Hold</span>
+                                    {% elif task.status.value == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif task.status.value == 'cancelled' %}
+                                        <span class="badge bg-danger">Cancelled</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.assignee %}
+                                        <a href="{{ url_for('operator.view_driver', driver_id=task.assignee.driver.id) }}" class="d-flex align-items-center text-decoration-none">
+                                            {% if task.assignee.profile_image %}
+                                                <img src="{{ url_for('static', filename=task.assignee.profile_image) }}" alt="Profile image" class="rounded-circle me-1" style="width: 24px; height: 24px;">
+                                            {% else %}
+                                                <div class="rounded-circle bg-secondary d-flex justify-content-center align-items-center me-1" style="width: 24px; height: 24px;">
+                                                    <span class="text-white" style="font-size: 10px;">{{ task.assignee.first_name[0] }}{{ task.assignee.last_name[0] }}</span>
+                                                </div>
+                                            {% endif %}
+                                            <span>{{ task.assignee.first_name }} {{ task.assignee.last_name }}</span>
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">Unassigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if task.deadline %}
+                                        <span class="{% if task.deadline < now %}text-danger{% endif %}">
+                                            {{ task.deadline.strftime('%b %d, %H:%M') }}
+                                            {% if task.deadline < now %}
+                                                <i class="fas fa-exclamation-circle"></i>
+                                            {% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">No deadline</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ task.created_at.strftime('%b %d, %Y') }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('routes.create_route', task_id=task.id) }}" class="btn btn-sm btn-outline-success" title="Create Route">
+                                            <i class="fas fa-route"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ url_for('documents.upload_document', task_id=task.id) }}">
+                                                    <i class="fas fa-file-upload"></i> Upload Document
+                                                </a>
+                                            </li>
+                                            {% if task.assignee %}
+                                            <li>
+                                                <a class="dropdown-item" href="{{ url_for('messages.chat', user_id=task.assignee.id, task_id=task.id) }}">
+                                                    <i class="fas fa-comment"></i> Message Driver
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            {% if task.status.value != 'completed' and task.status.value != 'cancelled' %}
+                                            <li>
+                                                <form action="{{ url_for('tasks.complete_task', task_id=task.id) }}" method="POST" class="d-inline">
+                                                    <button type="submit" class="dropdown-item text-success">
+                                                        <i class="fas fa-check"></i> Mark as Completed
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if tasks.pages > 1 %}
+                <nav aria-label="Task pagination" class="p-3">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if tasks.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('operator.tasks', page=tasks.prev_num, status=status, driver_id=driver_id, sort=sort, search=search_term) }}">
+                                    Previous
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Previous</span>
+                            </li>
+                        {% endif %}
+                        
+                        {% for page_num in tasks.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == tasks.page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('operator.tasks', page=page_num, status=status, driver_id=driver_id, sort=sort, search=search_term) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if tasks.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('operator.tasks', page=tasks.next_num, status=status, driver_id=driver_id, sort=sort, search=search_term) }}">
+                                    Next
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+                
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="display-1 text-muted mb-3">
+                        <i class="fas fa-tasks"></i>
+                    </div>
+                    <h4 class="text-muted mb-3">No tasks found</h4>
+                    <p class="text-muted">
+                        {% if search_term %}
+                            No tasks matching "{{ search_term }}"
+                            <a href="{{ url_for('operator.tasks') }}" class="btn btn-outline-primary mt-2">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </a>
+                        {% else %}
+                            Get started by creating a new task
+                            <a href="{{ url_for('tasks.create_task') }}" class="btn btn-primary mt-2">
+                                <i class="fas fa-plus"></i> Create Task
+                            </a>
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Task Statistics</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="taskStatusChart" width="400" height="300"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">Upcoming Deadlines</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if upcoming_tasks %}
+                        <div class="list-group list-group-flush">
+                            {% for task in upcoming_tasks %}
+                            <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-1">{{ task.title }}</h6>
+                                    <span class="badge {% if task.deadline < now %}bg-danger{% else %}bg-primary{% endif %}">
+                                        {{ task.deadline.strftime('%b %d, %H:%M') }}
+                                    </span>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small>
+                                        {% if task.assignee %}
+                                            Assigned to: {{ task.assignee.first_name }} {{ task.assignee.last_name }}
+                                        {% else %}
+                                            Unassigned
+                                        {% endif %}
+                                    </small>
+                                    <small class="text-muted">
+                                        {% if task.deadline < now %}
+                                            Overdue by {{ ((now - task.deadline).total_seconds() / 3600)|int }} hours
+                                        {% else %}
+                                            Due in {{ ((task.deadline - now).total_seconds() / 3600)|int }} hours
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-calendar-check fa-2x text-muted mb-3"></i>
+                            <p class="mb-0">No upcoming deadlines</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Task Status Chart
+    var ctx = document.getElementById('taskStatusChart').getContext('2d');
+    var taskStatusChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['New', 'In Progress', 'On Hold', 'Completed', 'Cancelled'],
+            datasets: [{
+                data: [
+                    {{ task_stats.new }}, 
+                    {{ task_stats.in_progress }}, 
+                    {{ task_stats.on_hold }}, 
+                    {{ task_stats.completed }}, 
+                    {{ task_stats.cancelled }}
+                ],
+                backgroundColor: [
+                    '#0d6efd',  // Primary (New)
+                    '#ffc107',  // Warning (In Progress)
+                    '#6c757d',  // Secondary (On Hold)
+                    '#198754',  // Success (Completed)
+                    '#dc3545'   // Danger (Cancelled)
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            var label = context.label || '';
+                            var value = context.raw || 0;
+                            var total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            var percentage = Math.round((value / total) * 100);
+                            return label + ': ' + value + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+    
+    // Enable Bootstrap tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

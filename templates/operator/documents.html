@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-user"></i> Operator Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-users"></i> My Drivers
+                </a>
+                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> Tasks
+                </a>
+                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Document Filters</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('operator.documents') }}">
+                    <div class="mb-3">
+                        <label class="form-label">Document Title</label>
+                        <input type="text" class="form-control" name="title" value="{{ search_form.title.data or '' }}" placeholder="Search by title...">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">File Type</label>
+                        <select class="form-select" name="file_type">
+                            <option value="">All Types</option>
+                            {% for type_value, type_name in search_form.file_type.choices %}
+                                <option value="{{ type_value }}" {% if search_form.file_type.data == type_value %}selected{% endif %}>
+                                    {{ type_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="date_from" 
+                                       value="{{ search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '' }}" 
+                                       placeholder="From">
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="date_to" 
+                                       value="{{ search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '' }}" 
+                                       placeholder="To">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Related Task</label>
+                        <select class="form-select" name="task_id">
+                            <option value="">All Tasks</option>
+                            {% for task in tasks %}
+                                <option value="{{ task.id }}" {% if task_id == task.id %}selected{% endif %}>
+                                    #{{ task.id }}: {{ task.title }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search"></i> Search Documents
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Documents</h5>
+                <div>
+                    <a href="{{ url_for('documents.upload_document') }}" class="btn btn-light btn-sm">
+                        <i class="fas fa-upload"></i> Upload Document
+                    </a>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if documents %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Document</th>
+                                <th>File Type</th>
+                                <th>Size</th>
+                                <th>Uploaded</th>
+                                <th>Related Task</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for document in documents.items %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('documents.view_document', document_id=document.id) }}" class="d-flex align-items-center text-decoration-none">
+                                        <div class="me-2">
+                                            {% if document.file_type in ['pdf'] %}
+                                                <i class="fas fa-file-pdf text-danger fa-2x"></i>
+                                            {% elif document.file_type in ['doc', 'docx'] %}
+                                                <i class="fas fa-file-word text-primary fa-2x"></i>
+                                            {% elif document.file_type in ['xls', 'xlsx'] %}
+                                                <i class="fas fa-file-excel text-success fa-2x"></i>
+                                            {% elif document.file_type in ['jpg', 'jpeg', 'png'] %}
+                                                <i class="fas fa-file-image text-info fa-2x"></i>
+                                            {% else %}
+                                                <i class="fas fa-file-alt text-secondary fa-2x"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <div>{{ document.title }}</div>
+                                            <small class="text-muted">{{ document.file_type }}</small>
+                                        </div>
+                                    </a>
+                                </td>
+                                <td>{{ document.file_type|upper }}</td>
+                                <td>
+                                    {% if document.size < 1024 %}
+                                        {{ document.size }} B
+                                    {% elif document.size < 1024 * 1024 %}
+                                        {{ (document.size / 1024)|round(1) }} KB
+                                    {% else %}
+                                        {{ (document.size / (1024 * 1024))|round(1) }} MB
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ document.uploaded_at.strftime('%b %d, %Y') }}
+                                    <div class="small text-muted">
+                                        By: {{ document.uploader.first_name }} {{ document.uploader.last_name }}
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if document.task_id %}
+                                        <a href="{{ url_for('tasks.view_task', task_id=document.task_id) }}">
+                                            Task #{{ document.task_id }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">None</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('documents.view_document', document_id=document.id) }}" class="btn btn-sm btn-outline-primary" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="{{ url_for('documents.download_document', document_id=document.id) }}" class="btn btn-sm btn-outline-success" title="Download">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                            <i class="fas fa-ellipsis-v"></i>
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li>
+                                                <a class="dropdown-item" href="{{ url_for('documents.edit_document', document_id=document.id) }}">
+                                                    <i class="fas fa-edit"></i> Edit Details
+                                                </a>
+                                            </li>
+                                            {% if document.task_id %}
+                                            <li>
+                                                <a class="dropdown-item" href="{{ url_for('tasks.view_task', task_id=document.task_id) }}">
+                                                    <i class="fas fa-tasks"></i> View Related Task
+                                                </a>
+                                            </li>
+                                            {% endif %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li>
+                                                <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" 
+                                                        data-bs-target="#deleteDocumentModal" 
+                                                        data-document-id="{{ document.id }}" 
+                                                        data-document-title="{{ document.title }}">
+                                                    <i class="fas fa-trash"></i> Delete
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                {% if documents.pages > 1 %}
+                <nav aria-label="Document pagination" class="p-3">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if documents.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('operator.documents', page=documents.prev_num, title=search_form.title.data, file_type=search_form.file_type.data, date_from=search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '', date_to=search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '', task_id=task_id) }}">
+                                    Previous
+                                </a>
+                            </li>
+                        {% else %}
+                            <li
