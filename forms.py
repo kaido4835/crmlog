@@ -213,6 +213,16 @@ class SearchForm(FlaskForm):
 
 
 class TaskForm(FlaskForm):
+    def __init__(self, *args, **kwargs):
+        super(TaskForm, self).__init__(*args, **kwargs)
+        # Initialize choices for SelectField fields to prevent 'Choices cannot be None' error
+        if hasattr(self, 'status') and self.status.choices is None:
+            self.status.choices = [(s.value, s.name) for s in TaskStatus]
+        if hasattr(self, 'assignee_id') and self.assignee_id.choices is None:
+            self.assignee_id.choices = []
+        if hasattr(self, 'company_id') and self.company_id.choices is None:
+            self.company_id.choices = []
+
     title = StringField('Title', validators=[DataRequired(), Length(max=128)])
     description = TextAreaField('Description', validators=[Optional()])
     assignee_id = SelectField('Assign To Driver', coerce=int, validators=[Optional()])
@@ -248,6 +258,14 @@ class MessageForm(FlaskForm):
 
 
 class RouteForm(FlaskForm):
+    def __init__(self, *args, **kwargs):
+        super(RouteForm, self).__init__(*args, **kwargs)
+        # Initialize choices for SelectField fields
+        if hasattr(self, 'status') and self.status.choices is None:
+            self.status.choices = [(s.value, s.name) for s in RouteStatus]
+        if hasattr(self, 'driver_id') and self.driver_id.choices is None:
+            self.driver_id.choices = []
+
     start_point = StringField('Start Point', validators=[DataRequired(), Length(max=256)])
     end_point = StringField('End Point', validators=[DataRequired(), Length(max=256)])
     waypoints = TextAreaField('Waypoints', validators=[Optional()],

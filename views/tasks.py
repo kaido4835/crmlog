@@ -102,6 +102,14 @@ def create_task():
     Create a new task
     """
     form = TaskForm()
+# Ensure all SelectField choices are initialized to prevent 'Choices cannot be None' error
+if form.assignee_id.choices is None:
+    form.assignee_id.choices = []
+if hasattr(form, 'status') and form.status.choices is None:
+    form.status.choices = [(s.value, s.name) for s in TaskStatus]
+if hasattr(form, 'company_id') and form.company_id.choices is None:
+    form.company_id.choices = []
+
 
     # Get company ID based on user role
     company_id = None
