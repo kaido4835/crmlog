@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime
 from sqlalchemy import or_, and_, desc, func, case
-from wtforms import SelectField
+from wtforms import SelectField, StringField
 from wtforms.validators import DataRequired
 
 from app import db
@@ -102,8 +102,10 @@ def compose():
     """
     Compose a new message
     """
-    # Create a new form instance
-    form = MessageForm()
+
+    # Create a new form instance with dynamic fields
+    class DynamicMessageForm(MessageForm):
+        pass
 
     # Get company ID based on user role
     company_id = None
@@ -185,22 +187,24 @@ def compose():
         # Remove current user if in the list
         available_recipients = [u for u in available_recipients if u.id != current_user.id]
 
-    # Add recipient_id field to the form class dynamically
-    # Here is the fix: using setattr instead of direct assignment
+    # Add recipient_id field to the form class
     if available_recipients:
-        setattr(form, 'recipient_id', SelectField('Recipient', coerce=int, validators=[DataRequired()]))
-        form.recipient_id.choices = [(r.id, f"{r.first_name} {r.last_name} ({r.role.value})") for r in
-                                     available_recipients]
+        setattr(DynamicMessageForm, 'recipient_id',
+                SelectField('Recipient', choices=[(r.id, f"{r.first_name} {r.last_name} ({r.role.value})") for r in
+                                                  available_recipients],
+                            coerce=int, validators=[DataRequired()]))
     else:
-        setattr(form, 'recipient_id', SelectField('Recipient', coerce=int, validators=[DataRequired()]))
-        form.recipient_id.choices = []
+        setattr(DynamicMessageForm, 'recipient_id',
+                SelectField('Recipient', choices=[], coerce=int, validators=[DataRequired()]))
+
+    # Create form instance after adding fields
+    form = DynamicMessageForm()
 
     # Add task ID field if in context of a task
     task_id = request.args.get('task_id', None, type=int)
     if task_id:
         task = Task.query.get_or_404(task_id)
-        # Here's another fix: using setattr for task_id as well
-        setattr(form, 'task_id', task_id)
+        form.task_id.data = task_id
 
     # Get recent contacts for sidebar
     recent_contacts = []
@@ -317,8 +321,7 @@ def chat(user_id):
 
     if task_id:
         task = Task.query.get(task_id)
-        # Fix: using setattr here too
-        setattr(form, 'task_id', task_id)
+        form.task_id.data = task_id
         is_task_related = True
 
     # Mark received messages as read
