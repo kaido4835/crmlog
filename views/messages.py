@@ -211,8 +211,9 @@ def compose():
                 and_(Message.recipient_id == current_user.id, Message.sender_id != current_user.id)
             )
         ).group_by(
+            # Исправление: обновленный синтаксис case() в SQLAlchemy
             case(
-                [(Message.sender_id == current_user.id, Message.recipient_id)],
+                (Message.sender_id == current_user.id, Message.recipient_id),
                 else_=Message.sender_id
             )
         ).order_by(desc('last_message_time')).limit(5).all()
