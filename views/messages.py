@@ -98,7 +98,7 @@ def sent():
 
 @messages.route('/compose', methods=['GET', 'POST'])
 @login_required
-def compose():  # Removed 'self' parameter here - this was the issue
+def compose():  # Removed 'self' parameter - this was causing the error
     """
     Compose a new message
     """
@@ -203,7 +203,6 @@ def compose():  # Removed 'self' parameter here - this was the issue
     recent_contacts = []
     if company_id:
         # Get all users this user has messaged with, ordered by most recent
-        # ИСПРАВЛЕНО: Используем подзапрос для правильной группировки
         message_partners_subquery = db.session.query(
             case(
                 (Message.sender_id == current_user.id, Message.recipient_id),
@@ -553,7 +552,6 @@ def _get_user_contacts():
         return contacts
 
     # Get all distinct users with whom the current user has exchanged messages
-    # ИСПРАВЛЕНО: Используем два отдельных запроса вместо DISTINCT для более надежных результатов
     senders = db.session.query(Message.sender_id).filter(
         Message.recipient_id == current_user.id,
         Message.sender_id != current_user.id
