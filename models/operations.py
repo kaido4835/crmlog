@@ -108,6 +108,7 @@ class Route(db.Model):
     company = db.relationship('Company', foreign_keys=[company_id])
     driver = db.relationship('Driver', back_populates='routes')
     task = db.relationship('Task', back_populates='route')
+    documents = db.relationship('Document', back_populates='route', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<Route {self.id}: {self.start_point} to {self.end_point}>'
