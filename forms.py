@@ -243,7 +243,7 @@ class DocumentUploadForm(FlaskForm):
 
 class MessageForm(FlaskForm):
     content = TextAreaField('Message', validators=[DataRequired(), Length(max=1000)])
-    task_id = HiddenField('Task ID')
+    task_id = HiddenField('Task ID', filters=[lambda x: int(x) if x and x.isdigit() else None])
     submit = SubmitField('Send')
 
 

@@ -191,14 +191,14 @@
                                 <li><h6 class="dropdown-header">Link to task:</h6></li>
                                 {% for task in tasks %}
                                 <li>
-                                    <a class="dropdown-item" href="#" onclick="document.getElementById('task_id').value='{{ task.id }}'; return false;">
+                                    <a class="dropdown-item" href="#" onclick="document.getElementById(\'task_id\').value=\'{{ task.id }}\'; return false;">
                                         #{{ task.id }}: {{ task.title }}
                                     </a>
                                 </li>
                                 {% endfor %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li>
-                                    <a class="dropdown-item" href="#" onclick="document.getElementById('task_id').value=''; return false;">
+                                    <a class="dropdown-item" href="#" onclick="document.getElementById(\'task_id\').value=\'\'; return false;">
                                         <i class="fas fa-times-circle"></i> No task
                                     </a>
                                 </li>

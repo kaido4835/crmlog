@@ -45,7 +45,7 @@
                     {% if form.task_id %}
                     <div class="mb-3">
                         {{ form.task_id.label(class="form-label") }}
-                        {{ form.task_id(class="form-select") }}
+                        {{ form.task_id(value="") }}
                         {% for error in form.task_id.errors %}
                             <span class="text-danger">{{ error }}</span>
                         {% endfor %}

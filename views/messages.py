@@ -255,7 +255,7 @@ def compose():
             recipient_id=recipient_id,
             sent_at=datetime.utcnow(),
             is_read=False,
-            task_id=form.task_id.data if hasattr(form, 'task_id') else None,
+            task_id=int(form.task_id.data) if hasattr(form, "task_id") and form.task_id.data and form.task_id.data.isdigit() else None,
             company_id=company_id
         )
 
@@ -355,7 +355,7 @@ def chat(user_id):
             recipient_id=user_id,
             sent_at=datetime.utcnow(),
             is_read=False,
-            task_id=task_id,
+            task_id=int(task_id) if task_id and isinstance(task_id, str) and task_id.isdigit() else None,
             company_id=company_id
         )
 
@@ -476,7 +476,7 @@ def send_message(user_id):
             recipient_id=user_id,
             sent_at=datetime.utcnow(),
             is_read=False,
-            task_id=task_id,
+            task_id=int(task_id) if task_id and isinstance(task_id, str) and task_id.isdigit() else None,
             company_id=company_id
         )
 
