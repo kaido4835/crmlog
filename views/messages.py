@@ -98,7 +98,7 @@ def sent():
 
 @messages.route('/compose', methods=['GET', 'POST'])
 @login_required
-def compose(self):
+def compose():  # Removed 'self' parameter here - this was the issue
     """
     Compose a new message
     """
