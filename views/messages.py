@@ -98,10 +98,11 @@ def sent():
 
 @messages.route('/compose', methods=['GET', 'POST'])
 @login_required
-def compose():  # Removed 'self' parameter - this was causing the error
+def compose():
     """
     Compose a new message
     """
+    # Create a new form instance
     form = MessageForm()
 
     # Get company ID based on user role
@@ -184,20 +185,22 @@ def compose():  # Removed 'self' parameter - this was causing the error
         # Remove current user if in the list
         available_recipients = [u for u in available_recipients if u.id != current_user.id]
 
-    # Create recipient choices for form
+    # Add recipient_id field to the form class dynamically
+    # Here is the fix: using setattr instead of direct assignment
     if available_recipients:
-        form.recipient_id = SelectField('Recipient', coerce=int, validators=[DataRequired()])
+        setattr(form, 'recipient_id', SelectField('Recipient', coerce=int, validators=[DataRequired()]))
         form.recipient_id.choices = [(r.id, f"{r.first_name} {r.last_name} ({r.role.value})") for r in
                                      available_recipients]
     else:
-        form.recipient_id = SelectField('Recipient', coerce=int, validators=[DataRequired()])
+        setattr(form, 'recipient_id', SelectField('Recipient', coerce=int, validators=[DataRequired()]))
         form.recipient_id.choices = []
 
     # Add task ID field if in context of a task
     task_id = request.args.get('task_id', None, type=int)
     if task_id:
         task = Task.query.get_or_404(task_id)
-        form.task_id = task_id
+        # Here's another fix: using setattr for task_id as well
+        setattr(form, 'task_id', task_id)
 
     # Get recent contacts for sidebar
     recent_contacts = []
@@ -314,7 +317,8 @@ def chat(user_id):
 
     if task_id:
         task = Task.query.get(task_id)
-        form.task_id = task_id
+        # Fix: using setattr here too
+        setattr(form, 'task_id', task_id)
         is_task_related = True
 
     # Mark received messages as read
