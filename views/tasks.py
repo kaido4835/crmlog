@@ -463,3 +463,95 @@ def _can_delete_document(document):
         return True
 
     return False
+
+
+@tasks.route('/<int:task_id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_task(task_id):
+    """
+    Edit an existing task
+    """
+    task = Task.query.get_or_404(task_id)
+
+    # Check if user has access to edit this task
+    if not _can_edit_task(task):
+        flash('You do not have permission to edit this task.', 'danger')
+        return redirect(url_for('tasks.view_task', task_id=task.id))
+
+    # Create form
+    form = TaskForm()
+
+    # Get company ID based on user role
+    company_id = None
+    if current_user.role == UserRole.COMPANY_OWNER and current_user.company_owner:
+        company_id = current_user.company_owner.company_id
+    elif current_user.role == UserRole.MANAGER and current_user.manager:
+        company_id = current_user.manager.company_id
+    elif current_user.role == UserRole.OPERATOR and current_user.operator:
+        company_id = current_user.operator.company_id
+    elif current_user.role == UserRole.ADMIN:
+        company_id = task.company_id
+
+    # Get available drivers for this company
+    drivers = []
+    if company_id:
+        driver_query = User.query.filter_by(role=UserRole.DRIVER)
+
+        # For operators, only show their drivers
+        if current_user.role == UserRole.OPERATOR and current_user.operator:
+            driver_ids = [d.id for d in current_user.operator.drivers]
+            driver_query = driver_query.filter(User.id.in_(driver_ids))
+
+        drivers = [(d.id, f"{d.first_name} {d.last_name}") for d in driver_query.all()]
+
+    # Add empty option and set choices
+    drivers.insert(0, (0, 'Select a driver'))
+    form.assignee_id.choices = drivers
+
+    if request.method == 'GET':
+        # Fill form with current task data
+        form.title.data = task.title
+        form.description.data = task.description
+        form.assignee_id.data = task.assignee_id if task.assignee_id else 0
+        form.deadline.data = task.deadline
+        if hasattr(form, 'status'):
+            form.status.data = task.status.value
+
+    if form.validate_on_submit():
+        try:
+            # Update task with form data
+            task.title = form.title.data
+            task.description = form.description.data
+
+            # Update status if form includes status field
+            if hasattr(form, 'status') and form.status.data:
+                task.status = TaskStatus(form.status.data)
+
+            # Update assignee
+            task.assignee_id = form.assignee_id.data if form.assignee_id.data != 0 else None
+
+            # Update deadline
+            task.deadline = form.deadline.data
+
+            # Update updated_at
+            task.updated_at = datetime.utcnow()
+
+            # Handle document upload if provided
+            if form.document.data:
+                TaskService.add_document(task, form.document.data, current_user.id, db)
+
+            db.session.commit()
+            log_action(ActionType.UPDATE, f"Updated task {task.title}", db)
+
+            flash(f'Task "{task.title}" updated successfully!', 'success')
+            return redirect(url_for('tasks.view_task', task_id=task.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating task: {str(e)}', 'danger')
+
+    return render_template(
+        'tasks/edit_task.html',
+        title='Edit Task',
+        form=form,
+        task=task
+    )
