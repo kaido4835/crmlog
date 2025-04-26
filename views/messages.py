@@ -98,7 +98,7 @@ def sent():
 
 @messages.route('/compose', methods=['GET', 'POST'])
 @login_required
-def compose():
+def compose(self):
     """
     Compose a new message
     """
@@ -203,23 +203,33 @@ def compose():
     recent_contacts = []
     if company_id:
         # Get all users this user has messaged with, ordered by most recent
-        recent_messages = db.session.query(
-            Message, func.max(Message.sent_at).label('last_message_time')
+        # ИСПРАВЛЕНО: Используем подзапрос для правильной группировки
+        message_partners_subquery = db.session.query(
+            case(
+                (Message.sender_id == current_user.id, Message.recipient_id),
+                else_=Message.sender_id
+            ).label('contact_id'),
+            func.max(Message.sent_at).label('last_message_time')
         ).filter(
             or_(
                 and_(Message.sender_id == current_user.id, Message.recipient_id != current_user.id),
                 and_(Message.recipient_id == current_user.id, Message.sender_id != current_user.id)
             )
         ).group_by(
-            # Исправление: обновленный синтаксис case() в SQLAlchemy
             case(
                 (Message.sender_id == current_user.id, Message.recipient_id),
                 else_=Message.sender_id
             )
-        ).order_by(desc('last_message_time')).limit(5).all()
+        ).subquery()
 
-        for message, last_time in recent_messages:
-            contact_id = message.recipient_id if message.sender_id == current_user.id else message.sender_id
+        recent_message_partners = db.session.query(
+            message_partners_subquery.c.contact_id,
+            message_partners_subquery.c.last_message_time
+        ).order_by(
+            desc(message_partners_subquery.c.last_message_time)
+        ).limit(5).all()
+
+        for contact_id, last_time in recent_message_partners:
             contact = User.query.get(contact_id)
             if contact:
                 recent_contacts.append({
@@ -542,23 +552,20 @@ def _get_user_contacts():
     if not company_id and current_user.role != UserRole.ADMIN:
         return contacts
 
-    # Get all users with whom the current user has exchanged messages
-    recent_contacts = db.session.query(
-        Message.sender_id,
-        Message.recipient_id
-    ).filter(
-        or_(
-            Message.sender_id == current_user.id,
-            Message.recipient_id == current_user.id
-        )
+    # Get all distinct users with whom the current user has exchanged messages
+    # ИСПРАВЛЕНО: Используем два отдельных запроса вместо DISTINCT для более надежных результатов
+    senders = db.session.query(Message.sender_id).filter(
+        Message.recipient_id == current_user.id,
+        Message.sender_id != current_user.id
     ).distinct().all()
 
-    contact_ids = []
-    for sender_id, recipient_id in recent_contacts:
-        if sender_id != current_user.id and sender_id not in contact_ids:
-            contact_ids.append(sender_id)
-        if recipient_id != current_user.id and recipient_id not in contact_ids:
-            contact_ids.append(recipient_id)
+    recipients = db.session.query(Message.recipient_id).filter(
+        Message.sender_id == current_user.id,
+        Message.recipient_id != current_user.id
+    ).distinct().all()
+
+    # Объединяем уникальные ID
+    contact_ids = set([sender[0] for sender in senders] + [recipient[0] for recipient in recipients])
 
     # Get user objects for all contacts
     for contact_id in contact_ids:
