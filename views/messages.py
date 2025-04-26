@@ -2,10 +2,13 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request
 from flask_login import login_required, current_user
 from datetime import datetime
 from sqlalchemy import or_, and_, desc, func, case
+from wtforms import SelectField
+from wtforms.validators import DataRequired
 
 from app import db
 from forms import MessageForm
 from models import Message, User, UserRole, Task, Company, ActionType
+from models import CompanyOwner, Manager, Operator, Driver
 from utils import log_action
 
 messages = Blueprint('messages', __name__, url_prefix='/messages')
@@ -120,47 +123,74 @@ def compose():
         available_recipients = User.query.filter(User.id != current_user.id).all()
     elif current_user.role == UserRole.COMPANY_OWNER and company_id:
         # Company owner can message managers, operators, and drivers in their company
-        available_recipients = User.query.join(
-            Company, or_(
-                and_(User.id == Company.owner_id, Company.id == company_id),
-                and_(User.role.in_([UserRole.MANAGER, UserRole.OPERATOR, UserRole.DRIVER]),
-                     User.company_id == company_id)
-            )
-        ).filter(User.id != current_user.id).all()
+        manager_users = User.query.join(Manager).filter(Manager.company_id == company_id).all()
+        operator_users = User.query.join(Operator).filter(Operator.company_id == company_id).all()
+        driver_users = User.query.join(Driver).filter(Driver.company_id == company_id).all()
+
+        # Combine all users
+        available_recipients = manager_users + operator_users + driver_users
+        # Remove duplicates if any
+        available_recipients = list(set(available_recipients))
+        # Remove current user if in the list
+        available_recipients = [u for u in available_recipients if u.id != current_user.id]
+
     elif current_user.role == UserRole.MANAGER and company_id:
         # Manager can message company owner, other managers, operators, and drivers in their company
-        available_recipients = User.query.filter(
-            User.id != current_user.id,
-            User.company_id == company_id,
-            User.role.in_([UserRole.COMPANY_OWNER, UserRole.MANAGER, UserRole.OPERATOR, UserRole.DRIVER])
-        ).all()
+        owner_users = User.query.join(CompanyOwner).filter(CompanyOwner.company_id == company_id).all()
+        manager_users = User.query.join(Manager).filter(Manager.company_id == company_id).all()
+        operator_users = User.query.join(Operator).filter(Operator.company_id == company_id).all()
+        driver_users = User.query.join(Driver).filter(Driver.company_id == company_id).all()
+
+        # Combine all users
+        available_recipients = owner_users + manager_users + operator_users + driver_users
+        # Remove duplicates if any
+        available_recipients = list(set(available_recipients))
+        # Remove current user if in the list
+        available_recipients = [u for u in available_recipients if u.id != current_user.id]
+
     elif current_user.role == UserRole.OPERATOR and company_id:
         # Operator can message company owner, managers, other operators, and their drivers
-        driver_ids = [driver.user_id for driver in current_user.operator.drivers]
-        available_recipients = User.query.filter(
-            User.id != current_user.id,
-            or_(
-                and_(User.company_id == company_id,
-                     User.role.in_([UserRole.COMPANY_OWNER, UserRole.MANAGER, UserRole.OPERATOR])),
-                User.id.in_(driver_ids)
-            )
-        ).all()
+        owner_users = User.query.join(CompanyOwner).filter(CompanyOwner.company_id == company_id).all()
+        manager_users = User.query.join(Manager).filter(Manager.company_id == company_id).all()
+        operator_users = User.query.join(Operator).filter(Operator.company_id == company_id).all()
+
+        # Get driver IDs assigned to this operator
+        driver_ids = [driver.id for driver in current_user.operator.drivers]
+        driver_users = User.query.filter(User.id.in_(driver_ids)).all() if driver_ids else []
+
+        # Combine all users
+        available_recipients = owner_users + manager_users + operator_users + driver_users
+        # Remove duplicates if any
+        available_recipients = list(set(available_recipients))
+        # Remove current user if in the list
+        available_recipients = [u for u in available_recipients if u.id != current_user.id]
+
     elif current_user.role == UserRole.DRIVER and company_id:
         # Driver can message their operator, and company admins
-        available_recipients = User.query.filter(
-            User.id != current_user.id,
-            User.company_id == company_id,
-            or_(
-                User.id == current_user.driver.operator_id,
-                User.role.in_([UserRole.COMPANY_OWNER, UserRole.MANAGER])
-            )
-        ).all()
+        owner_users = User.query.join(CompanyOwner).filter(CompanyOwner.company_id == company_id).all()
+        manager_users = User.query.join(Manager).filter(Manager.company_id == company_id).all()
+
+        # Add operator if assigned
+        operator_users = []
+        if current_user.driver.operator_id:
+            operator = User.query.filter(User.id == current_user.driver.operator_id).first()
+            if operator:
+                operator_users = [operator]
+
+        # Combine all users
+        available_recipients = owner_users + manager_users + operator_users
+        # Remove duplicates if any
+        available_recipients = list(set(available_recipients))
+        # Remove current user if in the list
+        available_recipients = [u for u in available_recipients if u.id != current_user.id]
 
     # Create recipient choices for form
     if available_recipients:
+        form.recipient_id = SelectField('Recipient', coerce=int, validators=[DataRequired()])
         form.recipient_id.choices = [(r.id, f"{r.first_name} {r.last_name} ({r.role.value})") for r in
                                      available_recipients]
     else:
+        form.recipient_id = SelectField('Recipient', coerce=int, validators=[DataRequired()])
         form.recipient_id.choices = []
 
     # Add task ID field if in context of a task
