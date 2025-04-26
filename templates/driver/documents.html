@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-id-card"></i> Driver Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.driver_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('driver.tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> My Tasks
+                </a>
+                <a href="{{ url_for('driver.routes_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> My Routes
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('driver.documents') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Document Categories</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('driver.documents', category='all') }}" class="list-group-item list-group-item-action {% if category == 'all' or not category %}active{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-folder me-2"></i> All Documents</span>
+                        <span class="badge bg-primary rounded-pill">{{ document_counts.all }}</span>
+                    </div>
+                </a>
+                <a href="{{ url_for('driver.documents', category='task') }}" class="list-group-item list-group-item-action {% if category == 'task' %}active{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-tasks me-2"></i> Task Documents</span>
+                        <span class="badge bg-primary rounded-pill">{{ document_counts.task }}</span>
+                    </div>
+                </a>
+                <a href="{{ url_for('driver.documents', category='route') }}" class="list-group-item list-group-item-action {% if category == 'route' %}active{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-route me-2"></i> Route Documents</span>
+                        <span class="badge bg-primary rounded-pill">{{ document_counts.route }}</span>
+                    </div>
+                </a>
+                <a href="{{ url_for('driver.documents', category='personal') }}" class="list-group-item list-group-item-action {% if category == 'personal' %}active{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-user me-2"></i> Personal Documents</span>
+                        <span class="badge bg-primary rounded-pill">{{ document_counts.personal }}</span>
+                    </div>
+                </a>
+                <a href="{{ url_for('driver.documents', category='vehicle') }}" class="list-group-item list-group-item-action {% if category == 'vehicle' %}active{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-truck me-2"></i> Vehicle Documents</span>
+                        <span class="badge bg-primary rounded-pill">{{ document_counts.vehicle }}</span>
+                    </div>
+                </a>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Upload Document</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('driver.upload_document') }}" enctype="multipart/form-data">
+                    {{ upload_form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ upload_form.title.label(class="form-label") }}
+                        {{ upload_form.title(class="form-control") }}
+                        {% for error in upload_form.title.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ upload_form.document.label(class="form-label") }}
+                        {{ upload_form.document(class="form-control") }}
+                        {% for error in upload_form.document.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="document_category" class="form-label">Category</label>
+                        <select name="document_category" id="document_category" class="form-select">
+                            <option value="personal">Personal Document</option>
+                            <option value="vehicle">Vehicle Document</option>
+                            <option value="task">Task Document</option>
+                            <option value="route">Route Document</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="task_selection" style="display: none;">
+                        <label for="task_id" class="form-label">Related Task</label>
+                        <select name="task_id" id="task_id" class="form-select">
+                            <option value="">Select a task...</option>
+                            {% for task in active_tasks %}
+                                <option value="{{ task.id }}">{{ task.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3" id="route_selection" style="display: none;">
+                        <label for="route_id" class="form-label">Related Route</label>
+                        <select name="route_id" id="route_id" class="form-select">
+                            <option value="">Select a route...</option>
+                            {% for route in active_routes %}
+                                <option value="{{ route.id }}">{{ route.start_point }} to {{ route.end_point }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="d-grid">
+                        {{ upload_form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">
+                    {% if category == 'task' %}
+                        Task Documents
+                    {% elif category == 'route' %}
+                        Route Documents
+                    {% elif category == 'personal' %}
+                        Personal Documents
+                    {% elif category == 'vehicle' %}
+                        Vehicle Documents
+                    {% else %}
+                        All Documents
+                    {% endif %}
+                </h5>
+                <div>
+                    <form method="GET" action="{{ url_for('driver.documents') }}" class="d-inline-flex">
+                        <input type="hidden" name="category" value="{{ category }}">
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="search" class="form-control" placeholder="Search documents..." value="{{ search_term }}">
+                            <button type="submit" class="btn btn-light">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                {% if documents.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Title</th>
+                                <th>Category</th>
+                                <th>Type</th>
+                                <th>Size</th>
+                                <th>Uploaded</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for document in documents.items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if document.file_type == 'pdf' %}
+                                            <i class="fas fa-file-pdf text-danger fa-2x me-2"></i>
+                                        {% elif document.file_type in ['doc', 'docx'] %}
+                                            <i class="fas fa-file-word text-primary fa-2x me-2"></i>
+                                        {% elif document.file_type in ['xls', 'xlsx'] %}
+                                            <i class="fas fa-file-excel text-success fa-2x me-2"></i>
+                                        {% elif document.file_type in ['jpg', 'jpeg', 'png'] %}
+                                            <i class="fas fa-file-image text-info fa-2x me-2"></i>
+                                        {% else %}
+                                            <i class="fas fa-file-alt text-secondary fa-2x me-2"></i>
+                                        {% endif %}
+                                        <div>
+                                            <h6 class="mb-0">{{ document.title }}</h6>
+                                            {% if document.task %}
+                                            <small class="text-muted">Task: {{ document.task.title|truncate(30) }}</small>
+                                            {% elif document.route_id %}
+                                            <small class="text-muted">Route ID: {{ document.route_id }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if document.task %}
+                                        <span class="badge bg-info">Task</span>
+                                    {% elif document.route_id %}
+                                        <span class="badge bg-primary">Route</span>
+                                    {% elif document.document_category == 'personal' %}
+                                        <span class="badge bg-success">Personal</span>
+                                    {% elif document.document_category == 'vehicle' %}
+                                        <span class="badge bg-warning">Vehicle</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Other</span>
+                                    {% endif %}
+                                </td>
+                                <td><span class="badge bg-secondary">{{ document.file_type.upper() }}</span></td>
+                                <td>{{ document.size|filesizeformat }}</td>
+                                <td>{{ document.uploaded_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <a href="{{ url_for('documents.download_document', document_id=document.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download"></i> Download
+                                        </a>
+                                        
+                                        {% if document.uploader_id == current_user.id %}
+                                        <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ document.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    <!-- Delete Modal -->
+                                    <div class="modal fade" id="deleteModal{{ document.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ document.id }}" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="deleteModalLabel{{ document.id }}">Confirm Delete</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    Are you sure you want to delete the document <strong>{{ document.title }}</strong>?
+                                                    <p class="text-danger mt-2">This action cannot be undone.</p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                    <form action="{{ url_for('documents.delete_document', document_id=document.id) }}" method="POST">
+                                                        <button type="submit" class="btn btn-danger">Delete</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                <nav aria-label="Document pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if documents.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('driver.documents', page=documents.prev_num, category=category, search=search_term) }}">
+                                    Previous
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Previous</span>
+                            </li>
+                        {% endif %}
+
+                        {% for page_num in documents.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == documents.page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('driver.documents', page=page_num, category=category, search=search_term) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if documents.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('driver.documents', page=documents.next_num, category=category, search=search_term) }}">
+                                    Next
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-file-alt fa-4x text-muted mb-3"></i>
+                    <h5>No documents found</h5>
+                    <p class="text-muted">
+                        {% if search_term %}
+                            No documents matching "{{ search_term }}" in this category.
+                        {% else %}
+                            You don't have any documents in this category yet.
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show/hide task and route selection based on document category
+        const categorySelect = document.getElementById('document_category');
+        const taskSelection = document.getElementById('task_selection');
+        const routeSelection = document.getElementById('route_selection');
+        
+        if (categorySelect && taskSelection && routeSelection) {
+            categorySelect.addEventListener('change', function() {
+                if (this.value === 'task') {
+                    taskSelection.style.display = 'block';
+                    routeSelection.style.display = 'none';
+                } else if (this.value === 'route') {
+                    taskSelection.style.display = 'none';
+                    routeSelection.style.display = 'block';
+                } else {
+                    taskSelection.style.display = 'none';
+                    routeSelection.style.display = 'none';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

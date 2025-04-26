@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-id-card"></i> Driver Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.driver_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('driver.tasks') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-tasks"></i> My Tasks
+                </a>
+                <a href="{{ url_for('driver.routes_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> My Routes
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('driver.documents') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Tasks Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Total Tasks:</span>
+                    <span class="badge bg-primary rounded-pill">{{ stats.total }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>New Tasks:</span>
+                    <span class="badge bg-info rounded-pill">{{ stats.new }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Active Tasks:</span>
+                    <span class="badge bg-warning rounded-pill">{{ stats.active }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Completed:</span>
+                    <span class="badge bg-success rounded-pill">{{ stats.completed }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Overdue:</span>
+                    <span class="badge bg-danger rounded-pill">{{ stats.overdue }}</span>
+                </div>
+                <div class="progress mt-3">
+                    <div class="progress-bar bg-success" role="progressbar" 
+                        style="width: {{ (stats.completed / stats.total * 100) if stats.total > 0 else 0 }}%;" 
+                        aria-valuenow="{{ stats.completed }}" aria-valuemin="0" aria-valuemax="{{ stats.total }}">
+                        {{ ((stats.completed / stats.total * 100) if stats.total > 0 else 0)|round(1) }}%
+                    </div>
+                </div>
+                <small class="text-muted">Completion rate</small>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">My Tasks</h5>
+                <div>
+                    <div class="btn-group">
+                        <a href="{{ url_for('driver.tasks', view='all') }}" class="btn btn-light btn-sm {% if view == 'all' %}active{% endif %}">All Tasks</a>
+                        <a href="{{ url_for('driver.tasks', view='active') }}" class="btn btn-light btn-sm {% if view == 'active' %}active{% endif %}">Active</a>
+                        <a href="{{ url_for('driver.tasks', view='completed') }}" class="btn btn-light btn-sm {% if view == 'completed' %}active{% endif %}">Completed</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <!-- Active Tasks -->
+                {% if view != 'completed' %}
+                <div class="task-section mb-4">
+                    <h5 class="border-bottom pb-2">
+                        {% if view == 'active' %}
+                        Active Tasks
+                        {% else %}
+                        New & In Progress Tasks
+                        {% endif %}
+                    </h5>
+                    
+                    {% if active_tasks %}
+                    <div class="list-group">
+                        {% for task in active_tasks %}
+                        <div class="list-group-item list-group-item-action flex-column align-items-start">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ task.title }}</h5>
+                                <small>
+                                    {% if task.status.value == 'new' %}
+                                        <span class="badge bg-info">New</span>
+                                    {% elif task.status.value == 'in_progress' %}
+                                        <span class="badge bg-primary">In Progress</span>
+                                    {% elif task.status.value == 'on_hold' %}
+                                        <span class="badge bg-warning">On Hold</span>
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <p class="mb-1">{{ task.description|truncate(150) }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Deadline: 
+                                    {% if task.deadline %}
+                                        {{ task.deadline.strftime('%Y-%m-%d %H:%M') }}
+                                        {% if task.deadline < now %}
+                                            <span class="text-danger">(Overdue)</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Not set</span>
+                                    {% endif %}
+                                </small>
+                                <div>
+                                    {% if task.route %}
+                                    <a href="{{ url_for('routes.view_route', route_id=task.route.id) }}" class="btn btn-outline-primary btn-sm me-1">
+                                        <i class="fas fa-route"></i> View Route
+                                    </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
+                        <p>No active tasks assigned to you.</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- New Tasks -->
+                {% if view != 'completed' and view != 'active' %}
+                <div class="task-section mb-4">
+                    <h5 class="border-bottom pb-2">New Tasks</h5>
+                    
+                    {% if new_tasks %}
+                    <div class="list-group">
+                        {% for task in new_tasks %}
+                        <div class="list-group-item list-group-item-action flex-column align-items-start">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ task.title }}</h5>
+                                <small>
+                                    <span class="badge bg-info">New</span>
+                                </small>
+                            </div>
+                            <p class="mb-1">{{ task.description|truncate(150) }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    Deadline: 
+                                    {% if task.deadline %}
+                                        {{ task.deadline.strftime('%Y-%m-%d %H:%M') }}
+                                        {% if task.deadline < now %}
+                                            <span class="text-danger">(Overdue)</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">Not set</span>
+                                    {% endif %}
+                                </small>
+                                <div>
+                                    {% if task.route %}
+                                    <a href="{{ url_for('routes.view_route', route_id=task.route.id) }}" class="btn btn-outline-primary btn-sm me-1">
+                                        <i class="fas fa-route"></i> View Route
+                                    </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                    <form action="{{ url_for('driver.start_task', task_id=task.id) }}" method="POST" class="d-inline">
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="fas fa-play"></i> Start Task
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                        <p>No new tasks assigned to you.</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Completed Tasks -->
+                {% if view == 'completed' or view == 'all' %}
+                <div class="task-section">
+                    <h5 class="border-bottom pb-2">Completed Tasks</h5>
+                    
+                    {% if completed_tasks %}
+                    <div class="list-group">
+                        {% for task in completed_tasks %}
+                        <div class="list-group-item list-group-item-action flex-column align-items-start">
+                            <div class="d-flex w-100 justify-content-between">
+                                <h5 class="mb-1">{{ task.title }}</h5>
+                                <small>
+                                    <span class="badge bg-success">Completed</span>
+                                </small>
+                            </div>
+                            <p class="mb-1">{{ task.description|truncate(150) }}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-check me-1"></i>
+                                    Completed on: {{ task.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                                <div>
+                                    {% if task.route %}
+                                    <a href="{{ url_for('routes.view_route', route_id=task.route.id) }}" class="btn btn-outline-secondary btn-sm me-1">
+                                        <i class="fas fa-route"></i> Route
+                                    </a>
+                                    {% endif %}
+                                    <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-secondary btn-sm">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard-check fa-3x text-muted mb-3"></i>
+                        <p>No completed tasks to display.</p>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

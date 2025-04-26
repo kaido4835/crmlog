@@ -11,128 +11,357 @@
                 <a href="{{ url_for('main.driver_dashboard') }}" class="list-group-item list-group-item-action active">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('driver.tasks') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tasks"></i> My Tasks
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('driver.routes_dashboard') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-route"></i> My Routes
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-comments"></i> Messages
+                    {% if unread_count > 0 %}
+                    <span class="badge bg-danger rounded-pill float-end">{{ unread_count }}</span>
+                    {% endif %}
                 </a>
-                <a href="#" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('driver.documents') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-file-alt"></i> Documents
                 </a>
             </div>
         </div>
-        
+
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">My Operator</h5>
             </div>
             <div class="card-body text-center">
-                <div class="rounded-circle bg-light d-inline-flex justify-content-center align-items-center mb-3" style="width: 80px; height: 80px;">
-                    <i class="fas fa-user fa-3x text-primary"></i>
+                {% if operator %}
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-info"
+                     style="width: 80px; height: 80px;">
+                    <span class="text-white" style="font-size: 32px;">{{ operator.name[0:2] }}</span>
                 </div>
-                <h5>Not Assigned</h5>
-                <button class="btn btn-sm btn-primary mt-2" disabled>
+                <h5 class="mt-3">{{ operator.name }}</h5>
+                <p class="text-muted mb-3">Your Operator</p>
+                <a href="{{ url_for('messages.chat', user_id=operator.id) }}" class="btn btn-primary">
+                    <i class="fas fa-comments"></i> Message
+                </a>
+                {% else %}
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light"
+                     style="width: 80px; height: 80px;">
+                    <i class="fas fa-user fa-3x text-muted"></i>
+                </div>
+                <h5 class="mt-3">Not Assigned</h5>
+                <p class="text-muted mb-3">No operator assigned</p>
+                <button class="btn btn-primary" disabled>
                     <i class="fas fa-comments"></i> Message
                 </button>
+                {% endif %}
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-9">
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <h5 class="card-title mb-0">Driver Dashboard</h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> This is a placeholder for the Driver Dashboard. In a complete application, this would show assigned tasks, route navigation, and status updates.
-                </div>
-                
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Current Task</h5>
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card stat-card border-primary h-100">
+                            <div class="card-body text-center">
+                                <div class="icon text-primary">
+                                    <i class="fas fa-route"></i>
+                                </div>
+                                <div class="count">{{ stats.active_routes }}</div>
+                                <div class="label">Active Routes</div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="text-center py-4">
-                            <i class="fas fa-tasks fa-3x text-muted mb-3"></i>
-                            <p>No active task assigned.</p>
+                    <div class="col-md-3">
+                        <div class="card stat-card border-info h-100">
+                            <div class="card-body text-center">
+                                <div class="icon text-info">
+                                    <i class="fas fa-tasks"></i>
+                                </div>
+                                <div class="count">{{ stats.active + stats.new }}</div>
+                                <div class="label">Active Tasks</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card border-success h-100">
+                            <div class="card-body text-center">
+                                <div class="icon text-success">
+                                    <i class="fas fa-check-circle"></i>
+                                </div>
+                                <div class="count">{{ stats.completed_routes }}</div>
+                                <div class="label">Completed Routes</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card stat-card border-warning h-100">
+                            <div class="card-body text-center">
+                                <div class="icon text-warning">
+                                    <i class="fas fa-truck-moving"></i>
+                                </div>
+                                <div class="count">{{ stats.total_distance|round|int }}</div>
+                                <div class="label">Total km</div>
+                            </div>
                         </div>
                     </div>
                 </div>
-                
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Current Route</h5>
+
+                <!-- Current Task and Route -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <!-- Current Task -->
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">Current Task</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if active_task %}
+                                <div class="d-flex align-items-start">
+                                    <div class="me-3">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                            style="width: 48px; height: 48px;">
+                                            <i class="fas fa-clipboard-list"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">{{ active_task.title }}</h5>
+                                        <p class="text-muted small mb-2">
+                                            <span class="badge bg-primary">In Progress</span>
+                                            {% if active_task.deadline %}
+                                            <span class="ms-2">
+                                                <i class="fas fa-clock"></i> Due: {{ active_task.deadline.strftime('%Y-%m-%d %H:%M') }}
+                                                {% if active_task.deadline < now %}
+                                                <span class="text-danger">(Overdue)</span>
+                                                {% endif %}
+                                            </span>
+                                            {% endif %}
+                                        </p>
+                                        <p class="mb-2">{{ active_task.description|truncate(100) }}</p>
+                                        <div>
+                                            <a href="{{ url_for('tasks.view_task', task_id=active_task.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> View Details
+                                            </a>
+                                            <form action="{{ url_for('driver.complete_task', task_id=active_task.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check"></i> Complete Task
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                                    <p class="mb-0">No active task assigned.</p>
+                                    <p>
+                                        <a href="{{ url_for('driver.tasks') }}" class="btn btn-primary mt-2">
+                                            <i class="fas fa-tasks"></i> View All Tasks
+                                        </a>
+                                    </p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="text-center py-4">
-                            <i class="fas fa-route fa-3x text-muted mb-3"></i>
-                            <p>No active route assigned.</p>
+
+                    <div class="col-md-6">
+                        <!-- Current Route -->
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">Current Route</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if active_route %}
+                                <div class="d-flex align-items-start">
+                                    <div class="me-3">
+                                        <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                            style="width: 48px; height: 48px;">
+                                            <i class="fas fa-route"></i>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <h5 class="mb-1">{{ active_route.start_point }} → {{ active_route.end_point }}</h5>
+                                        <p class="text-muted small mb-2">
+                                            <span class="badge bg-primary">In Progress</span>
+                                            <span class="ms-2">
+                                                <i class="fas fa-ruler-horizontal"></i> {{ active_route.distance|round(1) }} km
+                                            </span>
+                                            {% if active_route.estimated_time %}
+                                            <span class="ms-2">
+                                                <i class="fas fa-clock"></i> {{ active_route.estimated_time }} min
+                                            </span>
+                                            {% endif %}
+                                        </p>
+
+                                        {% if active_route.waypoints %}
+                                        <p class="mb-2">
+                                            <small>{{ active_route.waypoints|length }} waypoints</small>
+                                        </p>
+                                        {% endif %}
+
+                                        <div>
+                                            <a href="{{ url_for('routes.view_route', route_id=active_route.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> View Details
+                                            </a>
+                                            <a href="{{ url_for('routes.route_map', route_id=active_route.id) }}" class="btn btn-sm btn-info">
+                                                <i class="fas fa-map-marked-alt"></i> View Map
+                                            </a>
+                                            <form action="{{ url_for('routes.complete_route', route_id=active_route.id) }}" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check"></i> Complete
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-route fa-3x text-muted mb-3"></i>
+                                    <p class="mb-0">No active route assigned.</p>
+                                    <p>
+                                        <a href="{{ url_for('driver.routes_dashboard') }}" class="btn btn-primary mt-2">
+                                            <i class="fas fa-route"></i> View All Routes
+                                        </a>
+                                    </p>
+                                </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="row">
                     <div class="col-md-6">
+                        <!-- Upcoming Tasks -->
                         <div class="card mb-4">
-                            <div class="card-header">
+                            <div class="card-header d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">Upcoming Tasks</h5>
+                                <a href="{{ url_for('driver.tasks') }}" class="btn btn-sm btn-outline-primary">View All</a>
                             </div>
-                            <div class="card-body">
-                                <div class="list-group">
-                                    <div class="list-group-item text-center py-4">
-                                        <i class="fas fa-clipboard-list fa-2x text-muted mb-3"></i>
-                                        <p class="mb-0">No upcoming tasks.</p>
-                                    </div>
+                            <div class="list-group list-group-flush">
+                                {% if new_tasks %}
+                                    {% for task in new_tasks[:3] %}
+                                    <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="list-group-item list-group-item-action">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">{{ task.title }}</h6>
+                                            <small>
+                                                <span class="badge bg-info">New</span>
+                                            </small>
+                                        </div>
+                                        <p class="mb-1 small">{{ task.description|truncate(50) }}</p>
+                                        {% if task.deadline %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar-alt"></i> {{ task.deadline.strftime('%Y-%m-%d') }}
+                                        </small>
+                                        {% endif %}
+                                    </a>
+                                    {% endfor %}
+                                {% else %}
+                                <div class="list-group-item text-center py-4">
+                                    <i class="fas fa-clipboard-list fa-2x text-muted mb-3"></i>
+                                    <p class="mb-0">No upcoming tasks.</p>
                                 </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
+                        <!-- Next Planned Route -->
                         <div class="card mb-4">
-                            <div class="card-header">
-                                <h5 class="mb-0">Recent Messages</h5>
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Next Route</h5>
+                                <a href="{{ url_for('driver.routes_dashboard') }}" class="btn btn-sm btn-outline-primary">View All</a>
                             </div>
                             <div class="card-body">
-                                <div class="list-group">
-                                    <div class="list-group-item text-center py-4">
-                                        <i class="fas fa-comments fa-2x text-muted mb-3"></i>
-                                        <p class="mb-0">No recent messages.</p>
+                                {% if next_route %}
+                                <div>
+                                    <h6>{{ next_route.start_point }} → {{ next_route.end_point }}</h6>
+                                    <p class="text-muted mb-2">
+                                        <span class="badge bg-info">Planned</span>
+                                        <span class="ms-2">
+                                            <i class="fas fa-ruler-horizontal"></i> {{ next_route.distance|round(1) }} km
+                                        </span>
+                                        {% if next_route.estimated_time %}
+                                        <span class="ms-2">
+                                            <i class="fas fa-clock"></i> {{ next_route.estimated_time }} min
+                                        </span>
+                                        {% endif %}
+                                    </p>
+
+                                    {% if next_route.start_time %}
+                                    <p class="small">
+                                        <i class="fas fa-calendar-alt"></i> Scheduled: {{ next_route.start_time.strftime('%Y-%m-%d %H:%M') }}
+                                    </p>
+                                    {% endif %}
+
+                                    <div>
+                                        <a href="{{ url_for('routes.view_route', route_id=next_route.id) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i> View Details
+                                        </a>
+                                        <form action="{{ url_for('routes.start_route', route_id=next_route.id) }}" method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-success">
+                                                <i class="fas fa-play"></i> Start Route
+                                            </button>
+                                        </form>
                                     </div>
                                 </div>
+                                {% else %}
+                                <div class="text-center py-4">
+                                    <i class="fas fa-route fa-3x text-muted mb-3"></i>
+                                    <p>No planned routes.</p>
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Recent Messages -->
                 <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Task History</h5>
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Messages</h5>
+                        <a href="{{ url_for('messages.inbox') }}" class="btn btn-sm btn-outline-primary">View All</a>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Title</th>
-                                        <th>Date</th>
-                                        <th>Status</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td colspan="5" class="text-center">No task history to display.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                    <div class="card-body p-0">
+                        {% if recent_messages %}
+                        <div class="list-group list-group-flush">
+                            {% for message in recent_messages %}
+                            <a href="{{ url_for('messages.chat', user_id=message.sender_id) }}" class="list-group-item list-group-item-action {% if not message.is_read %}list-group-item-light{% endif %}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">
+                                        {{ message.sender.first_name }} {{ message.sender.last_name }}
+                                        {% if message.sender.role.value == 'operator' %}
+                                            <span class="badge bg-info text-dark ms-1">Operator</span>
+                                        {% elif message.sender.role.value == 'manager' %}
+                                            <span class="badge bg-success text-dark ms-1">Manager</span>
+                                        {% elif message.sender.role.value == 'company_owner' %}
+                                            <span class="badge bg-primary text-dark ms-1">Owner</span>
+                                        {% endif %}
+                                    </h6>
+                                    <small>
+                                        {{ message.sent_at.strftime('%H:%M') }}
+                                        {% if not message.is_read %}
+                                        <span class="badge bg-danger ms-1">New</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <p class="mb-1 small">{{ message.content|truncate(50) }}</p>
+                            </a>
+                            {% endfor %}
                         </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-envelope fa-3x text-muted mb-3"></i>
+                            <p>No recent messages.</p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>

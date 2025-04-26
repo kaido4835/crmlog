@@ -1,11 +1,17 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
 from flask_login import login_required, current_user
-from datetime import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import func, or_, and_
 
 from app import db
-from models import Route, RouteStatus, User, UserRole, Task, TaskStatus, Driver, Message
+from models import (
+    Route, RouteStatus, User, UserRole, Task, TaskStatus, Driver, Message,
+    Document, Operator, ActionType, Manager, CompanyOwner
+)
+from forms import DocumentUploadForm, MessageForm
 from utils import role_required, log_action
-from models import ActionType
+from werkzeug.utils import secure_filename
+import os
 
 driver = Blueprint('driver', __name__, url_prefix='/driver')
 
@@ -43,47 +49,65 @@ def routes_dashboard():
         status=RouteStatus.COMPLETED
     ).order_by(Route.end_time.desc()).limit(5).all()
 
-    # Get driver stats
-    stats = _get_driver_stats(current_user.driver.id)
+    # Get active and new tasks
+    active_task = Task.query.filter_by(
+        assignee_id=current_user.id,
+        status=TaskStatus.IN_PROGRESS
+    ).order_by(Task.deadline).first()
 
-    log_action(ActionType.VIEW, "Viewed driver routes dashboard", db)
+    new_tasks = Task.query.filter_by(
+        assignee_id=current_user.id,
+        status=TaskStatus.NEW
+    ).order_by(Task.deadline).limit(3).all()
 
-    return render_template(
-        'routes/routes_dashboard.html',
-        title='My Routes',
-        active_route=active_route,
-        next_route=next_route,
-        upcoming_routes=upcoming_routes,
-        completed_routes=completed_routes,
-        stats=stats
-    )
+    # Get recent messages
+    recent_messages = Message.query.filter_by(
+        recipient_id=current_user.id
+    ).order_by(Message.sent_at.desc()).limit(5).all()
 
-
-@driver.route('/unread-messages')
-@login_required
-@role_required('driver')
-def unread_messages():
-    """
-    Show unread messages for driver
-    """
-    # Get unread messages count
+    # Get unread message count
     unread_count = Message.query.filter_by(
         recipient_id=current_user.id,
         is_read=False
     ).count()
 
-    # If no unread messages, redirect to inbox
-    if unread_count == 0:
-        return redirect(url_for('messages.inbox'))
+    # Get operator info
+    operator = None
+    if current_user.driver and current_user.driver.operator_id:
+        operator_user = User.query.join(
+            User.operator
+        ).filter(
+            User.operator.has(id=current_user.driver.operator_id)
+        ).first()
 
-    # Get first unread message
-    first_unread = Message.query.filter_by(
-        recipient_id=current_user.id,
-        is_read=False
-    ).order_by(Message.sent_at).first()
+        if operator_user:
+            operator = {
+                'id': operator_user.id,
+                'name': f"{operator_user.first_name} {operator_user.last_name}",
+                'email': operator_user.email,
+                'phone': operator_user.phone
+            }
 
-    # Redirect to chat with sender
-    return redirect(url_for('messages.chat', user_id=first_unread.sender_id))
+    # Get driver stats
+    stats = _get_driver_stats(current_user.driver.id)
+
+    log_action(ActionType.VIEW, "Viewed driver dashboard", db)
+
+    return render_template(
+        'driver/dashboard.html',  # Updated template path
+        title='Driver Dashboard',
+        active_route=active_route,
+        next_route=next_route,
+        upcoming_routes=upcoming_routes,
+        completed_routes=completed_routes,
+        active_task=active_task,
+        new_tasks=new_tasks,
+        recent_messages=recent_messages,
+        unread_count=unread_count,
+        operator=operator,
+        stats=stats,
+        now=datetime.utcnow()
+    )
 
 
 @driver.route('/tasks')
@@ -93,6 +117,9 @@ def tasks():
     """
     Show tasks assigned to driver
     """
+    # Get view filter (all, active, completed)
+    view = request.args.get('view', 'all')
+
     # Get assigned tasks
     active_tasks = Task.query.filter_by(
         assignee_id=current_user.id,
@@ -108,6 +135,20 @@ def tasks():
         assignee_id=current_user.id,
         status=TaskStatus.COMPLETED
     ).order_by(Task.updated_at.desc()).limit(5).all()
+
+    # If view is "active", only show active tasks
+    if view == 'active':
+        active_tasks = active_tasks + new_tasks
+        new_tasks = []
+        completed_tasks = []
+    # If view is "completed", only show completed tasks
+    elif view == 'completed':
+        completed_tasks = Task.query.filter_by(
+            assignee_id=current_user.id,
+            status=TaskStatus.COMPLETED
+        ).order_by(Task.updated_at.desc()).all()
+        active_tasks = []
+        new_tasks = []
 
     # Get task stats
     stats = {
@@ -127,6 +168,7 @@ def tasks():
         new_tasks=new_tasks,
         completed_tasks=completed_tasks,
         stats=stats,
+        view=view,
         now=datetime.utcnow()
     )
 
@@ -166,6 +208,320 @@ def profile():
         operator=operator,
         stats=stats
     )
+
+
+@driver.route('/documents')
+@login_required
+@role_required('driver')
+def documents():
+    """
+    Show driver documents
+    """
+    page = request.args.get('page', 1, type=int)
+    category = request.args.get('category', 'all')
+    search_term = request.args.get('search', '')
+
+    # Create document query
+    query = Document.query
+
+    # Filter by company
+    if current_user.driver and current_user.driver.company_id:
+        query = query.filter(Document.company_id == current_user.driver.company_id)
+
+    # Filter by driver-specific access
+    # Documents are visible if:
+    # 1. The driver uploaded them
+    # 2. They're attached to the driver's tasks
+    # 3. They're attached to the driver's routes
+    # 4. They're marked as accessible to this driver
+
+    task_ids = [task.id for task in Task.query.filter_by(assignee_id=current_user.id).all()]
+    route_ids = [route.id for route in Route.query.filter_by(driver_id=current_user.driver.id).all()]
+
+    query = query.filter(
+        or_(
+            Document.uploader_id == current_user.id,
+            Document.task_id.in_(task_ids),
+            Document.route_id.in_(route_ids) if route_ids else False,
+            Document.access_user_id == current_user.id
+        )
+    )
+
+    # Apply category filter
+    if category == 'task':
+        query = query.filter(Document.task_id.isnot(None))
+    elif category == 'route':
+        query = query.filter(Document.route_id.isnot(None))
+    elif category == 'personal':
+        query = query.filter(Document.document_category == 'personal')
+    elif category == 'vehicle':
+        query = query.filter(Document.document_category == 'vehicle')
+
+    # Apply search filter
+    if search_term:
+        query = query.filter(Document.title.ilike(f'%{search_term}%'))
+
+    # Order by upload date (newest first)
+    query = query.order_by(Document.uploaded_at.desc())
+
+    # Paginate results
+    documents = query.paginate(page=page, per_page=10)
+
+    # Get document counts for sidebar
+    document_counts = {
+        'all': Document.query.filter(
+            or_(
+                Document.uploader_id == current_user.id,
+                Document.task_id.in_(task_ids),
+                Document.route_id.in_(route_ids) if route_ids else False,
+                Document.access_user_id == current_user.id
+            )
+        ).count(),
+        'task': Document.query.filter(
+            Document.task_id.in_(task_ids)
+        ).count(),
+        'route': Document.query.filter(
+            Document.route_id.in_(route_ids) if route_ids else False
+        ).count(),
+        'personal': Document.query.filter(
+            Document.document_category == 'personal',
+            or_(
+                Document.uploader_id == current_user.id,
+                Document.access_user_id == current_user.id
+            )
+        ).count(),
+        'vehicle': Document.query.filter(
+            Document.document_category == 'vehicle',
+            or_(
+                Document.uploader_id == current_user.id,
+                Document.access_user_id == current_user.id
+            )
+        ).count()
+    }
+
+    # Get active tasks for document upload form
+    active_tasks = Task.query.filter(
+        Task.assignee_id == current_user.id,
+        Task.status.in_([TaskStatus.NEW, TaskStatus.IN_PROGRESS])
+    ).all()
+
+    # Get active routes for document upload form
+    active_routes = Route.query.filter(
+        Route.driver_id == current_user.driver.id,
+        Route.status.in_([RouteStatus.PLANNED, RouteStatus.IN_PROGRESS])
+    ).all()
+
+    # Create upload form
+    upload_form = DocumentUploadForm()
+
+    log_action(ActionType.VIEW, "Viewed driver documents", db)
+
+    return render_template(
+        'driver/documents.html',
+        title='My Documents',
+        documents=documents,
+        document_counts=document_counts,
+        category=category,
+        search_term=search_term,
+        active_tasks=active_tasks,
+        active_routes=active_routes,
+        upload_form=upload_form
+    )
+
+
+@driver.route('/upload-document', methods=['POST'])
+@login_required
+@role_required('driver')
+def upload_document():
+    """
+    Upload a document
+    """
+    form = DocumentUploadForm()
+
+    if form.validate_on_submit():
+        try:
+            # Get form data
+            title = form.title.data
+            document_file = form.document.data
+            document_category = request.form.get('document_category', 'personal')
+            task_id = request.form.get('task_id')
+            route_id = request.form.get('route_id')
+
+            # Convert task_id and route_id to int or None
+            task_id = int(task_id) if task_id and task_id.isdigit() else None
+            route_id = int(route_id) if route_id and route_id.isdigit() else None
+
+            # Validate task access if task_id is provided
+            if task_id:
+                task = Task.query.get(task_id)
+                if not task or task.assignee_id != current_user.id:
+                    flash('You do not have access to upload documents to this task.', 'danger')
+                    return redirect(url_for('driver.documents'))
+
+            # Validate route access if route_id is provided
+            if route_id:
+                route = Route.query.get(route_id)
+                if not route or route.driver_id != current_user.driver.id:
+                    flash('You do not have access to upload documents to this route.', 'danger')
+                    return redirect(url_for('driver.documents'))
+
+            # Generate unique filename
+            filename = secure_filename(document_file.filename)
+            _, file_ext = os.path.splitext(filename)
+            unique_filename = f"{current_user.id}_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}{file_ext}"
+
+            # Determine path based on document type
+            if task_id:
+                upload_path = os.path.join('documents', 'tasks', str(task_id))
+            elif route_id:
+                upload_path = os.path.join('documents', 'routes', str(route_id))
+            else:
+                upload_path = os.path.join('documents', 'drivers', str(current_user.id), document_category)
+
+            # Ensure directory exists
+            full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload_path)
+            os.makedirs(full_path, exist_ok=True)
+
+            # Save file
+            file_path = os.path.join(full_path, unique_filename)
+            document_file.save(file_path)
+
+            # Calculate file size
+            file_size = os.path.getsize(file_path)
+
+            # Get file type
+            file_type = file_ext.lstrip('.').lower()
+
+            # Create document record
+            document = Document(
+                title=title,
+                file_path=os.path.join(upload_path, unique_filename),
+                file_type=file_type,
+                size=file_size,
+                uploaded_at=datetime.utcnow(),
+                uploader_id=current_user.id,
+                task_id=task_id,
+                route_id=route_id,
+                company_id=current_user.driver.company_id,
+                document_category=document_category
+            )
+
+            db.session.add(document)
+            db.session.commit()
+
+            log_action(ActionType.UPLOAD, f"Uploaded document: {title}", db)
+            flash('Document uploaded successfully!', 'success')
+
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error uploading document: {str(e)}', 'danger')
+
+    return redirect(url_for('driver.documents', category=request.form.get('document_category', 'all')))
+
+
+@driver.route('/unread-messages')
+@login_required
+@role_required('driver')
+def unread_messages():
+    """
+    Show unread messages for driver
+    """
+    # Get unread messages count
+    unread_count = Message.query.filter_by(
+        recipient_id=current_user.id,
+        is_read=False
+    ).count()
+
+    # If no unread messages, redirect to inbox
+    if unread_count == 0:
+        return redirect(url_for('messages.inbox'))
+
+    # Get first unread message
+    first_unread = Message.query.filter_by(
+        recipient_id=current_user.id,
+        is_read=False
+    ).order_by(Message.sent_at).first()
+
+    # Redirect to chat with sender
+    return redirect(url_for('messages.chat', user_id=first_unread.sender_id))
+
+
+@driver.route('/tasks/<int:task_id>/start', methods=['POST'])
+@login_required
+@role_required('driver')
+def start_task(task_id):
+    """
+    Mark a task as started (in progress)
+    """
+    task = Task.query.get_or_404(task_id)
+
+    # Check if task is assigned to this driver
+    if task.assignee_id != current_user.id:
+        flash('You are not assigned to this task.', 'danger')
+        return redirect(url_for('driver.tasks'))
+
+    # Check if task is in NEW status
+    if task.status != TaskStatus.NEW:
+        flash('This task cannot be started as it is not in NEW status.', 'danger')
+        return redirect(url_for('driver.tasks'))
+
+    try:
+        # Update task status
+        task.status = TaskStatus.IN_PROGRESS
+        task.updated_at = datetime.utcnow()
+
+        # Update related route if exists
+        if task.route and task.route.status == RouteStatus.PLANNED:
+            task.route.status = RouteStatus.IN_PROGRESS
+            task.route.actual_start_time = datetime.utcnow()
+
+        db.session.commit()
+        log_action(ActionType.UPDATE, f"Started task {task.title}", db)
+        flash('Task started successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error starting task: {str(e)}', 'danger')
+
+    return redirect(url_for('tasks.view_task', task_id=task_id))
+
+
+@driver.route('/tasks/<int:task_id>/complete', methods=['POST'])
+@login_required
+@role_required('driver')
+def complete_task(task_id):
+    """
+    Mark a task as completed
+    """
+    task = Task.query.get_or_404(task_id)
+
+    # Check if task is assigned to this driver
+    if task.assignee_id != current_user.id:
+        flash('You are not assigned to this task.', 'danger')
+        return redirect(url_for('driver.tasks'))
+
+    # Check if task is in IN_PROGRESS status
+    if task.status != TaskStatus.IN_PROGRESS:
+        flash('This task cannot be completed as it is not in progress.', 'danger')
+        return redirect(url_for('driver.tasks'))
+
+    try:
+        # Update task status
+        task.status = TaskStatus.COMPLETED
+        task.updated_at = datetime.utcnow()
+
+        # Update related route if exists
+        if task.route and task.route.status == RouteStatus.IN_PROGRESS:
+            task.route.status = RouteStatus.COMPLETED
+            task.route.end_time = datetime.utcnow()
+
+        db.session.commit()
+        log_action(ActionType.UPDATE, f"Completed task {task.title}", db)
+        flash('Task completed successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error completing task: {str(e)}', 'danger')
+
+    return redirect(url_for('tasks.view_task', task_id=task_id))
 
 
 # Helper functions

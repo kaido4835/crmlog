@@ -113,6 +113,14 @@ class Route(db.Model):
         return f'<Route {self.id}: {self.start_point} to {self.end_point}>'
 
 
+class DocumentCategory(enum.Enum):
+    PERSONAL = "personal"
+    VEHICLE = "vehicle"
+    TASK = "task"
+    ROUTE = "route"
+    OTHER = "other"
+
+
 class Document(db.Model):
     __tablename__ = 'documents'
 
@@ -122,17 +130,22 @@ class Document(db.Model):
     file_type = db.Column(db.String(64), nullable=False)
     size = db.Column(db.Integer, nullable=False)  # in bytes
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+    document_category = db.Column(Enum(DocumentCategory), default=DocumentCategory.OTHER, nullable=False)
 
     uploader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=False, index=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=True, index=True)
+    route_id = db.Column(db.Integer, db.ForeignKey('routes.id'), nullable=True, index=True)
+    access_user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     # Adding company_id to enable more efficient queries by company
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False, index=True)
 
     # Relationships
     company = db.relationship('Company', foreign_keys=[company_id])
-    uploader = db.relationship('User', backref='uploaded_documents')
+    uploader = db.relationship('User', foreign_keys=[uploader_id], backref='uploaded_documents')
     task = db.relationship('Task', back_populates='documents')
+    route = db.relationship('Route', back_populates='documents')
+    access_user = db.relationship('User', foreign_keys=[access_user_id], backref='accessible_documents')
 
     def __repr__(self):
         return f'<Document {self.title}>'

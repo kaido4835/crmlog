@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <i class="fas fa-id-card"></i> Driver Panel
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('main.driver_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="{{ url_for('driver.tasks') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-tasks"></i> My Tasks
+                </a>
+                <a href="{{ url_for('driver.routes_dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> My Routes
+                </a>
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action active">
+                    <i class="fas fa-comments"></i> Messages
+                </a>
+                <a href="{{ url_for('driver.documents') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-file-alt"></i> Documents
+                </a>
+            </div>
+        </div>
+        
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Quick Contacts</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <!-- Operator -->
+                {% if operator %}
+                <a href="{{ url_for('messages.chat', user_id=operator.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-headset me-2"></i> {{ operator.name }} 
+                        <span class="d-block text-muted small">Operator</span>
+                    </div>
+                    {% if operator.unread_count > 0 %}
+                    <span class="badge bg-danger rounded-pill">{{ operator.unread_count }}</span>
+                    {% endif %}
+                </a>
+                {% endif %}
+                
+                <!-- Manager -->
+                {% if manager %}
+                <a href="{{ url_for('messages.chat', user_id=manager.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-user-tie me-2"></i> {{ manager.name }}
+                        <span class="d-block text-muted small">Manager</span>
+                    </div>
+                    {% if manager.unread_count > 0 %}
+                    <span class="badge bg-danger rounded-pill">{{ manager.unread_count }}</span>
+                    {% endif %}
+                </a>
+                {% endif %}
+                
+                <!-- Company Owner -->
+                {% if company_owner %}
+                <a href="{{ url_for('messages.chat', user_id=company_owner.id) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-building me-2"></i> {{ company_owner.name }}
+                        <span class="d-block text-muted small">Company Owner</span>
+                    </div>
+                    {% if company_owner.unread_count > 0 %}
+                    <span class="badge bg-danger rounded-pill">{{ company_owner.unread_count }}</span>
+                    {% endif %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Message Filters</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-inbox me-2"></i> Inbox</span>
+                    {% if unread_count > 0 %}
+                    <span class="badge bg-danger rounded-pill">{{ unread_count }}</span>
+                    {% endif %}
+                </a>
+                <a href="{{ url_for('messages.sent') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-paper-plane me-2"></i> Sent Messages
+                </a>
+                <a href="{{ url_for('driver.unread_messages') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-envelope me-2"></i> Unread Messages
+                </a>
+                <a href="{{ url_for('messages.compose') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-edit me-2"></i> Compose New Message
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        {% if view == 'inbox' %}
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Inbox</h5>
+                <div>
+                    <form method="GET" action="{{ url_for('messages.inbox') }}" class="d-inline-flex">
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="search" class="form-control" placeholder="Search messages..." value="{{ search_term }}">
+                            <button type="submit" class="btn btn-light">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card-body p-0">
+                {% if messages.items %}
+                <div class="list-group list-group-flush">
+                    {% for message in messages.items %}
+                    <a href="{{ url_for('messages.chat', user_id=message.sender_id) }}" class="list-group-item list-group-item-action {% if not message.is_read %}list-group-item-light{% endif %}">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                {{ message.sender.first_name }} {{ message.sender.last_name }}
+                                {% if message.sender.role.value == 'operator' %}
+                                    <span class="badge bg-info text-dark ms-1">Operator</span>
+                                {% elif message.sender.role.value == 'manager' %}
+                                    <span class="badge bg-success text-dark ms-1">Manager</span>
+                                {% elif message.sender.role.value == 'company_owner' %}
+                                    <span class="badge bg-primary text-dark ms-1">Owner</span>
+                                {% elif message.sender.role.value == 'admin' %}
+                                    <span class="badge bg-danger text-dark ms-1">Admin</span>
+                                {% endif %}
+                            </h6>
+                            <small>
+                                {{ message.sent_at.strftime('%Y-%m-%d %H:%M') }}
+                                {% if not message.is_read %}
+                                <span class="badge bg-danger ms-1">New</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        <p class="mb-1">{{ message.content|truncate(100) }}</p>
+                        {% if message.task %}
+                            <small class="text-muted"><i class="fas fa-tasks me-1"></i>Re: Task "{{ message.task.title }}"</small>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                <nav aria-label="Message pagination" class="p-3">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if messages.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('messages.inbox', page=messages.prev_num, search=search_term) }}">
+                                    Previous
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Previous</span>
+                            </li>
+                        {% endif %}
+
+                        {% for page_num in messages.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == messages.page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('messages.inbox', page=page_num, search=search_term) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if messages.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('messages.inbox', page=messages.next_num, search=search_term) }}">
+                                    Next
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                    <h5>Your inbox is empty</h5>
+                    <p class="text-muted">
+                        {% if search_term %}
+                            No messages matching "{{ search_term }}".
+                        {% else %}
+                            You don't have any messages yet.
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% elif view == 'sent' %}
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Sent Messages</h5>
+                <div>
+                    <form method="GET" action="{{ url_for('messages.sent') }}" class="d-inline-flex">
+                        <div class="input-group input-group-sm">
+                            <input type="text" name="search" class="form-control" placeholder="Search messages..." value="{{ search_term }}">
+                            <button type="submit" class="btn btn-light">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card-body p-0">
+                {% if messages.items %}
+                <div class="list-group list-group-flush">
+                    {% for message in messages.items %}
+                    <a href="{{ url_for('messages.chat', user_id=message.recipient_id) }}" class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                To: {{ message.recipient.first_name }} {{ message.recipient.last_name }}
+                                {% if message.recipient.role.value == 'operator' %}
+                                    <span class="badge bg-info text-dark ms-1">Operator</span>
+                                {% elif message.recipient.role.value == 'manager' %}
+                                    <span class="badge bg-success text-dark ms-1">Manager</span>
+                                {% elif message.recipient.role.value == 'company_owner' %}
+                                    <span class="badge bg-primary text-dark ms-1">Owner</span>
+                                {% elif message.recipient.role.value == 'admin' %}
+                                    <span class="badge bg-danger text-dark ms-1">Admin</span>
+                                {% endif %}
+                            </h6>
+                            <small>{{ message.sent_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </div>
+                        <p class="mb-1">{{ message.content|truncate(100) }}</p>
+                        {% if message.task %}
+                            <small class="text-muted"><i class="fas fa-tasks me-1"></i>Re: Task "{{ message.task.title }}"</small>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+                
+                <!-- Pagination -->
+                <nav aria-label="Message pagination" class="p-3">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if messages.has_prev %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('messages.sent', page=messages.prev_num, search=search_term) }}">
+                                    Previous
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Previous</span>
+                            </li>
+                        {% endif %}
+
+                        {% for page_num in messages.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == messages.page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('messages.sent', page=page_num, search=search_term) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if messages.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('messages.sent', page=messages.next_num, search=search_term) }}">
+                                    Next
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-paper-plane fa-4x text-muted mb-3"></i>
+                    <h5>No sent messages</h5>
+                    <p class="text-muted">
+                        {% if search_term %}
+                            No messages matching "{{ search_term }}".
+                        {% else %}
+                            You haven't sent any messages yet.
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% elif view == 'compose' %}
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Compose New Message</h5>
+            </div>
+            
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('messages.compose') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label for="recipient_id" class="form-label">To</label>
+                        <select name="recipient_id" id="recipient_id" class="form-select">
+                            {% for user_id, user_name in form.recipient_id.choices %}
+                                <option value="{{ user_id }}">{{ user_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="related_task" class="form-label">Related Task (Optional)</label>
+                        <select name="task_id" id="related_task" class="form-select">
+                            <option value="">None</option>
+                            {% for task in active_tasks %}
+                                <option value="{{ task.id }}">{{ task.title }}</option>
+                            {% endfor %}
+                        </select>
+                        <small class="form-text text-muted">Select a task if this message is related to a specific task.</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.content.label(class="form-label") }}
+                        {{ form.content(class="form-control", rows=5) }}
+                        {% for error in form.content.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <a href="{{ url_for('messages.inbox') }}" class="btn btn-secondary me-2">Cancel</a>
+                        {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% elif view == 'chat' %}
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0">Chat with {{ other_user.first_name }} {{ other_user.last_name }}</h5>
+                    {% if other_user.role.value == 'operator' %}
+                        <span class="badge bg-info text-dark ms-2">Operator</span>
+                    {% elif other_user.role.value == 'manager' %}
+                        <span class="badge bg-success text-dark ms-2">Manager</span>
+                    {% elif other_user.role.value == 'company_owner' %}
+                        <span class="badge bg-primary text-dark ms-2">Owner</span>
+                    {% elif other_user.role.value == 'admin' %}
+                        <span class="badge bg-danger text-dark ms-2">Admin</span>
+                    {% endif %}
+                </div>
+                
+                {% if is_task_related and task %}
+                <div>
+                    <span class="badge bg-info">
+                        <i class="fas fa-tasks me-1"></i> Task: {{ task.title }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="card-body">
+                <!-- Chat messages -->
+                <div id="messages-container" class="mb-3" style="max-height: 400px; overflow-y: auto;">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="d-flex mb-3 {% if message.sender.id == current_user.id %}justify-content-end{% endif %}">
+                                <div class="{% if message.sender.id == current_user.id %}bg-primary text-white{% else %}bg-light{% endif %} p-2 rounded" style="max-width: 75%;">
+                                    <div class="small {% if message.sender.id == current_user.id %}text-white-50{% else %}text-muted{% endif %} mb-1">
+                                        {{ message.sender.first_name }} {{ message.sender.last_name }} - {{ message.sent_at.strftime('%Y-%m-%d %H:%M') }}
+                                    </div>
+                                    <div>{{ message.content }}</div>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-comments fa-3x text-muted mb-3"></i>
+                            <p>No messages with this user yet. Send a message to start a conversation.</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Message input form -->
+                <form method="POST" action="{{ url_for('messages.send_message', user_id=other_user.id) }}">
+                    <input type="hidden" name="task_id" value="{{ task.id if task else '' }}">
+                    <div class="input-group">
+                        <textarea name="content" class="form-control" placeholder="Type your message..." rows="2" required></textarea>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Scroll to bottom of messages container
+        const messagesContainer = document.getElementById('messages-container');
+        if (messagesContainer) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}
