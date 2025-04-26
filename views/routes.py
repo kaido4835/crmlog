@@ -112,7 +112,7 @@ def list_routes():
 
 @routes.route('/create', methods=['GET', 'POST'])
 @login_required
-@role_required(['admin', 'company_owner', 'manager', 'operator'])
+@role_required(["ADMIN", "COMPANY_OWNER", "MANAGER", "OPERATOR"])
 def create_route():
     """
     Create a new route

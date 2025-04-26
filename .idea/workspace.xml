@@ -59,7 +59,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.AIAssistantPromptsLibrary&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python.run">
+  <component name="RunManager" selected="Python.fix">
     <configuration name="create_test_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="fff" />
       <option name="ENV_FILES" value="" />
@@ -172,8 +172,8 @@
     </configuration>
     <recent_temporary>
       <list>
-        <item itemvalue="Python.run" />
         <item itemvalue="Python.fix" />
+        <item itemvalue="Python.run" />
         <item itemvalue="Python.run_migration" />
         <item itemvalue="Python.create_test_data" />
         <item itemvalue="Python.db_check" />

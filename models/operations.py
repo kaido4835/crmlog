@@ -6,11 +6,11 @@ from app import db
 
 
 class TaskStatus(enum.Enum):
-    NEW = "new"
-    IN_PROGRESS = "in_progress"
-    ON_HOLD = "on_hold"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+    NEW = "NEW"
+    IN_PROGRESS = "IN_PROGRESS"
+    ON_HOLD = "ON_HOLD"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 
 class RouteStatus(enum.Enum):

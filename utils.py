@@ -78,13 +78,13 @@ def admin_required(f):
 
 def role_required(roles):
     """
-    Decorator that checks if the current user has one of the required roles
+    Decorator that checks if the current user has one of the required upper_roles
 
     Args:
-        roles: A list of role values or a single role value
+        upper_roles: A list of role values or a single role value
     """
-    if isinstance(roles, str):
-        roles = [roles]
+    if isinstance(upper_roles, str):
+        upper_roles = [upper_roles]
 
     def decorator(f):
         @wraps(f)
@@ -97,7 +97,11 @@ def role_required(roles):
                 flash('Your account is inactive.', 'danger')
                 return redirect(url_for('main.index'))
 
-            if current_user.role.value not in roles:
+            if current_user.role.value not in upper_roles:
+            # Convert required roles to uppercase for comparison if they're lowercase in code
+            upper_roles = [role.upper() if isinstance(role, str) else role for role in roles]
+
+            if current_user.role.value not in upper_roles:
                 flash('You do not have permission to access this page.', 'danger')
                 return redirect(url_for('main.index'))
 

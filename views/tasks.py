@@ -96,7 +96,7 @@ def list_tasks():
 
 @tasks.route('/create', methods=['GET', 'POST'])
 @login_required
-@role_required(['admin', 'company_owner', 'manager', 'operator'])
+@role_required(["ADMIN", "COMPANY_OWNER", "MANAGER", "OPERATOR"])
 def create_task():
     """
     Create a new task

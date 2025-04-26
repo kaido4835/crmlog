@@ -8,11 +8,11 @@ from app import db
 
 
 class UserRole(enum.Enum):
-    ADMIN = "admin"
-    COMPANY_OWNER = "company_owner"
-    MANAGER = "manager"
-    OPERATOR = "operator"
-    DRIVER = "driver"
+    ADMIN = "ADMIN"
+    COMPANY_OWNER = "COMPANY_OWNER"
+    MANAGER = "MANAGER"
+    OPERATOR = "OPERATOR"
+    DRIVER = "DRIVER"
 
 
 class User(UserMixin, db.Model):

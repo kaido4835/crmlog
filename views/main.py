@@ -43,7 +43,7 @@ def owner_dashboard():
     Dashboard for company owner with analytics and stats
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
@@ -121,11 +121,11 @@ def owner_managers():
     Managers list for company owner
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get("PAGE", 1, type=int)
 
     # Get all managers for this company
     managers_query = Manager.query.filter_by(company_id=company_id)
@@ -153,7 +153,7 @@ def add_manager():
     Add a new manager
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
@@ -193,11 +193,11 @@ def add_manager():
             db.session.commit()
             log_action(ActionType.CREATE, f"Created manager {user.username}", db)
 
-            flash(f'Manager {user.first_name} {user.last_name} created successfully!', 'success')
+            flash(f'Manager {user.first_name} {user.last_name} created successfully!', "SUCCESS")
             return redirect(url_for('main.owner_managers'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error creating manager: {str(e)}', 'danger')
+            flash(f'Error creating manager: {str(e)}', "DANGER")
 
     return render_template(
         'owner/add_manager.html',
@@ -215,7 +215,7 @@ def view_manager(manager_id):
     View manager details including their team and performance
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
@@ -225,7 +225,7 @@ def view_manager(manager_id):
 
     # Ensure manager belongs to owner's company
     if manager.company_id != company_id:
-        flash('You do not have permission to view this manager.', 'danger')
+        flash('You do not have permission to view this manager.', "DANGER")
         return redirect(url_for('main.owner_managers'))
 
     # Get manager's team (operators)
@@ -295,7 +295,7 @@ def edit_manager(manager_id):
     Edit manager details
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
@@ -305,7 +305,7 @@ def edit_manager(manager_id):
 
     # Ensure manager belongs to owner's company
     if manager.company_id != company_id:
-        flash('You do not have permission to edit this manager.', 'danger')
+        flash('You do not have permission to edit this manager.', "DANGER")
         return redirect(url_for('main.owner_managers'))
 
     # Create form
@@ -340,11 +340,11 @@ def edit_manager(manager_id):
             db.session.commit()
             log_action(ActionType.UPDATE, f"Updated manager {manager.user.username}", db.session)
 
-            flash(f'Manager {manager.user.first_name} {manager.user.last_name} updated successfully!', 'success')
+            flash(f'Manager {manager.user.first_name} {manager.user.last_name} updated successfully!', "SUCCESS")
             return redirect(url_for('main.view_manager', manager_id=manager_id))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error updating manager: {str(e)}', 'danger')
+            flash(f'Error updating manager: {str(e)}', "DANGER")
 
     return render_template(
         'owner/edit_manager.html',
@@ -362,7 +362,7 @@ def delete_manager(manager_id):
     Delete a manager
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
@@ -372,12 +372,12 @@ def delete_manager(manager_id):
 
     # Ensure manager belongs to owner's company
     if manager.company_id != company_id:
-        flash('You do not have permission to delete this manager.', 'danger')
+        flash('You do not have permission to delete this manager.', "DANGER")
         return redirect(url_for('main.owner_managers'))
 
     # Check if manager has operators
     if manager.operators:
-        flash('Cannot delete manager with assigned operators. Please reassign operators first.', 'danger')
+        flash('Cannot delete manager with assigned operators. Please reassign operators first.', "DANGER")
         return redirect(url_for('main.view_manager', manager_id=manager_id))
 
     try:
@@ -390,10 +390,10 @@ def delete_manager(manager_id):
         db.session.commit()
 
         log_action(ActionType.DELETE, f"Deleted manager {username}", db.session)
-        flash(f'Manager {username} deleted successfully!', 'success')
+        flash(f'Manager {username} deleted successfully!', "SUCCESS")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error deleting manager: {str(e)}', 'danger')
+        flash(f'Error deleting manager: {str(e)}', "DANGER")
 
     return redirect(url_for('main.owner_managers'))
 
@@ -406,7 +406,7 @@ def assign_operators_to_manager(manager_id):
     Assign operators to a manager
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
@@ -416,7 +416,7 @@ def assign_operators_to_manager(manager_id):
 
     # Ensure manager belongs to owner's company
     if manager.company_id != company_id:
-        flash('You do not have permission to modify this manager.', 'danger')
+        flash('You do not have permission to modify this manager.', "DANGER")
         return redirect(url_for('main.owner_managers'))
 
     # Get selected operator IDs
@@ -454,7 +454,7 @@ def remove_operator_from_manager(operator_id, manager_id):
     Remove an operator from a manager
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
@@ -465,12 +465,12 @@ def remove_operator_from_manager(operator_id, manager_id):
 
     # Ensure they belong to owner's company
     if operator.company_id != company_id or manager.company_id != company_id:
-        flash('You do not have permission to modify these users.', 'danger')
+        flash('You do not have permission to modify these users.', "DANGER")
         return redirect(url_for('main.owner_managers'))
 
     # Ensure operator is assigned to this manager
     if operator.manager_id != manager_id:
-        flash('This operator is not assigned to the specified manager.', 'warning')
+        flash('This operator is not assigned to the specified manager.', "WARNING")
         return redirect(url_for('main.view_manager', manager_id=manager_id))
 
     try:
@@ -481,10 +481,10 @@ def remove_operator_from_manager(operator_id, manager_id):
         log_action(ActionType.UPDATE, f"Removed operator {operator.user.username} from manager {manager.user.username}",
                    db)
         flash(f'Operator {operator.user.first_name} {operator.user.last_name} removed from manager successfully!',
-              'success')
+              "SUCCESS")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error removing operator from manager: {str(e)}', 'danger')
+        flash(f'Error removing operator from manager: {str(e)}', "DANGER")
 
     return redirect(url_for('main.view_manager', manager_id=manager_id))
 
@@ -497,7 +497,7 @@ def owner_company_settings():
     Company settings page for owner
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
@@ -512,11 +512,11 @@ def owner_company_settings():
     # Get mock company settings
     # In a real app, this would be from a settings table
     company_settings = {
-        'enable_notifications': True,
-        'task_assignment_approval': False,
-        'allow_driver_messaging': True,
-        'auto_route_optimization': False,
-        'default_task_deadline': 24
+        "ENABLE_NOTIFICATIONS": True,
+        "TASK_ASSIGNMENT_APPROVAL": False,
+        "ALLOW_DRIVER_MESSAGING": True,
+        "AUTO_ROUTE_OPTIMIZATION": False,
+        "DEFAULT_TASK_DEADLINE": 24
     }
 
     log_action(ActionType.VIEW, "Viewed company settings", db.session)
@@ -541,7 +541,7 @@ def edit_company():
     Edit company details
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.company_owner.company_id
@@ -573,11 +573,11 @@ def edit_company():
             db.session.commit()
             log_action(ActionType.UPDATE, f"Updated company details for {company.name}", db.session)
 
-            flash('Company details updated successfully!', 'success')
+            flash('Company details updated successfully!', "SUCCESS")
             return redirect(url_for('main.owner_company_settings'))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error updating company details: {str(e)}', 'danger')
+            flash(f'Error updating company details: {str(e)}', "DANGER")
 
     return render_template(
         'owner/edit_company.html',
@@ -595,17 +595,17 @@ def update_company_settings():
     Update company settings
     """
     if not current_user.company_owner or not current_user.company_owner.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     # In a real app, this would update a settings table
     # For this demo, we'll just acknowledge the update
 
-    enable_notifications = 'enable_notifications' in request.form
-    task_assignment_approval = 'task_assignment_approval' in request.form
-    allow_driver_messaging = 'allow_driver_messaging' in request.form
-    auto_route_optimization = 'auto_route_optimization' in request.form
-    default_task_deadline = int(request.form.get('default_task_deadline', 24))
+    enable_notifications = "ENABLE_NOTIFICATIONS" in request.form
+    task_assignment_approval = "TASK_ASSIGNMENT_APPROVAL" in request.form
+    allow_driver_messaging = "ALLOW_DRIVER_MESSAGING" in request.form
+    auto_route_optimization = "AUTO_ROUTE_OPTIMIZATION" in request.form
+    default_task_deadline = int(request.form.get("DEFAULT_TASK_DEADLINE", 24))
 
     # Log the settings update
     settings_summary = f"Notifications: {enable_notifications}, " \
@@ -616,7 +616,7 @@ def update_company_settings():
 
     log_action(ActionType.UPDATE, f"Updated company settings: {settings_summary}", db.session)
 
-    flash('Company settings updated successfully!', 'success')
+    flash('Company settings updated successfully!', "SUCCESS")
     return redirect(url_for('main.owner_company_settings'))
 
 
@@ -628,7 +628,7 @@ def manager_dashboard():
     Dashboard for manager with team overview and tasks
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.manager.company_id
@@ -721,11 +721,11 @@ def manager_operators():
     Show the operators assigned to this manager
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.manager.company_id
-    page = request.args.get('page', 1, type=int)
+    page = request.args.get("PAGE", 1, type=int)
 
     # Get operators assigned to this manager
     operators_query = Operator.query.filter_by(
@@ -757,7 +757,7 @@ def view_operator(operator_id):
     View details of a specific operator
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get operator
@@ -765,7 +765,7 @@ def view_operator(operator_id):
 
     # Check if the operator is assigned to this manager
     if operator.manager_id != current_user.manager.id:
-        flash('This operator is not assigned to you.', 'danger')
+        flash('This operator is not assigned to you.', "DANGER")
         return redirect(url_for('main.manager_operators'))
 
     # Get activity logs for this operator
@@ -803,7 +803,7 @@ def add_operator():
     Add a new operator to the team
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.manager.company_id
@@ -820,7 +820,7 @@ def add_operator():
 
     if request.method == 'POST':
         # Handle form submission
-        operator_id = request.form.get('operator_id')
+        operator_id = request.form.get("OPERATOR_ID")
 
         if operator_id:
             try:
@@ -832,13 +832,13 @@ def add_operator():
                     db.session.commit()
 
                     log_action(ActionType.UPDATE, f"Added operator {operator.user.username} to team", db)
-                    flash(f'Operator {operator.user.first_name} {operator.user.last_name} added to your team!', 'success')
+                    flash(f'Operator {operator.user.first_name} {operator.user.last_name} added to your team!', "SUCCESS")
                     return redirect(url_for('main.manager_operators'))
                 else:
-                    flash('Invalid operator selected.', 'danger')
+                    flash('Invalid operator selected.', "DANGER")
             except Exception as e:
                 db.session.rollback()
-                flash(f'Error adding operator: {str(e)}', 'danger')
+                flash(f'Error adding operator: {str(e)}', "DANGER")
 
     log_action(ActionType.VIEW, "Viewed add operator page", db)
 
@@ -857,20 +857,20 @@ def request_operator():
     Request a new operator account to be created
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.manager.company_id
 
     # Get form data
-    first_name = request.form.get('first_name')
-    last_name = request.form.get('last_name')
-    email = request.form.get('email')
-    phone = request.form.get('phone')
-    justification = request.form.get('justification')
+    first_name = request.form.get("FIRST_NAME")
+    last_name = request.form.get("LAST_NAME")
+    email = request.form.get("EMAIL")
+    phone = request.form.get("PHONE")
+    justification = request.form.get("JUSTIFICATION")
 
     if not first_name or not last_name or not email or not justification:
-        flash('Please fill out all required fields.', 'danger')
+        flash('Please fill out all required fields.', "DANGER")
         return redirect(url_for('main.add_operator'))
 
     try:
@@ -901,7 +901,7 @@ def request_operator():
 
             db.session.commit()
             log_action(ActionType.CREATE, "Requested new operator account (to admins)", db)
-            flash('Your request has been sent to the system administrators.', 'success')
+            flash('Your request has been sent to the system administrators.', "SUCCESS")
         else:
             # Create notification message to company owner
             notification = Message(
@@ -921,11 +921,11 @@ def request_operator():
             db.session.add(notification)
             db.session.commit()
             log_action(ActionType.CREATE, "Requested new operator account (to company owner)", db)
-            flash('Your request has been sent to the company owner.', 'success')
+            flash('Your request has been sent to the company owner.', "SUCCESS")
 
     except Exception as e:
         db.session.rollback()
-        flash(f'Error submitting request: {str(e)}', 'danger')
+        flash(f'Error submitting request: {str(e)}', "DANGER")
 
     return redirect(url_for('main.manager_operators'))
 
@@ -938,7 +938,7 @@ def remove_operator(operator_id):
     Remove an operator from this manager's team
     """
     if not current_user.manager:
-        flash('You are not authorized to perform this action.', 'danger')
+        flash('You are not authorized to perform this action.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get operator
@@ -946,7 +946,7 @@ def remove_operator(operator_id):
 
     # Check if operator is assigned to this manager
     if operator.manager_id != current_user.manager.id:
-        flash('This operator is not assigned to you.', 'danger')
+        flash('This operator is not assigned to you.', "DANGER")
         return redirect(url_for('main.manager_operators'))
 
     try:
@@ -958,10 +958,10 @@ def remove_operator(operator_id):
         db.session.commit()
 
         log_action(ActionType.UPDATE, f"Removed operator {operator.user.username} from team", db)
-        flash(f'Operator {operator_name} removed from your team.', 'success')
+        flash(f'Operator {operator_name} removed from your team.', "SUCCESS")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error removing operator: {str(e)}', 'danger')
+        flash(f'Error removing operator: {str(e)}', "DANGER")
 
     return redirect(url_for('main.manager_operators'))
 
@@ -974,7 +974,7 @@ def assign_drivers(operator_id):
     Assign drivers to an operator
     """
     if not current_user.manager:
-        flash('You are not authorized to perform this action.', 'danger')
+        flash('You are not authorized to perform this action.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get operator
@@ -982,7 +982,7 @@ def assign_drivers(operator_id):
 
     # Check if operator is assigned to this manager
     if operator.manager_id != current_user.manager.id:
-        flash('This operator is not assigned to you.', 'danger')
+        flash('This operator is not assigned to you.', "DANGER")
         return redirect(url_for('main.manager_operators'))
 
     try:
@@ -1022,7 +1022,7 @@ def unassign_driver(operator_id, driver_id):
     Remove a driver from an operator
     """
     if not current_user.manager:
-        flash('You are not authorized to perform this action.', 'danger')
+        flash('You are not authorized to perform this action.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get operator and driver
@@ -1031,12 +1031,12 @@ def unassign_driver(operator_id, driver_id):
 
     # Check if operator is assigned to this manager
     if operator.manager_id != current_user.manager.id:
-        flash('This operator is not assigned to you.', 'danger')
+        flash('This operator is not assigned to you.', "DANGER")
         return redirect(url_for('main.manager_operators'))
 
     # Check if driver is assigned to this operator
     if driver.operator_id != operator.id:
-        flash('This driver is not assigned to this operator.', 'danger')
+        flash('This driver is not assigned to this operator.', "DANGER")
         return redirect(url_for('main.view_operator', operator_id=operator_id))
 
     try:
@@ -1048,10 +1048,10 @@ def unassign_driver(operator_id, driver_id):
         db.session.commit()
 
         log_action(ActionType.UPDATE, f"Unassigned driver {driver.user.username} from operator {operator.user.username}", db)
-        flash(f'Driver {driver_name} unassigned from operator.', 'success')
+        flash(f'Driver {driver_name} unassigned from operator.', "SUCCESS")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error unassigning driver: {str(e)}', 'danger')
+        flash(f'Error unassigning driver: {str(e)}', "DANGER")
 
     return redirect(url_for('main.view_operator', operator_id=operator_id))
 
@@ -1064,21 +1064,21 @@ def manager_tasks():
     Show task management interface for manager
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     company_id = current_user.manager.company_id
-    page = request.args.get('page', 1, type=int)
-    status = request.args.get('status')
-    view = request.args.get('view', 'team')  # team or my
-    sort = request.args.get('sort', 'deadline_asc')
-    search_term = request.args.get('search', '')
+    page = request.args.get("PAGE", 1, type=int)
+    status = request.args.get("STATUS")
+    view = request.args.get("VIEW", "TEAM")  # team or my
+    sort = request.args.get("SORT", "DEADLINE_ASC")
+    search_term = request.args.get("SEARCH", '')
 
     # Build query
     task_query = Task.query.filter_by(company_id=company_id)
 
     # Apply view filter
-    if view == 'my':
+    if view == "MY":
         task_query = task_query.filter_by(creator_id=current_user.id)
 
     # Apply status filter
@@ -1101,20 +1101,20 @@ def manager_tasks():
         )
 
     # Apply sorting
-    if sort == 'deadline_asc':
+    if sort == "DEADLINE_ASC":
         # Nulls last for deadline
         task_query = task_query.order_by(
             Task.deadline.is_(None).asc(),  # Not null deadlines first
             Task.deadline.asc()  # Then by deadline (soonest first)
         )
-    elif sort == 'deadline_desc':
+    elif sort == "DEADLINE_DESC":
         task_query = task_query.order_by(
             Task.deadline.is_(None).asc(),  # Not null deadlines first
             Task.deadline.desc()  # Then by deadline (latest first)
         )
-    elif sort == 'created_desc':
+    elif sort == "CREATED_DESC":
         task_query = task_query.order_by(Task.created_at.desc())
-    elif sort == 'created_asc':
+    elif sort == "CREATED_ASC":
         task_query = task_query.order_by(Task.created_at.asc())
 
     # Paginate results
@@ -1144,19 +1144,19 @@ def manager_tasks():
     low_priority_percent = (low_priority / total_tasks * 100) if total_tasks > 0 else 0
 
     task_stats = {
-        'total': total_tasks,
-        'new': new_tasks,
-        'in_progress': in_progress_tasks,
-        'on_hold': on_hold_tasks,
-        'completed': completed_tasks,
-        'cancelled': cancelled_tasks,
-        'completion_rate': round(completion_rate),
-        'high_priority': high_priority,
-        'medium_priority': medium_priority,
-        'low_priority': low_priority,
-        'high_priority_percent': round(high_priority_percent),
-        'medium_priority_percent': round(medium_priority_percent),
-        'low_priority_percent': round(low_priority_percent)
+        "TOTAL": total_tasks,
+        "NEW": new_tasks,
+        "IN_PROGRESS": in_progress_tasks,
+        "ON_HOLD": on_hold_tasks,
+        "COMPLETED": completed_tasks,
+        "CANCELLED": cancelled_tasks,
+        "COMPLETION_RATE": round(completion_rate),
+        "HIGH_PRIORITY": high_priority,
+        "MEDIUM_PRIORITY": medium_priority,
+        "LOW_PRIORITY": low_priority,
+        "HIGH_PRIORITY_PERCENT": round(high_priority_percent),
+        "MEDIUM_PRIORITY_PERCENT": round(medium_priority_percent),
+        "LOW_PRIORITY_PERCENT": round(low_priority_percent)
     }
 
     log_action(ActionType.VIEW, "Viewed tasks management", db)
@@ -1182,16 +1182,16 @@ def manager_reports():
     Show performance reports for the manager's team
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get date range from request, default to last 30 days
-    period = request.args.get('period', '30')
+    period = request.args.get("PERIOD", '30')
 
     # Handle custom date range
-    if period == 'custom':
-        start_date = request.args.get('start_date')
-        end_date = request.args.get('end_date')
+    if period == "CUSTOM":
+        start_date = request.args.get("START_DATE")
+        end_date = request.args.get("END_DATE")
 
         if not start_date or not end_date:
             # Default to last 30 days if dates not provided
@@ -1330,7 +1330,7 @@ def edit_operator(operator_id):
     Edit operator details
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get operator
@@ -1338,7 +1338,7 @@ def edit_operator(operator_id):
 
     # Check if operator is assigned to this manager
     if operator.manager_id != current_user.manager.id:
-        flash('This operator is not assigned to you.', 'danger')
+        flash('This operator is not assigned to you.', "DANGER")
         return redirect(url_for('main.manager_operators'))
 
     # Create form
@@ -1371,17 +1371,17 @@ def edit_operator(operator_id):
                 operator.user.profile_image = save_profile_image(form.profile_image.data)
 
             # Update operator notes if present in the form
-            if hasattr(form, 'notes'):
+            if hasattr(form, "NOTES"):
                 operator.notes = form.notes.data
 
             db.session.commit()
             log_action(ActionType.UPDATE, f"Updated operator {operator.user.username}", db)
 
-            flash(f'Operator {operator.user.first_name} {operator.user.last_name} updated successfully!', 'success')
+            flash(f'Operator {operator.user.first_name} {operator.user.last_name} updated successfully!', "SUCCESS")
             return redirect(url_for('main.view_operator', operator_id=operator_id))
         except Exception as e:
             db.session.rollback()
-            flash(f'Error updating operator: {str(e)}', 'danger')
+            flash(f'Error updating operator: {str(e)}', "DANGER")
 
     return render_template(
         'manager/edit_operator.html',
@@ -1399,7 +1399,7 @@ def request_password_reset(user_id):
     Request password reset for an operator
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', 'danger')
+        flash('You are not associated with a company.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get user
@@ -1408,7 +1408,7 @@ def request_password_reset(user_id):
     # Check if user is an operator assigned to this manager
     operator = Operator.query.get(user_id)
     if not operator or operator.manager_id != current_user.manager.id:
-        flash('You do not have permission to reset this user\'s password.', 'danger')
+        flash('You do not have permission to reset this user\'s password.', "DANGER")
         return redirect(url_for('main.manager_operators'))
 
     try:
@@ -1441,7 +1441,7 @@ def request_password_reset(user_id):
 
         flash(
             f'Password for {user.first_name} {user.last_name} has been reset to: {temp_password}. Please provide this to the operator securely.',
-            'success')
+            "SUCCESS")
 
         # Redirect back to operator's profile
         if operator:
@@ -1450,7 +1450,7 @@ def request_password_reset(user_id):
             return redirect(url_for('main.manager_operators'))
     except Exception as e:
         db.session.rollback()
-        flash(f'Error resetting password: {str(e)}', 'danger')
+        flash(f'Error resetting password: {str(e)}', "DANGER")
         return redirect(url_for('main.manager_operators'))
 
 
@@ -1462,7 +1462,7 @@ def unassign_driver_from_operator(operator_id, driver_id):
     Remove a driver from an operator
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not authorized to perform this action.', 'danger')
+        flash('You are not authorized to perform this action.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get operator and driver
@@ -1471,12 +1471,12 @@ def unassign_driver_from_operator(operator_id, driver_id):
 
     # Check if operator is assigned to this manager
     if operator.manager_id != current_user.manager.id:
-        flash('This operator is not assigned to you.', 'danger')
+        flash('This operator is not assigned to you.', "DANGER")
         return redirect(url_for('main.manager_operators'))
 
     # Check if driver is assigned to this operator
     if driver.operator_id != operator.id:
-        flash('This driver is not assigned to this operator.', 'danger')
+        flash('This driver is not assigned to this operator.', "DANGER")
         return redirect(url_for('main.view_operator', operator_id=operator_id))
 
     try:
@@ -1488,10 +1488,10 @@ def unassign_driver_from_operator(operator_id, driver_id):
         db.session.commit()
 
         log_action(ActionType.UPDATE, f"Unassigned driver {driver.user.username} from operator {operator.user.username}", db)
-        flash(f'Driver {driver_name} unassigned from operator.', 'success')
+        flash(f'Driver {driver_name} unassigned from operator.', "SUCCESS")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error unassigning driver: {str(e)}', 'danger')
+        flash(f'Error unassigning driver: {str(e)}', "DANGER")
 
     return redirect(url_for('main.view_operator', operator_id=operator_id))
 
@@ -1505,7 +1505,7 @@ def assign_drivers_to_operator(operator_id):
     Assign drivers to an operator
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not authorized to perform this action.', 'danger')
+        flash('You are not authorized to perform this action.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get operator
@@ -1513,7 +1513,7 @@ def assign_drivers_to_operator(operator_id):
 
     # Check if operator is assigned to this manager
     if operator.manager_id != current_user.manager.id:
-        flash('This operator is not assigned to you.', 'danger')
+        flash('This operator is not assigned to you.', "DANGER")
         return redirect(url_for('main.manager_operators'))
 
     try:

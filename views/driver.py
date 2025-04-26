@@ -18,14 +18,14 @@ driver = Blueprint('driver', __name__, url_prefix='/driver')
 
 @driver.route('/dashboard')
 @login_required
-@role_required('driver')
+@role_required("DRIVER")
 def routes_dashboard():
     """
     Driver dashboard showing routes
     """
     # Check if user is a driver
     if not current_user.driver:
-        flash('This page is only accessible to drivers.', 'danger')
+        flash('This page is only accessible to drivers.', "DANGER")
         return redirect(url_for('main.index'))
 
     # Get driver's routes
@@ -82,10 +82,10 @@ def routes_dashboard():
 
         if operator_user:
             operator = {
-                'id': operator_user.id,
-                'name': f"{operator_user.first_name} {operator_user.last_name}",
-                'email': operator_user.email,
-                'phone': operator_user.phone
+                "ID": operator_user.id,
+                "NAME": f"{operator_user.first_name} {operator_user.last_name}",
+                "EMAIL": operator_user.email,
+                "PHONE": operator_user.phone
             }
 
     # Get driver stats
@@ -112,13 +112,13 @@ def routes_dashboard():
 
 @driver.route('/tasks')
 @login_required
-@role_required('driver')
+@role_required("DRIVER")
 def tasks():
     """
     Show tasks assigned to driver
     """
     # Get view filter (all, active, completed)
-    view = request.args.get('view', 'all')
+    view = request.args.get("VIEW", "ALL")
 
     # Get assigned tasks
     active_tasks = Task.query.filter_by(
@@ -175,7 +175,7 @@ def tasks():
 
 @driver.route('/profile')
 @login_required
-@role_required('driver')
+@role_required("DRIVER")
 def profile():
     """
     Show driver profile
@@ -191,10 +191,10 @@ def profile():
 
         if operator_user:
             operator = {
-                'id': operator_user.id,
-                'name': f"{operator_user.first_name} {operator_user.last_name}",
-                'email': operator_user.email,
-                'phone': operator_user.phone
+                "ID": operator_user.id,
+                "NAME": f"{operator_user.first_name} {operator_user.last_name}",
+                "EMAIL": operator_user.email,
+                "PHONE": operator_user.phone
             }
 
     # Get driver stats
@@ -212,14 +212,14 @@ def profile():
 
 @driver.route('/documents')
 @login_required
-@role_required('driver')
+@role_required("DRIVER")
 def documents():
     """
     Show driver documents
     """
-    page = request.args.get('page', 1, type=int)
-    category = request.args.get('category', 'all')
-    search_term = request.args.get('search', '')
+    page = request.args.get("PAGE", 1, type=int)
+    category = request.args.get("CATEGORY", "ALL")
+    search_term = request.args.get("SEARCH", '')
 
     # Create document query
     query = Document.query
@@ -331,7 +331,7 @@ def documents():
 
 @driver.route('/upload-document', methods=['POST'])
 @login_required
-@role_required('driver')
+@role_required("DRIVER")
 def upload_document():
     """
     Upload a document
@@ -343,9 +343,9 @@ def upload_document():
             # Get form data
             title = form.title.data
             document_file = form.document.data
-            document_category = request.form.get('document_category', 'personal')
-            task_id = request.form.get('task_id')
-            route_id = request.form.get('route_id')
+            document_category = request.form.get("DOCUMENT_CATEGORY", "PERSONAL")
+            task_id = request.form.get("TASK_ID")
+            route_id = request.form.get("ROUTE_ID")
 
             # Convert task_id and route_id to int or None
             task_id = int(task_id) if task_id and task_id.isdigit() else None
@@ -355,14 +355,14 @@ def upload_document():
             if task_id:
                 task = Task.query.get(task_id)
                 if not task or task.assignee_id != current_user.id:
-                    flash('You do not have access to upload documents to this task.', 'danger')
+                    flash('You do not have access to upload documents to this task.', "DANGER")
                     return redirect(url_for('driver.documents'))
 
             # Validate route access if route_id is provided
             if route_id:
                 route = Route.query.get(route_id)
                 if not route or route.driver_id != current_user.driver.id:
-                    flash('You do not have access to upload documents to this route.', 'danger')
+                    flash('You do not have access to upload documents to this route.', "DANGER")
                     return redirect(url_for('driver.documents'))
 
             # Generate unique filename
@@ -372,11 +372,11 @@ def upload_document():
 
             # Determine path based on document type
             if task_id:
-                upload_path = os.path.join('documents', 'tasks', str(task_id))
+                upload_path = os.path.join("DOCUMENTS", "TASKS", str(task_id))
             elif route_id:
-                upload_path = os.path.join('documents', 'routes', str(route_id))
+                upload_path = os.path.join("DOCUMENTS", "ROUTES", str(route_id))
             else:
-                upload_path = os.path.join('documents', 'drivers', str(current_user.id), document_category)
+                upload_path = os.path.join("DOCUMENTS", "DRIVERS", str(current_user.id), document_category)
 
             # Ensure directory exists
             full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload_path)
@@ -421,7 +421,7 @@ def upload_document():
 
 @driver.route('/unread-messages')
 @login_required
-@role_required('driver')
+@role_required("DRIVER")
 def unread_messages():
     """
     Show unread messages for driver
@@ -448,7 +448,7 @@ def unread_messages():
 
 @driver.route('/tasks/<int:task_id>/start', methods=['POST'])
 @login_required
-@role_required('driver')
+@role_required("DRIVER")
 def start_task(task_id):
     """
     Mark a task as started (in progress)
@@ -457,12 +457,12 @@ def start_task(task_id):
 
     # Check if task is assigned to this driver
     if task.assignee_id != current_user.id:
-        flash('You are not assigned to this task.', 'danger')
+        flash('You are not assigned to this task.', "DANGER")
         return redirect(url_for('driver.tasks'))
 
     # Check if task is in NEW status
     if task.status != TaskStatus.NEW:
-        flash('This task cannot be started as it is not in NEW status.', 'danger')
+        flash('This task cannot be started as it is not in NEW status.', "DANGER")
         return redirect(url_for('driver.tasks'))
 
     try:
@@ -477,17 +477,17 @@ def start_task(task_id):
 
         db.session.commit()
         log_action(ActionType.UPDATE, f"Started task {task.title}", db)
-        flash('Task started successfully!', 'success')
+        flash('Task started successfully!', "SUCCESS")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error starting task: {str(e)}', 'danger')
+        flash(f'Error starting task: {str(e)}', "DANGER")
 
     return redirect(url_for('tasks.view_task', task_id=task_id))
 
 
 @driver.route('/tasks/<int:task_id>/complete', methods=['POST'])
 @login_required
-@role_required('driver')
+@role_required("DRIVER")
 def complete_task(task_id):
     """
     Mark a task as completed
@@ -496,12 +496,12 @@ def complete_task(task_id):
 
     # Check if task is assigned to this driver
     if task.assignee_id != current_user.id:
-        flash('You are not assigned to this task.', 'danger')
+        flash('You are not assigned to this task.', "DANGER")
         return redirect(url_for('driver.tasks'))
 
     # Check if task is in IN_PROGRESS status
     if task.status != TaskStatus.IN_PROGRESS:
-        flash('This task cannot be completed as it is not in progress.', 'danger')
+        flash('This task cannot be completed as it is not in progress.', "DANGER")
         return redirect(url_for('driver.tasks'))
 
     try:
@@ -516,10 +516,10 @@ def complete_task(task_id):
 
         db.session.commit()
         log_action(ActionType.UPDATE, f"Completed task {task.title}", db)
-        flash('Task completed successfully!', 'success')
+        flash('Task completed successfully!', "SUCCESS")
     except Exception as e:
         db.session.rollback()
-        flash(f'Error completing task: {str(e)}', 'danger')
+        flash(f'Error completing task: {str(e)}', "DANGER")
 
     return redirect(url_for('tasks.view_task', task_id=task_id))
 

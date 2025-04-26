@@ -19,7 +19,7 @@ statistics = Blueprint('statistics', __name__, url_prefix='/statistics')
 
 @statistics.route('/dashboard')
 @login_required
-@role_required(['admin', 'company_owner', 'manager'])
+@role_required(["ADMIN", "COMPANY_OWNER", "MANAGER"])
 def dashboard():
     """
     Show statistics dashboard
@@ -198,7 +198,7 @@ def dashboard():
 
 @statistics.route('/company')
 @login_required
-@role_required(['admin', 'company_owner', 'manager'])
+@role_required(["ADMIN", "COMPANY_OWNER", "MANAGER"])
 def company():
     """
     Show company statistics
@@ -337,7 +337,7 @@ def company():
 
 @statistics.route('/routes')
 @login_required
-@role_required(['admin', 'company_owner', 'manager', 'operator'])
+@role_required(["ADMIN", "COMPANY_OWNER", "MANAGER", "OPERATOR"])
 def routes():
     """
     Show routes statistics
@@ -495,7 +495,7 @@ def routes():
 
 @statistics.route('/users')
 @login_required
-@role_required(['admin', 'company_owner', 'manager'])
+@role_required(["ADMIN", "COMPANY_OWNER", "MANAGER"])
 def users():
     """
     Show user performance statistics
@@ -692,7 +692,7 @@ def users():
 
 @statistics.route('/reports')
 @login_required
-@role_required(['admin', 'company_owner', 'manager'])
+@role_required(["ADMIN", "COMPANY_OWNER", "MANAGER"])
 def reports():
     """
     Show available reports
@@ -757,7 +757,7 @@ def reports():
 
 @statistics.route('/download_report/<report_id>')
 @login_required
-@role_required(['admin', 'company_owner', 'manager'])
+@role_required(["ADMIN", "COMPANY_OWNER", "MANAGER"])
 def download_report(report_id):
     """
     Download a specific report
@@ -806,7 +806,7 @@ def download_report(report_id):
 
 @statistics.route('/download_company_report')
 @login_required
-@role_required(['admin', 'company_owner'])
+@role_required(["ADMIN", "COMPANY_OWNER"])
 def download_company_report():
     """
     Download company report
