@@ -4,6 +4,7 @@ from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_login import LoginManager
+from jinja2_filters import register_filters
 
 from config import config
 
@@ -24,6 +25,9 @@ def create_app(config_name='default'):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
+
+    # Register custom Jinja2 filters
+    register_filters(app)
 
     # Ensure upload and log directories exist
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
