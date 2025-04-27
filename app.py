@@ -6,6 +6,7 @@ from flask_migrate import Migrate
 from flask_login import LoginManager
 from jinja2_filters import register_filters
 
+
 from config import config
 
 # Initialize extensions
@@ -99,6 +100,9 @@ def create_app(config_name='default'):
 
     from views.documents import documents as documents_blueprint
     app.register_blueprint(documents_blueprint)
+
+    from views.operator import operator as operator_blueprint
+    app.register_blueprint(operator_blueprint)
 
     return app
 
