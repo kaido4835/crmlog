@@ -1064,21 +1064,21 @@ def manager_tasks():
     Show task management interface for manager
     """
     if not current_user.manager or not current_user.manager.company_id:
-        flash('You are not associated with a company.', "DANGER")
+        flash('You are not associated with a company.', "danger")
         return redirect(url_for('main.index'))
 
     company_id = current_user.manager.company_id
-    page = request.args.get("PAGE", 1, type=int)
-    status = request.args.get("STATUS")
-    view = request.args.get("VIEW", "TEAM")  # team or my
-    sort = request.args.get("SORT", "DEADLINE_ASC")
-    search_term = request.args.get("SEARCH", '')
+    page = request.args.get("page", 1, type=int)
+    status = request.args.get("status")
+    view = request.args.get("view", "team")  # team or my
+    sort = request.args.get("sort", "deadline_asc")
+    search_term = request.args.get("search", '')
 
     # Build query
     task_query = Task.query.filter_by(company_id=company_id)
 
     # Apply view filter
-    if view == "MY":
+    if view == "my":
         task_query = task_query.filter_by(creator_id=current_user.id)
 
     # Apply status filter
@@ -1101,20 +1101,20 @@ def manager_tasks():
         )
 
     # Apply sorting
-    if sort == "DEADLINE_ASC":
+    if sort == "deadline_asc":
         # Nulls last for deadline
         task_query = task_query.order_by(
             Task.deadline.is_(None).asc(),  # Not null deadlines first
             Task.deadline.asc()  # Then by deadline (soonest first)
         )
-    elif sort == "DEADLINE_DESC":
+    elif sort == "deadline_desc":
         task_query = task_query.order_by(
             Task.deadline.is_(None).asc(),  # Not null deadlines first
             Task.deadline.desc()  # Then by deadline (latest first)
         )
-    elif sort == "CREATED_DESC":
+    elif sort == "created_desc":
         task_query = task_query.order_by(Task.created_at.desc())
-    elif sort == "CREATED_ASC":
+    elif sort == "created_asc":
         task_query = task_query.order_by(Task.created_at.asc())
 
     # Paginate results
@@ -1143,20 +1143,21 @@ def manager_tasks():
     medium_priority_percent = (medium_priority / total_tasks * 100) if total_tasks > 0 else 0
     low_priority_percent = (low_priority / total_tasks * 100) if total_tasks > 0 else 0
 
+    # Create task_stats with the required 'total' attribute
     task_stats = {
-        "TOTAL": total_tasks,
-        "NEW": new_tasks,
-        "IN_PROGRESS": in_progress_tasks,
-        "ON_HOLD": on_hold_tasks,
-        "COMPLETED": completed_tasks,
-        "CANCELLED": cancelled_tasks,
-        "COMPLETION_RATE": round(completion_rate),
-        "HIGH_PRIORITY": high_priority,
-        "MEDIUM_PRIORITY": medium_priority,
-        "LOW_PRIORITY": low_priority,
-        "HIGH_PRIORITY_PERCENT": round(high_priority_percent),
-        "MEDIUM_PRIORITY_PERCENT": round(medium_priority_percent),
-        "LOW_PRIORITY_PERCENT": round(low_priority_percent)
+        "total": total_tasks,  # Add this to fix the UndefinedError
+        "new": new_tasks,
+        "in_progress": in_progress_tasks,
+        "on_hold": on_hold_tasks,
+        "completed": completed_tasks,
+        "cancelled": cancelled_tasks,
+        "completion_rate": round(completion_rate),
+        "high_priority": high_priority,
+        "medium_priority": medium_priority,
+        "low_priority": low_priority,
+        "high_priority_percent": round(high_priority_percent),
+        "medium_priority_percent": round(medium_priority_percent),
+        "low_priority_percent": round(low_priority_percent)
     }
 
     log_action(ActionType.VIEW, "Viewed tasks management", db)
