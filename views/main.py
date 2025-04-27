@@ -1544,3 +1544,81 @@ def assign_drivers_to_operator(operator_id):
         flash(f'Error updating driver assignments: {str(e)}', 'danger')
 
     return redirect(url_for('main.view_operator', operator_id=operator_id))
+
+
+@main.route('/dashboard/operator')
+@login_required
+@role_required(UserRole.OPERATOR.value)
+def operator_dashboard():
+    """
+    Dashboard for operator showing their tasks and assigned drivers
+    """
+    if not current_user.operator or not current_user.operator.company_id:
+        flash('You are not associated with a company.', "danger")
+        return redirect(url_for('main.index'))
+
+    company_id = current_user.operator.company_id
+
+    # Get assigned drivers
+    drivers = Driver.query.filter_by(operator_id=current_user.operator.id).all()
+    driver_count = len(drivers)
+
+    # Get task statistics for tasks created by this operator
+    task_query = Task.query.filter_by(
+        creator_id=current_user.id,
+        company_id=company_id
+    )
+
+    total_tasks = task_query.count()
+    new_tasks = task_query.filter_by(status=TaskStatus.NEW).count()
+    in_progress_tasks = task_query.filter_by(status=TaskStatus.IN_PROGRESS).count()
+    active_tasks = new_tasks + in_progress_tasks
+    completed_tasks = task_query.filter_by(status=TaskStatus.COMPLETED).count()
+
+    # Get routes for drivers managed by this operator
+    driver_ids = [d.id for d in drivers]
+
+    route_query = Route.query.filter(
+        Route.driver_id.in_(driver_ids) if driver_ids else False
+    )
+
+    total_routes = route_query.count()
+    active_routes = route_query.filter(
+        Route.status.in_([RouteStatus.PLANNED, RouteStatus.IN_PROGRESS])
+    ).count()
+    completed_routes = route_query.filter_by(status=RouteStatus.COMPLETED).count()
+
+    # Get unread messages count
+    unread_count = Message.query.filter_by(
+        recipient_id=current_user.id,
+        is_read=False
+    ).count()
+
+    # Get manager info
+    manager = None
+    if current_user.operator and current_user.operator.manager_id:
+        manager_user = User.query.get(current_user.operator.manager_id)
+        if manager_user:
+            manager = {
+                'id': manager_user.id,
+                'name': f"{manager_user.first_name} {manager_user.last_name}",
+                'email': manager_user.email,
+                'phone': manager_user.phone
+            }
+
+    log_action(ActionType.VIEW, "Viewed operator dashboard", db)
+
+    return render_template(
+        'operator/dashboard.html',
+        title='Operator Dashboard',
+        drivers=drivers,
+        driver_count=driver_count,
+        total_tasks=total_tasks,
+        active_tasks=active_tasks,
+        completed_tasks=completed_tasks,
+        total_routes=total_routes,
+        active_routes=active_routes,
+        completed_routes=completed_routes,
+        unread_count=unread_count,
+        manager=manager
+    )
