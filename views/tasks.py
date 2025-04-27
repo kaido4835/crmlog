@@ -6,6 +6,12 @@ from sqlalchemy import or_
 
 from app import db
 from forms import TaskForm, DocumentUploadForm, MessageForm
+from models import User, Task, TaskStatus, Route, Document, Message, UserRole, ActionType, Company
+from services import TaskService, MessageService
+from utils import role_required, company_access_required, log_action
+
+from app import db
+from forms import TaskForm, DocumentUploadForm, MessageForm
 from models import User, Task, TaskStatus, Route, Document, Message, UserRole, ActionType
 from services import TaskService, MessageService
 from utils import role_required, company_access_required, log_action
@@ -121,7 +127,7 @@ def create_task():
         company_id = current_user.operator.company_id
     elif current_user.role == UserRole.ADMIN:
         # Admin must select a company
-        form.company_id.choices = [(c.id, c.name) for c in User.query.all()]
+        form.company_id.choices = [(c.id, c.name) for c in Company.query.all()]
         if form.validate_on_submit():
             company_id = form.company_id.data
 
@@ -138,7 +144,7 @@ def create_task():
     if current_user.role == UserRole.OPERATOR and current_user.operator:
         drivers = [
             (d.user.id, f"{d.user.first_name} {d.user.last_name}")
-            for d in current_user.operator.drivers
+            for d in current_user.operator.drivers if d.user is not None
         ]
     # For managers, all drivers in their company
     elif current_user.role == UserRole.MANAGER and current_user.manager:
@@ -161,16 +167,31 @@ def create_task():
 
     if form.validate_on_submit():
         try:
-            # Create task
-            task = TaskService.create_task(form, current_user.id, company_id, db)
+            # Создаем задачу напрямую, минуя TaskService
+            task = Task(
+                title=form.title.data,
+                description=form.description.data,
+                status=TaskStatus.NEW,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+                deadline=form.deadline.data,
+                company_id=company_id,
+                creator_id=current_user.id,
+                assignee_id=form.assignee_id.data if form.assignee_id.data != 0 else None
+            )
+
+            db.session.add(task)
+            db.session.commit()
 
             # Handle document upload if provided
             if form.document.data:
                 TaskService.add_document(task, form.document.data, current_user.id, db)
 
+            log_action(ActionType.CREATE, f"Created task {task.title}", db)
             flash(f'Task "{task.title}" created successfully!', 'success')
             return redirect(url_for('tasks.view_task', task_id=task.id))
         except Exception as e:
+            db.session.rollback()
             flash(f'Error creating task: {str(e)}', 'danger')
 
     return render_template('tasks/create_task.html', title='Create Task', form=form)

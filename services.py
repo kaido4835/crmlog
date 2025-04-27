@@ -546,9 +546,11 @@ class TaskService:
                 title=form.title.data,
                 description=form.description.data,
                 status=TaskStatus.NEW,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
                 deadline=form.deadline.data,
                 creator_id=creator_id,
-                assignee_id=form.assignee_id.data if hasattr(form, 'assignee_id') else None,
+                assignee_id=form.assignee_id.data if hasattr(form, 'assignee_id') and form.assignee_id.data != 0 else None,
                 company_id=company_id
             )
 
