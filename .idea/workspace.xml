@@ -6,6 +6,11 @@
   <component name="ChangeListManager">
     <list default="true" id="b3fe698a-4de6-4cb7-9782-9fee7824eed1" name="Changes" comment="commit">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/operator/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/dashboard.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/operator/documents.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/documents.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/operator/drivers.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/drivers.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/templates/operator/view_driver.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/view_driver.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/views/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/views/main.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -555,7 +560,15 @@
       <option name="project" value="LOCAL" />
       <updated>1745751067302</updated>
     </task>
-    <option name="localTasksCounter" value="46" />
+    <task id="LOCAL-00046" summary="commit">
+      <option name="closed" value="true" />
+      <created>1745770158479</created>
+      <option name="number" value="00046" />
+      <option name="presentableId" value="LOCAL-00046" />
+      <option name="project" value="LOCAL" />
+      <updated>1745770158479</updated>
+    </task>
+    <option name="localTasksCounter" value="47" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

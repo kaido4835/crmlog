@@ -214,4 +214,115 @@
                                 </a>
                             </li>
                         {% else %}
-                            <li
+                            <li class="page-item disabled">
+                                <span class="page-link">Previous</span>
+                            </li>
+                        {% endif %}
+
+                        {% for page_num in documents.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == documents.page %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ page_num }}</span>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="{{ url_for('operator.documents', page=page_num, title=search_form.title.data, file_type=search_form.file_type.data, date_from=search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '', date_to=search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '', task_id=task_id) }}">
+                                            {{ page_num }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if documents.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('operator.documents', page=documents.next_num, title=search_form.title.data, file_type=search_form.file_type.data, date_from=search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '', date_to=search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '', task_id=task_id) }}">
+                                    Next
+                                </a>
+                            </li>
+                        {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link">Next</span>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="display-1 text-muted mb-3">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h4 class="text-muted mb-3">No documents found</h4>
+                    <p class="text-muted">
+                        {% if search_form.title.data or search_form.file_type.data or search_form.date_from.data or search_form.date_to.data or task_id %}
+                            No documents matching your search criteria
+                            <a href="{{ url_for('operator.documents') }}" class="btn btn-outline-primary mt-2">
+                                <i class="fas fa-times"></i> Clear Filters
+                            </a>
+                        {% else %}
+                            You haven't uploaded any documents yet
+                            <a href="{{ url_for('documents.upload_document') }}" class="btn btn-primary mt-2">
+                                <i class="fas fa-upload"></i> Upload Document
+                            </a>
+                        {% endif %}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Document Modal -->
+<div class="modal fade" id="deleteDocumentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the document "<span id="documentTitle"></span>"?</p>
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> This action cannot be undone.
+                </div>
+            </div>
+            <form id="deleteDocumentForm" method="POST">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set up document delete modal
+    const deleteDocumentModal = document.getElementById('deleteDocumentModal');
+    if (deleteDocumentModal) {
+        deleteDocumentModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const documentId = button.getAttribute('data-document-id');
+            const documentTitle = button.getAttribute('data-document-title');
+
+            // Update modal content
+            document.getElementById('documentTitle').textContent = documentTitle;
+
+            // Update form action
+            document.getElementById('deleteDocumentForm').action = "{{ url_for('documents.delete_document', document_id=0) }}".replace('0', documentId);
+        });
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

@@ -127,8 +127,7 @@
                                     </a>
                                 </td>
                                 <td>
-                                    {% set active_route = driver.get_active_route() %}
-                                    {% if active_route %}
+                                    {% if routes and routes|selectattr('driver_id', 'equalto', driver.id)|selectattr('status.value', 'equalto', 'in_progress')|list %}
                                         <span class="badge bg-warning">On Route</span>
                                     {% elif driver.user.is_active %}
                                         <span class="badge bg-success">Available</span>
@@ -137,9 +136,9 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% set active_task = driver.get_active_task() %}
-                                    {% set active_route = driver.get_active_route() %}
-                                    
+                                    {% set active_task = tasks|selectattr('assignee_id', 'equalto', driver.id)|selectattr('status.value', 'equalto', 'IN_PROGRESS')|first %}
+                                    {% set active_route = routes|selectattr('driver_id', 'equalto', driver.id)|selectattr('status.value', 'equalto', 'in_progress')|first %}
+
                                     {% if active_task %}
                                         <a href="{{ url_for('tasks.view_task', task_id=active_task.id) }}" class="text-primary">
                                             <i class="fas fa-tasks"></i> {{ active_task.title|truncate(20) }}
@@ -156,23 +155,37 @@
                                     <small>{{ driver.vehicle_info|truncate(20) }}</small>
                                 </td>
                                 <td>
-                                    {% set performance = driver.get_performance_stats() %}
+                                    <!-- Calculate completion rate from tasks and routes -->
+                                    {% set driver_tasks = tasks|selectattr('assignee_id', 'equalto', driver.id)|list %}
+                                    {% set driver_routes = routes|selectattr('driver_id', 'equalto', driver.id)|list %}
+
+                                    {% set completed_tasks = driver_tasks|selectattr('status.value', 'equalto', 'COMPLETED')|list|length %}
+                                    {% set completed_routes = driver_routes|selectattr('status.value', 'equalto', 'completed')|list|length %}
+
+                                    {% set total_tasks = driver_tasks|length %}
+                                    {% set total_routes = driver_routes|length %}
+
+                                    {% set completion_rate = 0 %}
+                                    {% if (total_tasks + total_routes) > 0 %}
+                                        {% set completion_rate = ((completed_tasks + completed_routes) / (total_tasks + total_routes) * 100)|round %}
+                                    {% endif %}
+
                                     <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar 
-                                            {% if performance.completion_rate >= 85 %}bg-success
-                                            {% elif performance.completion_rate >= 70 %}bg-info
-                                            {% elif performance.completion_rate >= 50 %}bg-warning
-                                            {% else %}bg-danger{% endif %}" 
-                                            role="progressbar" 
-                                            style="width: {{ performance.completion_rate }}%;"
-                                            aria-valuenow="{{ performance.completion_rate }}" 
-                                            aria-valuemin="0" 
+                                        <div class="progress-bar
+                                            {% if completion_rate >= 85 %}bg-success
+                                            {% elif completion_rate >= 70 %}bg-info
+                                            {% elif completion_rate >= 50 %}bg-warning
+                                            {% else %}bg-danger{% endif %}"
+                                            role="progressbar"
+                                            style="width: {{ completion_rate }}%;"
+                                            aria-valuenow="{{ completion_rate }}"
+                                            aria-valuemin="0"
                                             aria-valuemax="100">
                                         </div>
                                     </div>
                                     <div class="d-flex justify-content-between">
-                                        <small>{{ performance.completion_rate }}%</small>
-                                        <small class="text-muted">{{ performance.completed_tasks }}/{{ performance.total_tasks }}</small>
+                                        <small>{{ completion_rate }}%</small>
+                                        <small class="text-muted">{{ completed_tasks + completed_routes }}/{{ total_tasks + total_routes }}</small>
                                     </div>
                                 </td>
                                 <td>
@@ -210,7 +223,7 @@
                         </tbody>
                     </table>
                 </div>
-                
+
                 <!-- Pagination -->
                 {% if drivers.pages > 1 %}
                 <nav aria-label="Driver pagination" class="p-3">
@@ -226,7 +239,7 @@
                                 <span class="page-link">Previous</span>
                             </li>
                         {% endif %}
-                        
+
                         {% for page_num in drivers.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
                             {% if page_num %}
                                 {% if page_num == drivers.page %}
@@ -246,7 +259,7 @@
                                 </li>
                             {% endif %}
                         {% endfor %}
-                        
+
                         {% if drivers.has_next %}
                             <li class="page-item">
                                 <a class="page-link" href="{{ url_for('operator.drivers', page=drivers.next_num, status=status, sort=sort, search=search_term) }}">
@@ -261,7 +274,7 @@
                     </ul>
                 </nav>
                 {% endif %}
-                
+
                 {% else %}
                 <div class="text-center py-5">
                     <div class="display-1 text-muted mb-3">
@@ -285,7 +298,7 @@
                 {% endif %}
             </div>
         </div>
-        
+
         <div class="row">
             <div class="col-md-6">
                 <div class="card mb-4">
@@ -293,11 +306,18 @@
                         <h5 class="mb-0">Driver Statistics</h5>
                     </div>
                     <div class="card-body">
+                        {% if top_drivers %}
                         <canvas id="driverPerformanceChart" width="400" height="300"></canvas>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-chart-bar fa-2x text-muted mb-3"></i>
+                            <p class="mb-0">No driver statistics available</p>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-md-6">
                 <div class="card mb-4">
                     <div class="card-header bg-primary text-white">
@@ -319,15 +339,12 @@
                                         {% endif %}
                                         {{ driver.user.first_name }} {{ driver.user.last_name }}
                                     </div>
-                                    
-                                    {% set active_route = driver.get_active_route() %}
-                                    {% if active_route %}
-                                        <span class="badge bg-warning">On Route</span>
-                                    {% else %}
-                                        <span class="badge bg-success">Available</span>
-                                    {% endif %}
+
+                                    <span class="badge bg-warning">On Route</span>
                                 </div>
-                                
+
+                                <!-- Find active route for this driver -->
+                                {% set active_route = routes|selectattr('driver_id', 'equalto', driver.id)|selectattr('status.value', 'equalto', 'in_progress')|first %}
                                 {% if active_route %}
                                 <div class="mt-2">
                                     <small class="text-muted">
@@ -336,11 +353,23 @@
                                             ({{ (active_route.estimated_time // 60) }}h {{ (active_route.estimated_time % 60) }}m)
                                         {% endif %}
                                     </small>
+
+                                    {% if active_route.waypoints %}
                                     <div class="progress mt-1" style="height: 4px;">
-                                        {% set progress = active_route.get_completion_percentage() %}
-                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress }}%;" 
+                                        {% set completed_waypoints = 0 %}
+                                        {% for waypoint in active_route.waypoints %}
+                                            {% if waypoint.completed %}
+                                                {% set completed_waypoints = completed_waypoints + 1 %}
+                                            {% endif %}
+                                        {% endfor %}
+
+                                        {% set total_waypoints = active_route.waypoints|length %}
+                                        {% set progress = (completed_waypoints / total_waypoints * 100) if total_waypoints > 0 else 0 %}
+
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress }}%;"
                                              aria-valuenow="{{ progress }}" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
+                                    {% endif %}
                                 </div>
                                 {% endif %}
                             </a>
@@ -364,56 +393,58 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Driver Performance Chart
-    var ctx = document.getElementById('driverPerformanceChart').getContext('2d');
-    var driverPerformanceChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: [{% for driver in top_drivers %}'{{ driver.user.first_name }} {{ driver.user.last_name }}'{% if not loop.last %}, {% endif %}{% endfor %}],
-            datasets: [{
-                label: 'Completion Rate (%)',
-                data: [{% for driver in top_drivers %}{{ driver.stats.completion_rate }}{% if not loop.last %}, {% endif %}{% endfor %}],
-                backgroundColor: [
-                    'rgba(13, 110, 253, 0.7)',
-                    'rgba(13, 110, 253, 0.7)',
-                    'rgba(13, 110, 253, 0.7)',
-                    'rgba(13, 110, 253, 0.7)',
-                    'rgba(13, 110, 253, 0.7)'
-                ],
-                borderColor: [
-                    'rgba(13, 110, 253, 1)',
-                    'rgba(13, 110, 253, 1)',
-                    'rgba(13, 110, 253, 1)',
-                    'rgba(13, 110, 253, 1)',
-                    'rgba(13, 110, 253, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 100
-                }
+    var ctx = document.getElementById('driverPerformanceChart');
+    if (ctx) {
+        var driverPerformanceChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [{% for driver in top_drivers %}'{{ driver.user.first_name }} {{ driver.user.last_name }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+                datasets: [{
+                    label: 'Completion Rate (%)',
+                    data: [{% for driver in top_drivers %}{{ driver.stats.completion_rate }}{% if not loop.last %}, {% endif %}{% endfor %}],
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(13, 110, 253, 0.7)',
+                        'rgba(13, 110, 253, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(13, 110, 253, 1)'
+                    ],
+                    borderWidth: 1
+                }]
             },
-            plugins: {
-                legend: {
-                    display: false
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100
+                    }
                 },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            var label = context.dataset.label || '';
-                            var value = context.raw || 0;
-                            return label + ': ' + value + '%';
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                var label = context.dataset.label || '';
+                                var value = context.raw || 0;
+                                return label + ': ' + value + '%';
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 });
 </script>
 {% endblock %}
