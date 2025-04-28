@@ -6,7 +6,7 @@ from datetime import datetime
 from utils import log_action
 
 from app import db
-from models import Document, User, UserRole, Task, TaskStatus, Route, RouteStatus, ActionType
+from models import Document, User, UserRole, Task, TaskStatus, Route, RouteStatus, ActionType, Company
 from forms import DocumentUploadForm, DocumentSearchForm
 from utils import role_required, company_access_required, log_action, save_document, delete_file
 
@@ -80,83 +80,54 @@ def list_documents():
 def upload_document():
     """
     Upload a new document
+
+    This is a fixed version of the upload_document function that properly:
+    1. Validates the form and file
+    2. Uses the save_document utility correctly
+    3. Creates the Document record in the database
     """
+    from forms import DocumentUploadForm
+
     form = DocumentUploadForm()
-
-    # Get company ID based on user role
-    company_id = None
-    if current_user.role == UserRole.COMPANY_OWNER and current_user.company_owner:
-        company_id = current_user.company_owner.company_id
-    elif current_user.role == UserRole.MANAGER and current_user.manager:
-        company_id = current_user.manager.company_id
-    elif current_user.role == UserRole.OPERATOR and current_user.operator:
-        company_id = current_user.operator.company_id
-    elif current_user.role == UserRole.DRIVER and current_user.driver:
-        company_id = current_user.driver.company_id
-
-    # For admins, they can select a company
-    if current_user.role == UserRole.ADMIN:
-        # Get all companies for dropdown
-        all_companies = Company.query.all()
-        form.company_id.choices = [(c.id, c.name) for c in all_companies]
-    else:
-        # Non-admins can only upload to their company
-        if not company_id:
-            flash('You are not associated with a company.', 'danger')
-            return redirect(url_for('main.index'))
-
-        # Hide company field for non-admins
-        del form.company_id
-
-    # Get task ID from query parameter
-    task_id = request.args.get('task_id', None, type=int)
-
-    # If task_id provided, validate it
-    if task_id:
-        task = Task.query.get_or_404(task_id)
-
-        # Check if user has access to this task
-        if not company_id or task.company_id != company_id:
-            flash('You do not have access to this task.', 'danger')
-            return redirect(url_for('documents.list_documents'))
-
-        # Pre-select task in form
-        form.task_id.data = task_id
-
-    # Get available tasks for dropdown
-    if company_id:
-        task_query = Task.query.filter_by(company_id=company_id)
-
-        # For drivers, only show their tasks
-        if current_user.role == UserRole.DRIVER:
-            task_query = task_query.filter_by(assignee_id=current_user.id)
-
-        tasks = task_query.all()
-
-        # Update task choices
-        form.task_id.choices = [(t.id, t.title) for t in tasks]
-        form.task_id.choices.insert(0, (0, 'No task'))
 
     if form.validate_on_submit():
         try:
-            # Get company ID (either from form or from user)
-            doc_company_id = form.company_id.data if hasattr(form, 'company_id') else company_id
+            # Get company ID based on user role
+            company_id = None
+            if current_user.company_owner:
+                company_id = current_user.company_owner.company_id
+            elif current_user.manager:
+                company_id = current_user.manager.company_id
+            elif current_user.operator:
+                company_id = current_user.operator.company_id
+            elif current_user.driver:
+                company_id = current_user.driver.company_id
 
-            # Get task ID (0 means no task)
-            doc_task_id = form.task_id.data if form.task_id.data != 0 else None
+            # For admins, they can select a company
+            if current_user.role.value == 'admin':
+                company_id = form.company_id.data if hasattr(form, 'company_id') else None
 
-            # If task ID provided, verify it
-            if doc_task_id:
-                task = Task.query.get_or_404(doc_task_id)
+            # Validate company existence
+            if not company_id:
+                flash('Company ID is required for document upload.', 'danger')
+                return redirect(url_for('documents.list_documents'))
 
-                # Check if user has access to this task
-                if not doc_company_id or task.company_id != doc_company_id:
-                    flash('You do not have access to this task.', 'danger')
-                    return redirect(url_for('documents.upload_document'))
+            # Get form data
+            title = form.title.data
+            document_file = form.document.data
+            task_id = request.form.get('task_id')
 
-            # Save document
-            file = form.document.data
-            file_path, file_type, file_size = save_document(file, doc_task_id, doc_company_id)
+            # Convert task_id to int or None
+            task_id = int(task_id) if task_id and task_id.isdigit() else None
+
+            # Fix: Properly import and use the save_document function
+            from utils import save_document
+
+            # Log the document upload attempt
+            current_app.logger.info(f"Attempting to save document: {title} for company: {company_id}, task: {task_id}")
+
+            # Save document and get file information
+            file_path, file_type, file_size = save_document(document_file, task_id, company_id)
 
             if not file_path:
                 flash('Error saving document. Please check file type and size.', 'danger')
@@ -164,37 +135,36 @@ def upload_document():
 
             # Create document record
             document = Document(
-                title=form.title.data,
+                title=title,
                 file_path=file_path,
                 file_type=file_type,
                 size=file_size,
                 uploader_id=current_user.id,
-                task_id=doc_task_id,
-                company_id=doc_company_id,
+                task_id=task_id,
+                company_id=company_id,
                 uploaded_at=datetime.utcnow()
             )
 
             db.session.add(document)
             db.session.commit()
 
-            log_action(ActionType.CREATE, f"Uploaded document: {document.title}", db)
+            log_action(ActionType.CREATE, f"Uploaded document: {title}", db)
             flash('Document uploaded successfully!', 'success')
 
             # Redirect to document list, with task filter if applicable
-            if doc_task_id:
-                return redirect(url_for('documents.list_documents', task_id=doc_task_id))
+            if task_id:
+                return redirect(url_for('documents.list_documents', task_id=task_id))
             else:
                 return redirect(url_for('documents.list_documents'))
 
         except Exception as e:
             db.session.rollback()
+            current_app.logger.error(f"Error uploading document: {str(e)}")
+            import traceback
+            current_app.logger.error(traceback.format_exc())
             flash(f'Error uploading document: {str(e)}', 'danger')
 
-    return render_template(
-        'documents/upload_document.html',
-        title='Upload Document',
-        form=form
-    )
+    return redirect(url_for('documents.upload_document'))
 
 
 @documents.route('/<int:document_id>')

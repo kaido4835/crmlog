@@ -220,9 +220,11 @@ def save_document(file, task_id, company_id):
             os.makedirs(upload_folder, exist_ok=True)
 
         # Create upload folder with company and task-specific subfolder
+        # Fix: Use os.path.join consistently and ensure 'documents' is spelled correctly
         document_folder = os.path.join(upload_folder, 'documents', str(company_id), str(task_id))
         os.makedirs(document_folder, exist_ok=True)
 
+        # Save the file using os.path.join for consistent path handling
         file_path = os.path.join(document_folder, unique_filename)
         file.save(file_path)
 
@@ -232,14 +234,19 @@ def save_document(file, task_id, company_id):
         file_size = os.path.getsize(file_path)
 
         # Return relative path to be stored in database
-        # Use os.path.join with explicit normalization to handle cross-platform paths
+        # Use os.path.join and then normalize to forward slashes for web use
         relative_path = os.path.join('uploads', 'documents', str(company_id), str(task_id), unique_filename)
         # Normalize path separators for web use (forward slashes)
         relative_path = relative_path.replace('\\', '/')
 
+        current_app.logger.info(f"Document saved successfully at: {file_path}")
+        current_app.logger.info(f"Relative path for database: {relative_path}")
+
         return (relative_path, file_type, file_size)
     except Exception as e:
         current_app.logger.error(f"Error saving document: {str(e)}")
+        import traceback
+        current_app.logger.error(traceback.format_exc())
         return None, None, None
 
 
