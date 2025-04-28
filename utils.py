@@ -215,6 +215,10 @@ def save_document(file, task_id, company_id):
         unique_filename = f"{uuid.uuid4().hex}{file_ext}"
         upload_folder = current_app.config['UPLOAD_FOLDER']
 
+        # Make sure main upload folder exists
+        if not os.path.exists(upload_folder):
+            os.makedirs(upload_folder, exist_ok=True)
+
         # Create upload folder with company and task-specific subfolder
         document_folder = os.path.join(upload_folder, 'documents', str(company_id), str(task_id))
         os.makedirs(document_folder, exist_ok=True)
@@ -228,7 +232,12 @@ def save_document(file, task_id, company_id):
         file_size = os.path.getsize(file_path)
 
         # Return relative path to be stored in database
-        return (f'uploads/documents/{company_id}/{task_id}/{unique_filename}', file_type, file_size)
+        # Use os.path.join with explicit normalization to handle cross-platform paths
+        relative_path = os.path.join('uploads', 'documents', str(company_id), str(task_id), unique_filename)
+        # Normalize path separators for web use (forward slashes)
+        relative_path = relative_path.replace('\\', '/')
+
+        return (relative_path, file_type, file_size)
     except Exception as e:
         current_app.logger.error(f"Error saving document: {str(e)}")
         return None, None, None
