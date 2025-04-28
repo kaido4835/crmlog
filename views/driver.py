@@ -584,6 +584,22 @@ def _get_driver_stats(driver_id):
 
     on_time_rate = (on_time_deliveries / total_planned_deliveries * 100) if total_planned_deliveries > 0 else 0
 
+    # Get task counts for the driver
+    active_tasks = Task.query.filter_by(
+        assignee_id=driver_id,
+        status=TaskStatus.IN_PROGRESS
+    ).count()
+
+    new_tasks = Task.query.filter_by(
+        assignee_id=driver_id,
+        status=TaskStatus.NEW
+    ).count()
+
+    completed_tasks = Task.query.filter_by(
+        assignee_id=driver_id,
+        status=TaskStatus.COMPLETED
+    ).count()
+
     return {
         'total_routes': total_routes,
         'completed_routes': completed_routes,
@@ -592,5 +608,60 @@ def _get_driver_stats(driver_id):
         'total_distance': total_distance,
         'avg_completion_time': round(avg_completion_time, 1) if avg_completion_time else 0,
         'on_time_rate': round(on_time_rate, 1),
-        'performance_score': min(round((completed_routes / total_routes * 100) if total_routes > 0 else 0, 1), 100)
+        'performance_score': min(round((completed_routes / total_routes * 100) if total_routes > 0 else 0, 1), 100),
+        'active': active_tasks,
+        'new': new_tasks,
+        'completed_tasks': completed_tasks
     }
+
+
+@driver.route('/routes')
+@login_required
+@role_required("DRIVER")
+def driver_routes():
+    """
+    Show routes for the driver
+    """
+    # Check if user is a driver
+    if not current_user.driver:
+        flash('This page is only accessible to drivers.', "DANGER")
+        return redirect(url_for('main.index'))
+
+    # Get driver's routes statistics
+    stats = _get_driver_stats(current_user.driver.id)
+
+    # Get active route (in progress)
+    active_route = Route.query.filter_by(
+        driver_id=current_user.driver.id,
+        status=RouteStatus.IN_PROGRESS
+    ).first()
+
+    # Get next route (planned)
+    next_route = Route.query.filter_by(
+        driver_id=current_user.driver.id,
+        status=RouteStatus.PLANNED
+    ).order_by(Route.start_time).first()
+
+    # Get upcoming routes
+    upcoming_routes = Route.query.filter_by(
+        driver_id=current_user.driver.id,
+        status=RouteStatus.PLANNED
+    ).order_by(Route.start_time).offset(1).limit(5).all()
+
+    # Get completed routes
+    completed_routes = Route.query.filter_by(
+        driver_id=current_user.driver.id,
+        status=RouteStatus.COMPLETED
+    ).order_by(Route.end_time.desc()).limit(5).all()
+
+    log_action(ActionType.VIEW, "Viewed driver routes", db)
+
+    return render_template(
+        'routes/routes_dashboard.html',
+        title='My Routes',
+        active_route=active_route,
+        next_route=next_route,
+        upcoming_routes=upcoming_routes,
+        completed_routes=completed_routes,
+        stats=stats
+    )
