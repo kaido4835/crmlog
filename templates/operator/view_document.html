@@ -11,19 +11,19 @@
                 <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator["drivers"]') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-users"></i> My Drivers
                 </a>
-                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator["tasks"]') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tasks"></i> Tasks
                 </a>
-                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator["routes"]') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-route"></i> Routes
                 </a>
                 <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-comments"></i> Messages
                 </a>
-                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action active">
+                <a href="{{ url_for('operator["documents"]') }}" class="list-group-item list-group-item-action active">
                     <i class="fas fa-file-alt"></i> Documents
                 </a>
             </div>
@@ -241,8 +241,8 @@
                                         </optgroup>
                                         <optgroup label="Operators">
                                             {% for operator in operators %}
-                                            <option value="{{ operator.user.id }}">
-                                                {{ operator.user.first_name }} {{ operator.user.last_name }} (Operator)
+                                            <option value="{{ operator["user"].id }}">
+                                                {{ operator["user"].first_name }} {{ operator["user"].last_name }} (Operator)
                                             </option>
                                             {% endfor %}
                                         </optgroup>
@@ -353,7 +353,7 @@
                 </div>
             </div>
             <div class="card-footer">
-                <a href="{{ url_for('operator.documents') }}" class="btn btn-secondary">
+                <a href="{{ url_for('operator["documents"]') }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Back to Documents
                 </a>
             </div>

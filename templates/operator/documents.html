@@ -11,19 +11,19 @@
                 <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator["drivers"]') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-users"></i> My Drivers
                 </a>
-                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator["tasks"]') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tasks"></i> Tasks
                 </a>
-                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator["routes"]') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-route"></i> Routes
                 </a>
                 <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-comments"></i> Messages
                 </a>
-                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action active">
+                <a href="{{ url_for('operator["documents"]') }}" class="list-group-item list-group-item-action active">
                     <i class="fas fa-file-alt"></i> Documents
                 </a>
             </div>
@@ -34,7 +34,7 @@
                 <h5 class="mb-0">Document Filters</h5>
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('operator.documents') }}">
+                <form method="GET" action="{{ url_for('operator["documents"]') }}">
                     <div class="mb-3">
                         <label class="form-label">Document Title</label>
                         <input type="text" class="form-control" name="title" value="{{ search_form.title.data or '' }}" placeholder="Search by title...">
@@ -209,7 +209,7 @@
                     <ul class="pagination justify-content-center mb-0">
                         {% if documents.has_prev %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ url_for('operator.documents', page=documents.prev_num, title=search_form.title.data, file_type=search_form.file_type.data, date_from=search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '', date_to=search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '', task_id=task_id) }}">
+                                <a class="page-link" href="{{ url_for('operator["documents"]', page=documents.prev_num, title=search_form.title.data, file_type=search_form.file_type.data, date_from=search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '', date_to=search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '', task_id=task_id) }}">
                                     Previous
                                 </a>
                             </li>
@@ -227,7 +227,7 @@
                                     </li>
                                 {% else %}
                                     <li class="page-item">
-                                        <a class="page-link" href="{{ url_for('operator.documents', page=page_num, title=search_form.title.data, file_type=search_form.file_type.data, date_from=search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '', date_to=search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '', task_id=task_id) }}">
+                                        <a class="page-link" href="{{ url_for('operator["documents"]', page=page_num, title=search_form.title.data, file_type=search_form.file_type.data, date_from=search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '', date_to=search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '', task_id=task_id) }}">
                                             {{ page_num }}
                                         </a>
                                     </li>
@@ -241,7 +241,7 @@
 
                         {% if documents.has_next %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ url_for('operator.documents', page=documents.next_num, title=search_form.title.data, file_type=search_form.file_type.data, date_from=search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '', date_to=search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '', task_id=task_id) }}">
+                                <a class="page-link" href="{{ url_for('operator["documents"]', page=documents.next_num, title=search_form.title.data, file_type=search_form.file_type.data, date_from=search_form.date_from.data.strftime('%Y-%m-%d') if search_form.date_from.data else '', date_to=search_form.date_to.data.strftime('%Y-%m-%d') if search_form.date_to.data else '', task_id=task_id) }}">
                                     Next
                                 </a>
                             </li>
@@ -263,7 +263,7 @@
                     <p class="text-muted">
                         {% if search_form.title.data or search_form.file_type.data or search_form.date_from.data or search_form.date_to.data or task_id %}
                             No documents matching your search criteria
-                            <a href="{{ url_for('operator.documents') }}" class="btn btn-outline-primary mt-2">
+                            <a href="{{ url_for('operator["documents"]') }}" class="btn btn-outline-primary mt-2">
                                 <i class="fas fa-times"></i> Clear Filters
                             </a>
                         {% else %}

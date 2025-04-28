@@ -55,28 +55,28 @@
                                     <td>
                                         <div class="d-flex align-items-center">
                                             {% if operator.user.profile_image %}
-                                                <img src="{{ url_for('static', filename=operator.user.profile_image) }}" 
+                                                <img src="{{ url_for('static', filename=operator["user"].profile_image) }}" 
                                                      alt="Profile" class="profile-image-sm me-2">
                                             {% else %}
                                                 <div class="rounded-circle bg-primary d-inline-flex justify-content-center align-items-center me-2" 
                                                      style="width: 40px; height: 40px;">
-                                                    <span class="text-white">{{ operator.user.first_name[0] }}{{ operator.user.last_name[0] }}</span>
+                                                    <span class="text-white">{{ operator["user"].first_name[0] }}{{ operator["user"].last_name[0] }}</span>
                                                 </div>
                                             {% endif %}
                                             <div>
-                                                <div class="fw-bold">{{ operator.user.first_name }} {{ operator.user.last_name }}</div>
-                                                <small class="text-muted">@{{ operator.user.username }}</small>
+                                                <div class="fw-bold">{{ operator["user"].first_name }} {{ operator["user"].last_name }}</div>
+                                                <small class="text-muted">@{{ operator["user"].username }}</small>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
-                                        <div><i class="fas fa-envelope text-muted me-1"></i> {{ operator.user.email }}</div>
+                                        <div><i class="fas fa-envelope text-muted me-1"></i> {{ operator["user"].email }}</div>
                                         {% if operator.user.phone %}
-                                            <div><i class="fas fa-phone text-muted me-1"></i> {{ operator.user.phone }}</div>
+                                            <div><i class="fas fa-phone text-muted me-1"></i> {{ operator["user"].phone }}</div>
                                         {% endif %}
                                     </td>
                                     <td>
-                                        <span class="badge bg-info">{{ operator.drivers|length }} Drivers</span>
+                                        <span class="badge bg-info">{{ operator["drivers"]|length }} Drivers</span>
                                     </td>
                                     <td>
                                         <div class="small">
@@ -89,7 +89,7 @@
                                             {% endfor %}
                                             
                                             <div>Tasks: {{ completed_tasks.count }}/{{ task_count }}</div>
-                                            <div>Last active: {{ operator.user.last_login.strftime('%d %b, %H:%M') if operator.user.last_login else 'Never' }}</div>
+                                            <div>Last active: {{ operator["user"].last_login.strftime('%d %b, %H:%M') if operator.user.last_login else 'Never' }}</div>
                                         </div>
                                     </td>
                                     <td>
@@ -107,39 +107,39 @@
                                     </td>
                                     <td>
                                         <div class="btn-group">
-                                            <a href="{{ url_for('main.view_operator', operator_id=operator.id) }}" 
+                                            <a href="{{ url_for('main.view_operator', operator_id=operator["id"]) }}" 
                                                class="btn btn-sm btn-outline-primary">
                                                 <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="{{ url_for('messages.chat', user_id=operator.user.id) }}" 
+                                            <a href="{{ url_for('messages.chat', user_id=operator["user"].id) }}" 
                                                class="btn btn-sm btn-outline-info">
                                                 <i class="fas fa-comment"></i>
                                             </a>
                                             <button type="button" class="btn btn-sm btn-outline-danger" 
                                                     data-bs-toggle="modal" 
-                                                    data-bs-target="#removeOperatorModal{{ operator.id }}">
+                                                    data-bs-target="#removeOperatorModal{{ operator["id"] }}">
                                                 <i class="fas fa-times"></i>
                                             </button>
                                         </div>
                                         
                                         <!-- Remove Modal -->
-                                        <div class="modal fade" id="removeOperatorModal{{ operator.id }}" tabindex="-1" 
-                                             aria-labelledby="removeOperatorModalLabel{{ operator.id }}" aria-hidden="true">
+                                        <div class="modal fade" id="removeOperatorModal{{ operator["id"] }}" tabindex="-1" 
+                                             aria-labelledby="removeOperatorModalLabel{{ operator["id"] }}" aria-hidden="true">
                                             <div class="modal-dialog">
                                                 <div class="modal-content">
                                                     <div class="modal-header">
-                                                        <h5 class="modal-title" id="removeOperatorModalLabel{{ operator.id }}">
+                                                        <h5 class="modal-title" id="removeOperatorModalLabel{{ operator["id"] }}">
                                                             Remove Operator
                                                         </h5>
                                                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                     </div>
                                                     <div class="modal-body">
-                                                        Are you sure you want to remove <strong>{{ operator.user.first_name }} {{ operator.user.last_name }}</strong> 
+                                                        Are you sure you want to remove <strong>{{ operator["user"].first_name }} {{ operator["user"].last_name }}</strong> 
                                                         from your team? This action will unassign them from your management.
                                                     </div>
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                                                        <form action="{{ url_for('main.remove_operator', operator_id=operator.id) }}" method="post">
+                                                        <form action="{{ url_for('main.remove_operator', operator_id=operator["id"]) }}" method="post">
                                                             <button type="submit" class="btn btn-danger">Remove</button>
                                                         </form>
                                                     </div>

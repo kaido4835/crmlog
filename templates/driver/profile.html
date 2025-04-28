@@ -190,26 +190,26 @@
                                     <div class="rounded-circle bg-info d-flex justify-content-center align-items-center me-3" 
                                         style="width: 50px; height: 50px; flex-shrink: 0;">
                                         <span class="text-white" style="font-size: 20px;">
-                                            {{ operator.name[0:2] }}
+                                            {{ operator["name"][0:2] }}
                                         </span>
                                     </div>
                                     <div>
-                                        <h6 class="mb-0">{{ operator.name }}</h6>
+                                        <h6 class="mb-0">{{ operator["name"] }}</h6>
                                         <p class="text-muted mb-0">Your Operator</p>
                                     </div>
                                 </div>
                                 
                                 <p><strong>Email:</strong> 
-                                    <a href="mailto:{{ operator.email }}">{{ operator.email }}</a>
+                                    <a href="mailto:{{ operator["email"] }}">{{ operator["email"] }}</a>
                                 </p>
                                 
                                 {% if operator.phone %}
                                 <p><strong>Phone:</strong> 
-                                    <a href="tel:{{ operator.phone }}">{{ operator.phone }}</a>
+                                    <a href="tel:{{ operator["phone"] }}">{{ operator["phone"] }}</a>
                                 </p>
                                 {% endif %}
                                 
-                                <a href="{{ url_for('messages.chat', user_id=operator.id) }}" class="btn btn-primary btn-sm">
+                                <a href="{{ url_for('messages.chat', user_id=operator["id"]) }}" class="btn btn-primary btn-sm">
                                     <i class="fas fa-comments"></i> Message Operator
                                 </a>
                                 {% else %}

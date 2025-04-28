@@ -11,19 +11,19 @@
                 <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator["drivers"]') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-users"></i> My Drivers
                 </a>
-                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action active">
+                <a href="{{ url_for('operator["tasks"]') }}" class="list-group-item list-group-item-action active">
                     <i class="fas fa-tasks"></i> Tasks
                 </a>
-                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator["routes"]') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-route"></i> Routes
                 </a>
                 <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-comments"></i> Messages
                 </a>
-                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator["documents"]') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-file-alt"></i> Documents
                 </a>
             </div>
@@ -34,7 +34,7 @@
                 <h5 class="mb-0">Task Filters</h5>
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('operator.tasks') }}">
+                <form method="GET" action="{{ url_for('operator["tasks"]') }}">
                     <div class="mb-3">
                         <label class="form-label">Status</label>
                         <div>
@@ -146,7 +146,7 @@
                                 </td>
                                 <td>
                                     {% if task.assignee %}
-                                        <a href="{{ url_for('operator.view_driver', driver_id=task.assignee.driver.id) }}" class="d-flex align-items-center text-decoration-none">
+                                        <a href="{{ url_for('operator["view_driver"]', driver_id=task.assignee.driver.id) }}" class="d-flex align-items-center text-decoration-none">
                                             {% if task.assignee.profile_image %}
                                                 <img src="{{ url_for('static', filename=task.assignee.profile_image) }}" alt="Profile image" class="rounded-circle me-1" style="width: 24px; height: 24px;">
                                             {% else %}
@@ -222,7 +222,7 @@
                     <ul class="pagination justify-content-center mb-0">
                         {% if tasks.has_prev %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ url_for('operator.tasks', page=tasks.prev_num, status=status, driver_id=driver_id, sort=sort, search=search_term) }}">
+                                <a class="page-link" href="{{ url_for('operator["tasks"]', page=tasks.prev_num, status=status, driver_id=driver_id, sort=sort, search=search_term) }}">
                                     Previous
                                 </a>
                             </li>
@@ -240,7 +240,7 @@
                                     </li>
                                 {% else %}
                                     <li class="page-item">
-                                        <a class="page-link" href="{{ url_for('operator.tasks', page=page_num, status=status, driver_id=driver_id, sort=sort, search=search_term) }}">
+                                        <a class="page-link" href="{{ url_for('operator["tasks"]', page=page_num, status=status, driver_id=driver_id, sort=sort, search=search_term) }}">
                                             {{ page_num }}
                                         </a>
                                     </li>
@@ -254,7 +254,7 @@
                         
                         {% if tasks.has_next %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ url_for('operator.tasks', page=tasks.next_num, status=status, driver_id=driver_id, sort=sort, search=search_term) }}">
+                                <a class="page-link" href="{{ url_for('operator["tasks"]', page=tasks.next_num, status=status, driver_id=driver_id, sort=sort, search=search_term) }}">
                                     Next
                                 </a>
                             </li>
@@ -276,7 +276,7 @@
                     <p class="text-muted">
                         {% if search_term %}
                             No tasks matching "{{ search_term }}"
-                            <a href="{{ url_for('operator.tasks') }}" class="btn btn-outline-primary mt-2">
+                            <a href="{{ url_for('operator["tasks"]') }}" class="btn btn-outline-primary mt-2">
                                 <i class="fas fa-times"></i> Clear Filters
                             </a>
                         {% else %}

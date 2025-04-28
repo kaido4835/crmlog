@@ -119,15 +119,15 @@
             </div>
             <div class="card-body">
                 {% if user.operator.company %}
-                <p><strong>Company:</strong> {{ user.operator.company.name }}</p>
-                <a href="{{ url_for('admin.view_company', company_id=user.operator.company.id) }}" class="btn btn-sm btn-outline-primary mb-2">
+                <p><strong>Company:</strong> {{ user.operator["company"].name }}</p>
+                <a href="{{ url_for('admin.view_company', company_id=user.operator["company"].id) }}" class="btn btn-sm btn-outline-primary mb-2">
                     <i class="fas fa-building"></i> View Company
                 </a>
                 {% endif %}
                 
                 {% if user.operator.manager %}
-                <p><strong>Manager:</strong> {{ user.operator.manager.user.first_name }} {{ user.operator.manager.user.last_name }}</p>
-                <a href="{{ url_for('admin.view_user', user_id=user.operator.manager.id) }}" class="btn btn-sm btn-outline-primary">
+                <p><strong>Manager:</strong> {{ user.operator["manager"].user.first_name }} {{ user.operator["manager"].user.last_name }}</p>
+                <a href="{{ url_for('admin.view_user', user_id=user.operator["manager"].id) }}" class="btn btn-sm btn-outline-primary">
                     <i class="fas fa-user-tie"></i> View Manager
                 </a>
                 {% endif %}
@@ -152,8 +152,8 @@
                 {% endif %}
                 
                 {% if user.driver.operator %}
-                <p><strong>Operator:</strong> {{ user.driver.operator.user.first_name }} {{ user.driver.operator.user.last_name }}</p>
-                <a href="{{ url_for('admin.view_user', user_id=user.driver.operator.id) }}" class="btn btn-sm btn-outline-primary">
+                <p><strong>Operator:</strong> {{ user.driver.operator["user"].first_name }} {{ user.driver.operator["user"].last_name }}</p>
+                <a href="{{ url_for('admin.view_user', user_id=user.driver.operator["id"]) }}" class="btn btn-sm btn-outline-primary">
                     <i class="fas fa-user"></i> View Operator
                 </a>
                 {% endif %}

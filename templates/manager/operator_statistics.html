@@ -31,7 +31,7 @@
                 <h5 class="mb-0">Date Range</h5>
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('main.operator_statistics', operator_id=operator.id) }}" id="dateRangeForm">
+                <form method="GET" action="{{ url_for('main.operator_statistics', operator_id=operator["id"]) }}" id="dateRangeForm">
                     <div class="mb-3">
                         <label for="period" class="form-label">Select Period</label>
                         <select class="form-select" id="period" name="period">
@@ -65,13 +65,13 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    <a href="{{ url_for('main.view_operator', operator_id=operator.id) }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('main.view_operator', operator_id=operator["id"]) }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-user"></i> View Profile
                     </a>
-                    <a href="{{ url_for('messages.chat', user_id=operator.user.id) }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('messages.chat', user_id=operator["user"].id) }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-comment"></i> Send Message
                     </a>
-                    <a href="{{ url_for('statistics.download_report', report_id='operator_performance', operator_id=operator.id) }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('statistics.download_report', report_id='operator_performance', operator_id=operator["id"]) }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-download"></i> Download Report
                     </a>
                 </div>
@@ -82,21 +82,21 @@
     <div class="col-md-9">
         <div class="card mb-4">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{{ operator.user.first_name }} {{ operator.user.last_name }} - Performance Statistics</h5>
+                <h5 class="mb-0">{{ operator["user"].first_name }} {{ operator["user"].last_name }} - Performance Statistics</h5>
                 <span class="badge bg-info">Operator</span>
             </div>
             <div class="card-body">
                 <div class="row mb-4">
                     <div class="col-md-3 text-center">
                         {% if operator.user.profile_image %}
-                            <img src="{{ url_for('static', filename=operator.user.profile_image) }}" alt="Profile" class="rounded-circle img-thumbnail mb-2" style="width: 80px; height: 80px; object-fit: cover;">
+                            <img src="{{ url_for('static', filename=operator["user"].profile_image) }}" alt="Profile" class="rounded-circle img-thumbnail mb-2" style="width: 80px; height: 80px; object-fit: cover;">
                         {% else %}
                             <div class="rounded-circle bg-primary d-inline-flex justify-content-center align-items-center mb-2" style="width: 80px; height: 80px;">
-                                <span class="text-white" style="font-size: 2rem;">{{ operator.user.first_name[0] }}{{ operator.user.last_name[0] }}</span>
+                                <span class="text-white" style="font-size: 2rem;">{{ operator["user"].first_name[0] }}{{ operator["user"].last_name[0] }}</span>
                             </div>
                         {% endif %}
-                        <h5>{{ operator.user.first_name }} {{ operator.user.last_name }}</h5>
-                        <p class="text-muted">@{{ operator.user.username }}</p>
+                        <h5>{{ operator["user"].first_name }} {{ operator["user"].last_name }}</h5>
+                        <p class="text-muted">@{{ operator["user"].username }}</p>
                     </div>
                     <div class="col-md-9">
                         <div class="row">
@@ -335,10 +335,10 @@
                 </div>
 
                 <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                    <a href="{{ url_for('statistics.download_report', report_id='operator_performance', operator_id=operator.id, format='excel') }}" class="btn btn-outline-success">
+                    <a href="{{ url_for('statistics.download_report', report_id='operator_performance', operator_id=operator["id"], format='excel') }}" class="btn btn-outline-success">
                         <i class="fas fa-file-excel"></i> Export to Excel
                     </a>
-                    <a href="{{ url_for('statistics.download_report', report_id='operator_performance', operator_id=operator.id, format='pdf') }}" class="btn btn-outline-danger">
+                    <a href="{{ url_for('statistics.download_report', report_id='operator_performance', operator_id=operator["id"], format='pdf') }}" class="btn btn-outline-danger">
                         <i class="fas fa-file-pdf"></i> Export to PDF
                     </a>
                 </div>

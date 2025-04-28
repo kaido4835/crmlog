@@ -32,13 +32,13 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    <a href="{{ url_for('messages.chat', user_id=operator.user.id) }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('messages.chat', user_id=operator["user"].id) }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-comment"></i> Send Message
                     </a>
-                    <a href="{{ url_for('tasks.list_tasks', creator_id=operator.user.id) }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('tasks.list_tasks', creator_id=operator["user"].id) }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-list-check"></i> View Operator's Tasks
                     </a>
-                    <a href="{{ url_for('main.edit_operator', operator_id=operator.id) }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('main.edit_operator', operator_id=operator["id"]) }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-user-edit"></i> Edit Operator
                     </a>
                     <button type="button" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#assignDriversModal">
@@ -61,14 +61,14 @@
                 <div class="row">
                     <div class="col-md-4 text-center">
                         {% if operator.user.profile_image %}
-                            <img src="{{ url_for('static', filename=operator.user.profile_image) }}" class="profile-image mb-3" alt="Profile Image">
+                            <img src="{{ url_for('static', filename=operator["user"].profile_image) }}" class="profile-image mb-3" alt="Profile Image">
                         {% else %}
                             <div class="rounded-circle bg-primary d-inline-flex justify-content-center align-items-center mb-3" style="width: 150px; height: 150px;">
-                                <span class="text-white" style="font-size: 60px;">{{ operator.user.first_name[0] }}{{ operator.user.last_name[0] }}</span>
+                                <span class="text-white" style="font-size: 60px;">{{ operator["user"].first_name[0] }}{{ operator["user"].last_name[0] }}</span>
                             </div>
                         {% endif %}
-                        <h4>{{ operator.user.first_name }} {{ operator.user.last_name }}</h4>
-                        <p class="text-muted">@{{ operator.user.username }}</p>
+                        <h4>{{ operator["user"].first_name }} {{ operator["user"].last_name }}</h4>
+                        <p class="text-muted">@{{ operator["user"].username }}</p>
                         <span class="badge bg-info">Operator</span>
                         {% if operator.user.is_active %}
                             <span class="badge bg-success">Active</span>
@@ -82,7 +82,7 @@
                         <div class="row mb-3">
                             <div class="col-md-4 text-muted">Email:</div>
                             <div class="col-md-8">
-                                <a href="mailto:{{ operator.user.email }}">{{ operator.user.email }}</a>
+                                <a href="mailto:{{ operator["user"].email }}">{{ operator["user"].email }}</a>
                             </div>
                         </div>
 
@@ -90,7 +90,7 @@
                             <div class="col-md-4 text-muted">Phone:</div>
                             <div class="col-md-8">
                                 {% if operator.user.phone %}
-                                    <a href="tel:{{ operator.user.phone }}">{{ operator.user.phone }}</a>
+                                    <a href="tel:{{ operator["user"].phone }}">{{ operator["user"].phone }}</a>
                                 {% else %}
                                     <span class="text-muted">Not provided</span>
                                 {% endif %}
@@ -99,14 +99,14 @@
 
                         <div class="row mb-3">
                             <div class="col-md-4 text-muted">Account Created:</div>
-                            <div class="col-md-8">{{ operator.user.created_at.strftime('%B %d, %Y') }}</div>
+                            <div class="col-md-8">{{ operator["user"].created_at.strftime('%B %d, %Y') }}</div>
                         </div>
 
                         <div class="row mb-3">
                             <div class="col-md-4 text-muted">Last Login:</div>
                             <div class="col-md-8">
                                 {% if operator.user.last_login %}
-                                    {{ operator.user.last_login.strftime('%B %d, %Y at %H:%M') }}
+                                    {{ operator["user"].last_login.strftime('%B %d, %Y at %H:%M') }}
                                 {% else %}
                                     <span class="text-muted">Never</span>
                                 {% endif %}
@@ -145,13 +145,13 @@
 
                         <div class="row mb-3">
                             <div class="col-md-4 text-muted">Team Size:</div>
-                            <div class="col-md-8">{{ operator.drivers|length }} drivers</div>
+                            <div class="col-md-8">{{ operator["drivers"]|length }} drivers</div>
                         </div>
 
                         {% if operator.notes %}
                         <h5 class="border-bottom pb-2 mt-4">Manager Notes</h5>
                         <div class="bg-light p-3 rounded">
-                            {{ operator.notes|nl2br }}
+                            {{ operator["notes"]|nl2br }}
                         </div>
                         {% endif %}
                     </div>
@@ -229,7 +229,7 @@
                                             <a href="{{ url_for('messages.chat', user_id=driver.user.id) }}" class="btn btn-outline-info">
                                                 <i class="fas fa-comment"></i>
                                             </a>
-<form action="{{ url_for('main.unassign_driver_from_operator', operator_id=operator.id, driver_id=driver.id) }}" method="post" class="d-inline">                                                <button type="submit" class="btn btn-outline-danger">
+<form action="{{ url_for('main.unassign_driver_from_operator', operator_id=operator["id"], driver_id=driver.id) }}" method="post" class="d-inline">                                                <button type="submit" class="btn btn-outline-danger">
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </form>
@@ -295,7 +295,7 @@
             <div class="modal-body">
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-triangle"></i> Warning: This action will remove
-                    <strong>{{ operator.user.first_name }} {{ operator.user.last_name }}</strong> from your team.
+                    <strong>{{ operator["user"].first_name }} {{ operator["user"].last_name }}</strong> from your team.
                 </div>
                 <p>
                     The operator will be unassigned from your management, but their account will remain in the system.
@@ -304,7 +304,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ url_for('main.remove_operator', operator_id=operator.id) }}" method="post">
+                <form action="{{ url_for('main.remove_operator', operator_id=operator["id"]) }}" method="post">
                     <button type="submit" class="btn btn-danger">Remove Operator</button>
                 </form>
             </div>
@@ -317,7 +317,7 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="assignDriversModalLabel">Assign Drivers to {{ operator.user.first_name }}</h5>
+                <h5 class="modal-title" id="assignDriversModalLabel">Assign Drivers to {{ operator["user"].first_name }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -330,7 +330,7 @@
                     </div>
                 </div>
 
-<form action="{{ url_for('main.assign_drivers_to_operator', operator_id=operator.id) }}" method="post" id="assignDriversForm">
+<form action="{{ url_for('main.assign_drivers_to_operator', operator_id=operator["id"]) }}" method="post" id="assignDriversForm">
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>

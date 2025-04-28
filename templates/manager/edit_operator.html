@@ -32,10 +32,10 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    <a href="{{ url_for('main.view_operator', operator_id=operator.id) }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('main.view_operator', operator_id=operator["id"]) }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-arrow-left"></i> Back to Operator Profile
                     </a>
-                    <a href="{{ url_for('messages.chat', user_id=operator.user.id) }}" class="list-group-item list-group-item-action">
+                    <a href="{{ url_for('messages.chat', user_id=operator["user"].id) }}" class="list-group-item list-group-item-action">
                         <i class="fas fa-comment"></i> Send Message
                     </a>
                     <button type="button" class="list-group-item list-group-item-action text-danger" data-bs-toggle="modal" data-bs-target="#removeOperatorModal">
@@ -49,16 +49,16 @@
     <div class="col-md-9">
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
-                <h5 class="mb-0">Edit Operator: {{ operator.user.first_name }} {{ operator.user.last_name }}</h5>
+                <h5 class="mb-0">Edit Operator: {{ operator["user"].first_name }} {{ operator["user"].last_name }}</h5>
             </div>
             <div class="card-body">
-                <form method="post" action="{{ url_for('main.edit_operator', operator_id=operator.id) }}" enctype="multipart/form-data">
+                <form method="post" action="{{ url_for('main.edit_operator', operator_id=operator["id"]) }}" enctype="multipart/form-data">
                     <!-- Note: In a real application, you would need to include a CSRF token here -->
                     
                     <div class="row mb-3">
                         <label class="col-sm-3 col-form-label">Username:</label>
                         <div class="col-sm-9">
-                            <input type="text" class="form-control" value="{{ operator.user.username }}" readonly>
+                            <input type="text" class="form-control" value="{{ operator["user"].username }}" readonly>
                             <div class="form-text">Username cannot be changed.</div>
                         </div>
                     </div>
@@ -66,28 +66,28 @@
                     <div class="row mb-3">
                         <label for="email" class="col-sm-3 col-form-label">Email:</label>
                         <div class="col-sm-9">
-                            <input type="email" class="form-control" id="email" name="email" value="{{ operator.user.email }}" required>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ operator["user"].email }}" required>
                         </div>
                     </div>
                     
                     <div class="row mb-3">
                         <label for="first_name" class="col-sm-3 col-form-label">First Name:</label>
                         <div class="col-sm-9">
-                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ operator.user.first_name }}" required>
+                            <input type="text" class="form-control" id="first_name" name="first_name" value="{{ operator["user"].first_name }}" required>
                         </div>
                     </div>
                     
                     <div class="row mb-3">
                         <label for="last_name" class="col-sm-3 col-form-label">Last Name:</label>
                         <div class="col-sm-9">
-                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ operator.user.last_name }}" required>
+                            <input type="text" class="form-control" id="last_name" name="last_name" value="{{ operator["user"].last_name }}" required>
                         </div>
                     </div>
                     
                     <div class="row mb-3">
                         <label for="phone" class="col-sm-3 col-form-label">Phone:</label>
                         <div class="col-sm-9">
-                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ operator.user.phone or '' }}">
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ operator["user"].phone or '' }}">
                         </div>
                     </div>
                     
@@ -96,10 +96,10 @@
                         <div class="col-sm-9">
                             <div class="mb-2">
                                 {% if operator.user.profile_image %}
-                                    <img src="{{ url_for('static', filename=operator.user.profile_image) }}" alt="Current profile image" class="rounded" style="max-width: 100px; max-height: 100px;">
+                                    <img src="{{ url_for('static', filename=operator["user"].profile_image) }}" alt="Current profile image" class="rounded" style="max-width: 100px; max-height: 100px;">
                                 {% else %}
                                     <div class="bg-secondary text-white rounded d-inline-flex justify-content-center align-items-center" style="width: 100px; height: 100px;">
-                                        <span style="font-size: 3rem;">{{ operator.user.first_name[0] }}{{ operator.user.last_name[0] }}</span>
+                                        <span style="font-size: 3rem;">{{ operator["user"].first_name[0] }}{{ operator["user"].last_name[0] }}</span>
                                     </div>
                                 {% endif %}
                             </div>
@@ -111,7 +111,7 @@
                     <div class="row mb-3">
                         <label for="notes" class="col-sm-3 col-form-label">Manager Notes:</label>
                         <div class="col-sm-9">
-                            <textarea class="form-control" id="notes" name="notes" rows="3">{{ operator.notes or '' }}</textarea>
+                            <textarea class="form-control" id="notes" name="notes" rows="3">{{ operator["notes"] or '' }}</textarea>
                             <div class="form-text">Private notes about this operator (only visible to you).</div>
                         </div>
                     </div>
@@ -128,7 +128,7 @@
                     </div>
                     
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{{ url_for('main.view_operator', operator_id=operator.id) }}" class="btn btn-secondary me-md-2">
+                        <a href="{{ url_for('main.view_operator', operator_id=operator["id"]) }}" class="btn btn-secondary me-md-2">
                             <i class="fas fa-times"></i> Cancel
                         </a>
                         <button type="submit" class="btn btn-primary">
@@ -150,7 +150,7 @@
                     If the operator needs to reset their password, you can request a password reset link be sent to their email.
                 </p>
                 
-                <form method="post" action="{{ url_for('main.request_password_reset', user_id=operator.user.id) }}">
+                <form method="post" action="{{ url_for('main.request_password_reset', user_id=operator["user"].id) }}">
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <button type="submit" class="btn btn-warning">
                             <i class="fas fa-key"></i> Request Password Reset
@@ -173,7 +173,7 @@
             <div class="modal-body">
                 <div class="alert alert-danger">
                     <i class="fas fa-exclamation-triangle"></i> Warning: This action will remove 
-                    <strong>{{ operator.user.first_name }} {{ operator.user.last_name }}</strong> from your team.
+                    <strong>{{ operator["user"].first_name }} {{ operator["user"].last_name }}</strong> from your team.
                 </div>
                 <p>
                     The operator will be unassigned from your management, but their account will remain in the system.
@@ -182,7 +182,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form action="{{ url_for('main.remove_operator', operator_id=operator.id) }}" method="post">
+                <form action="{{ url_for('main.remove_operator', operator_id=operator["id"]) }}" method="post">
                     <button type="submit" class="btn btn-danger">Remove Operator</button>
                 </form>
             </div>

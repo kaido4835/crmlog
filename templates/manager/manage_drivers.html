@@ -40,8 +40,8 @@
                         <select class="form-select" id="operator" name="operator_id">
                             <option value="">All Operators</option>
                             {% for operator in operators %}
-                                <option value="{{ operator.id }}" {% if filter_operator_id == operator.id %}selected{% endif %}>
-                                    {{ operator.user.first_name }} {{ operator.user.last_name }}
+                                <option value="{{ operator["id"] }}" {% if filter_operator_id == operator.id %}selected{% endif %}>
+                                    {{ operator["user"].first_name }} {{ operator["user"].last_name }}
                                 </option>
                             {% endfor %}
                         </select>
@@ -134,8 +134,8 @@
                                     </td>
                                     <td>
                                         {% if driver.operator %}
-                                            <a href="{{ url_for('main.view_operator', operator_id=driver.operator.id) }}">
-                                                {{ driver.operator.user.first_name }} {{ driver.operator.user.last_name }}
+                                            <a href="{{ url_for('main.view_operator', operator_id=driver.operator["id"]) }}">
+                                                {{ driver.operator["user"].first_name }} {{ driver.operator["user"].last_name }}
                                             </a>
                                         {% else %}
                                             <span class="badge bg-secondary">Unassigned</span>
@@ -196,8 +196,8 @@
                                                                 <select class="form-select" id="operator_id{{ driver.id }}" name="operator_id" required>
                                                                     <option value="">-- Select an Operator --</option>
                                                                     {% for operator in operators %}
-                                                                        <option value="{{ operator.id }}" {% if driver.operator_id == operator.id %}selected{% endif %}>
-                                                                            {{ operator.user.first_name }} {{ operator.user.last_name }}
+                                                                        <option value="{{ operator["id"] }}" {% if driver.operator_id == operator.id %}selected{% endif %}>
+                                                                            {{ operator["user"].first_name }} {{ operator["user"].last_name }}
                                                                         </option>
                                                                     {% endfor %}
                                                                 </select>
@@ -420,8 +420,8 @@
                         <select class="form-select" id="operator_id" name="operator_id">
                             <option value="">-- No Operator --</option>
                             {% for operator in operators %}
-                                <option value="{{ operator.id }}">
-                                    {{ operator.user.first_name }} {{ operator.user.last_name }}
+                                <option value="{{ operator["id"] }}">
+                                    {{ operator["user"].first_name }} {{ operator["user"].last_name }}
                                 </option>
                             {% endfor %}
                         </select>
