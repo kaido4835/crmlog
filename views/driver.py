@@ -81,12 +81,19 @@ def routes_dashboard():
         ).first()
 
         if operator_user:
-            operator = {
-                "id": operator_user.id,  # Ключи в нижнем регистре для соответствия шаблону
-                "name": f"{operator_user.first_name} {operator_user.last_name}",
-                "email": operator_user.email,
-                "phone": operator_user.phone
-            }
+            # Creating a SimpleNamespace-like object with attributes instead of dictionary
+            # This makes it compatible with both dictionary-style access and attribute access
+            class SimpleObject:
+                def __init__(self, **kwargs):
+                    for key, value in kwargs.items():
+                        setattr(self, key, value)
+
+            operator = SimpleObject(
+                id=operator_user.id,
+                name=f"{operator_user.first_name} {operator_user.last_name}",
+                email=operator_user.email,
+                phone=operator_user.phone
+            )
 
     # Get driver stats
     stats = _get_driver_stats(current_user.driver.id)
@@ -94,7 +101,7 @@ def routes_dashboard():
     log_action(ActionType.VIEW, "Viewed driver dashboard", db)
 
     return render_template(
-        'driver/dashboard.html',  # Updated template path
+        'driver/dashboard.html',
         title='Driver Dashboard',
         active_route=active_route,
         next_route=next_route,
@@ -190,12 +197,18 @@ def profile():
         ).first()
 
         if operator_user:
-            operator = {
-                "ID": operator_user.id,
-                "NAME": f"{operator_user.first_name} {operator_user.last_name}",
-                "EMAIL": operator_user.email,
-                "PHONE": operator_user.phone
-            }
+            # Using the same object structure as in the dashboard
+            class SimpleObject:
+                def __init__(self, **kwargs):
+                    for key, value in kwargs.items():
+                        setattr(self, key, value)
+
+            operator = SimpleObject(
+                id=operator_user.id,
+                name=f"{operator_user.first_name} {operator_user.last_name}",
+                email=operator_user.email,
+                phone=operator_user.phone
+            )
 
     # Get driver stats
     stats = _get_driver_stats(current_user.driver.id)
