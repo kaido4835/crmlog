@@ -82,10 +82,10 @@ def routes_dashboard():
 
         if operator_user:
             operator = {
-                "ID": operator_user.id,
-                "NAME": f"{operator_user.first_name} {operator_user.last_name}",
-                "EMAIL": operator_user.email,
-                "PHONE": operator_user.phone
+                "id": operator_user.id,  # Ключи в нижнем регистре для соответствия шаблону
+                "name": f"{operator_user.first_name} {operator_user.last_name}",
+                "email": operator_user.email,
+                "phone": operator_user.phone
             }
 
     # Get driver stats
