@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
 import os
 from datetime import datetime
+from utils import log_action
 
 from app import db
 from models import Document, User, UserRole, Task, TaskStatus, Route, RouteStatus, ActionType
