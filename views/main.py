@@ -1622,3 +1622,111 @@ def operator_dashboard():
         unread_count=unread_count,
         manager=manager
     )
+
+
+@main.route('/dashboard/driver')
+@login_required
+@role_required(UserRole.DRIVER.value)
+def driver_dashboard():
+    """
+    Dashboard for driver showing their tasks and routes
+    """
+    if not current_user.driver or not current_user.driver.company_id:
+        flash('You are not associated with a company.', "danger")
+        return redirect(url_for('main.index'))
+
+    company_id = current_user.driver.company_id
+
+    # Get task statistics for driver
+    task_query = Task.query.filter_by(
+        assignee_id=current_user.id
+    )
+
+    active_tasks = task_query.filter(
+        Task.status.in_([TaskStatus.NEW, TaskStatus.IN_PROGRESS])
+    ).count()
+
+    new_tasks = task_query.filter_by(status=TaskStatus.NEW).count()
+    in_progress_tasks = task_query.filter_by(status=TaskStatus.IN_PROGRESS).count()
+    completed_tasks = task_query.filter_by(status=TaskStatus.COMPLETED).count()
+
+    # Get route statistics
+    route_query = Route.query.filter_by(
+        driver_id=current_user.driver.id
+    )
+
+    active_routes = route_query.filter(
+        Route.status.in_([RouteStatus.PLANNED, RouteStatus.IN_PROGRESS])
+    ).count()
+
+    completed_routes = route_query.filter_by(status=RouteStatus.COMPLETED).count()
+
+    # Get total distance driven
+    total_distance = db.session.query(func.sum(Route.distance)).filter(
+        Route.driver_id == current_user.driver.id,
+        Route.status == RouteStatus.COMPLETED
+    ).scalar() or 0
+
+    # Get current active task
+    active_task = task_query.filter_by(status=TaskStatus.IN_PROGRESS).first()
+
+    # Get current active route
+    active_route = route_query.filter_by(status=RouteStatus.IN_PROGRESS).first()
+
+    # Get next planned route
+    next_route = route_query.filter_by(status=RouteStatus.PLANNED).order_by(Route.start_time).first()
+
+    # Get unread messages count
+    unread_count = Message.query.filter_by(
+        recipient_id=current_user.id,
+        is_read=False
+    ).count()
+
+    # Get operator info
+    operator = None
+    if current_user.driver.operator_id:
+        operator_user = User.query.get(current_user.driver.operator_id)
+        if operator_user:
+            operator = {
+                'id': operator_user.id,
+                'name': f"{operator_user.first_name} {operator_user.last_name}",
+                'email': operator_user.email,
+                'phone': operator_user.phone
+            }
+
+    # Get recent messages
+    recent_messages = Message.query.filter_by(
+        recipient_id=current_user.id
+    ).order_by(Message.sent_at.desc()).limit(5).all()
+
+    # Calculate statistics for driver performance metrics
+    stats = {
+        'new': new_tasks,
+        'active': in_progress_tasks,
+        'completed_tasks': completed_tasks,
+        'active_routes': active_routes,
+        'completed_routes': completed_routes,
+        'total_distance': total_distance,
+        'performance_score': 85,  # This would be calculated based on actual metrics
+        'on_time_rate': 92,  # This would be calculated from historical data
+        'avg_completion_time': 120  # This would be calculated from historical data
+    }
+
+    log_action(ActionType.VIEW, "Viewed driver dashboard", db)
+
+    now = datetime.utcnow()  # Current time for deadline checks
+
+    return render_template(
+        'driver/dashboard.html',
+        title='Driver Dashboard',
+        active_tasks=active_tasks,
+        active_routes=active_routes,
+        active_task=active_task,
+        active_route=active_route,
+        next_route=next_route,
+        stats=stats,
+        unread_count=unread_count,
+        operator=operator,
+        recent_messages=recent_messages,
+        now=now
+    )
