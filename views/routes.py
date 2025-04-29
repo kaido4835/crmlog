@@ -189,10 +189,9 @@ def create_route():
                 start_time=form.start_time.data,
                 status=RouteStatus.PLANNED,
                 driver_id=form.driver_id.data,
-                task_id=form.task_id.data if hasattr(form, 'task_id') and form.task_id.data != 0 else None,
+                task_id=form.task_id.data,
                 company_id=company_id,
                 waypoints=waypoints,
-                created_at=datetime.utcnow()
             )
 
             db.session.add(route)
