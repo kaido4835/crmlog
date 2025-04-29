@@ -385,16 +385,16 @@ def upload_document():
 
             # Set document category based on context
             if task_id:
-                document_category = DocumentCategory.TASK
+                document_category = DocumentCategory.TASK.value
             elif route_id:
-                document_category = DocumentCategory.ROUTE
+                document_category = DocumentCategory.ROUTE.value
             else:
                 # Map string values to enum values
                 try:
                     document_category = DocumentCategory(document_category_str)
                 except ValueError:
                     # Default to PERSONAL if invalid category provided
-                    document_category = DocumentCategory.PERSONAL
+                    document_category = DocumentCategory.PERSONAL.value
 
             # Validate task access if task_id is provided
             if task_id:
@@ -448,7 +448,7 @@ def upload_document():
                 task_id=task_id,
                 route_id=route_id,
                 company_id=current_user.driver.company_id,
-                document_category=document_category
+                document_category=document_category.value
             )
 
             db.session.add(document)

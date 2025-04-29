@@ -114,12 +114,23 @@ class Route(db.Model):
         return f'<Route {self.id}: {self.start_point} to {self.end_point}>'
 
 
-class DocumentCategory(enum.Enum):
-    PERSONAL = "personal"
-    VEHICLE = "vehicle"
-    TASK = "task"
-    ROUTE = "route"
-    OTHER = "other"
+class CaseInsensitiveEnum(enum.Enum):
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            # Ищем по совпадению без учета регистра
+            for member in cls:
+                if member.value.upper() == value.upper():
+                    return member
+        return None
+
+
+class DocumentCategory(CaseInsensitiveEnum):
+    PERSONAL = "PERSONAL"
+    VEHICLE = "VEHICLE"
+    TASK = "TASK"
+    ROUTE = "ROUTE"
+    OTHER = "OTHER"
 
 
 class Document(db.Model):

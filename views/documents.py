@@ -439,11 +439,11 @@ def edit_document(document_id):
 
                     if new_task_id:
                         old_category = document.document_category.value if document.document_category else None
-                        document.document_category = DocumentCategory.TASK
+                        document.document_category = DocumentCategory.TASK.value
                         changes.append(f"Category: {old_category} → {document.document_category.value}")
-                    elif document.document_category == DocumentCategory.TASK:
+                    elif document.document_category == DocumentCategory.TASK.value:
                         old_category = document.document_category.value
-                        document.document_category = DocumentCategory.OTHER
+                        document.document_category = DocumentCategory.OTHER.value
                         changes.append(f"Category: {old_category} → {document.document_category.value}")
 
             # Update company if allowed and changed
@@ -467,7 +467,7 @@ def edit_document(document_id):
                         f"Invalid document category provided: {category}. Using default category 'OTHER'. User: {current_user.username} (ID: {current_user.id})"
                     )
                     old_category = document.document_category.value if document.document_category else None
-                    document.document_category = DocumentCategory.OTHER
+                    document.document_category = DocumentCategory.OTHER.value
                     if old_category != DocumentCategory.OTHER.value:
                         changes.append(f"Category: {old_category} → {DocumentCategory.OTHER.value}")
 
