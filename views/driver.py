@@ -231,8 +231,7 @@ def documents():
     Show driver documents
     """
     page = request.args.get("page", 1, type=int)
-    # Не преобразуем в нижний регистр, чтобы сохранить оригинальный регистр
-    category = request.args.get("category", "all")
+    category = request.args.get("category", "all").lower()
     search_term = request.args.get("search", '')
 
     # Create document query
@@ -261,18 +260,17 @@ def documents():
         )
     )
 
-    # Apply category filter - используем upper() для сравнения, поскольку предполагаем, что
-    # значения в enum DocumentCategory определены в верхнем регистре
-    if category.upper() == 'TASK':
-        query = query.filter(Document.document_category == DocumentCategory.TASK)
-    elif category.upper() == 'ROUTE':
-        query = query.filter(Document.document_category == DocumentCategory.ROUTE)
-    elif category.upper() == 'PERSONAL':
-        query = query.filter(Document.document_category == DocumentCategory.PERSONAL)
-    elif category.upper() == 'VEHICLE':
-        query = query.filter(Document.document_category == DocumentCategory.VEHICLE)
-    elif category.upper() == 'OTHER':
-        query = query.filter(Document.document_category == DocumentCategory.OTHER)
+    # Apply category filter - using .value to ensure correct enum value comparison
+    if category == 'task':
+        query = query.filter(Document.document_category == DocumentCategory.TASK.value)
+    elif category == 'route':
+        query = query.filter(Document.document_category == DocumentCategory.ROUTE.value)
+    elif category == 'personal':
+        query = query.filter(Document.document_category == DocumentCategory.PERSONAL.value)
+    elif category == 'vehicle':
+        query = query.filter(Document.document_category == DocumentCategory.VEHICLE.value)
+    elif category == 'other':
+        query = query.filter(Document.document_category == DocumentCategory.OTHER.value)
 
     # Apply search filter
     if search_term:
@@ -284,7 +282,7 @@ def documents():
     # Paginate results
     documents = query.paginate(page=page, per_page=10)
 
-    # Get document counts for sidebar
+    # Get document counts for sidebar - using .value with enum comparisons
     document_counts = {
         'all': Document.query.filter(
             or_(
@@ -295,7 +293,7 @@ def documents():
             )
         ).count(),
         'task': Document.query.filter(
-            Document.document_category == DocumentCategory.TASK,
+            Document.document_category == DocumentCategory.TASK.value,
             or_(
                 Document.uploader_id == current_user.id,
                 Document.task_id.in_(task_ids) if task_ids else False,
@@ -303,7 +301,7 @@ def documents():
             )
         ).count(),
         'route': Document.query.filter(
-            Document.document_category == DocumentCategory.ROUTE,
+            Document.document_category == DocumentCategory.ROUTE.value,
             or_(
                 Document.uploader_id == current_user.id,
                 Document.route_id.in_(route_ids) if route_ids else False,
@@ -311,21 +309,21 @@ def documents():
             )
         ).count(),
         'personal': Document.query.filter(
-            Document.document_category == DocumentCategory.PERSONAL,
+            Document.document_category == DocumentCategory.PERSONAL.value,
             or_(
                 Document.uploader_id == current_user.id,
                 Document.access_user_id == current_user.id
             )
         ).count(),
         'vehicle': Document.query.filter(
-            Document.document_category == DocumentCategory.VEHICLE,
+            Document.document_category == DocumentCategory.VEHICLE.value,
             or_(
                 Document.uploader_id == current_user.id,
                 Document.access_user_id == current_user.id
             )
         ).count(),
         'other': Document.query.filter(
-            Document.document_category == DocumentCategory.OTHER,
+            Document.document_category == DocumentCategory.OTHER.value,
             or_(
                 Document.uploader_id == current_user.id,
                 Document.access_user_id == current_user.id
@@ -336,13 +334,13 @@ def documents():
     # Get active tasks for document upload form
     active_tasks = Task.query.filter(
         Task.assignee_id == current_user.id,
-        Task.status.in_([TaskStatus.NEW, TaskStatus.IN_PROGRESS])
+        Task.status.in_([TaskStatus.NEW.value, TaskStatus.IN_PROGRESS.value])
     ).all()
 
     # Get active routes for document upload form
     active_routes = Route.query.filter(
         Route.driver_id == current_user.driver.id,
-        Route.status.in_([RouteStatus.PLANNED, RouteStatus.IN_PROGRESS])
+        Route.status.in_([RouteStatus.PLANNED.value, RouteStatus.IN_PROGRESS.value])
     ).all()
 
     # Create upload form

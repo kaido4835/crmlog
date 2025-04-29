@@ -56,8 +56,9 @@ def list_documents():
     # Apply category filter
     if category:
         try:
+            # Fix: Convert to enum but use value for database filtering
             doc_category = DocumentCategory(category.lower())
-            doc_query = doc_query.filter(Document.document_category == doc_category)
+            doc_query = doc_query.filter(Document.document_category.has(value=doc_category.value))
         except ValueError:
             # Invalid category, ignore filter
             pass
@@ -456,17 +457,19 @@ def edit_document(document_id):
             if category:
                 try:
                     old_category = document.document_category.value if document.document_category else None
-                    document.document_category = DocumentCategory(category.lower())
-                    if old_category != document.document_category.value:
-                        changes.append(f"Category: {old_category} → {document.document_category.value}")
+                    # Fix: Use enum properly
+                    new_category = DocumentCategory(category.lower())
+                    document.document_category = new_category
+                    if old_category != new_category.value:
+                        changes.append(f"Category: {old_category} → {new_category.value}")
                 except ValueError:
                     current_app.logger.warning(
                         f"Invalid document category provided: {category}. Using default category 'OTHER'. User: {current_user.username} (ID: {current_user.id})"
                     )
                     old_category = document.document_category.value if document.document_category else None
                     document.document_category = DocumentCategory.OTHER
-                    if old_category != document.document_category.value:
-                        changes.append(f"Category: {old_category} → {document.document_category.value}")
+                    if old_category != DocumentCategory.OTHER.value:
+                        changes.append(f"Category: {old_category} → {DocumentCategory.OTHER.value}")
 
             db.session.commit()
 
@@ -607,7 +610,8 @@ def category_documents(category):
         company_id = current_user.driver.company_id
 
     # Build query
-    doc_query = Document.query.filter_by(document_category=doc_category)
+    # Fix: Use value for database filtering
+    doc_query = Document.query.filter(Document.document_category.has(value=doc_category.value))
 
     # Apply company filter if not admin
     if current_user.role != UserRole.ADMIN and company_id:
@@ -711,8 +715,9 @@ def search_documents():
         category = request.form.get('category', '')
         if category:
             try:
+                # Fix: Use value for database filtering
                 doc_category = DocumentCategory(category.lower())
-                search_query = search_query.filter(Document.document_category == doc_category)
+                search_query = search_query.filter(Document.document_category.has(value=doc_category.value))
             except ValueError:
                 # Invalid category, ignore
                 pass

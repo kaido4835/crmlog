@@ -6,19 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="b3fe698a-4de6-4cb7-9782-9fee7824eed1" name="Changes" comment="commit">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/driver/documents.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/driver/documents.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/dashboard.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/dashboard.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/documents.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/documents.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/drivers.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/drivers.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/edit_driver.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/edit_driver.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/routes.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/routes.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/statistics.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/statistics.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/tasks.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/tasks.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/view_document.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/view_document.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/view_driver.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/view_driver.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/operator/view_task.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/operator/view_task.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/routes/view_route.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/routes/view_route.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/templates/tasks/view_task.html" beforeDir="false" afterPath="$PROJECT_DIR$/templates/tasks/view_task.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/views/documents.py" beforeDir="false" afterPath="$PROJECT_DIR$/views/documents.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,7 +60,7 @@
     &quot;settings.editor.selected.configurable&quot;: &quot;ml.llm.AIAssistantPromptsLibrary&quot;
   }
 }</component>
-  <component name="RunManager" selected="Python.run">
+  <component name="RunManager" selected="Python.fix">
     <configuration name="create_test_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="fff" />
       <option name="ENV_FILES" value="" />
@@ -185,9 +173,9 @@
     </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.fix" />
         <item itemvalue="Python.run" />
         <item itemvalue="Python.init_db" />
-        <item itemvalue="Python.fix" />
         <item itemvalue="Python.run_migration" />
         <item itemvalue="Python.create_test_data" />
       </list>
