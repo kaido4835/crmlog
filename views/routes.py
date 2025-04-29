@@ -9,6 +9,7 @@ from models import Route, RouteStatus, User, UserRole, Driver, Task, TaskStatus
 from services import RouteService
 from utils import role_required, company_access_required, log_action
 from models import ActionType
+import json
 
 routes = Blueprint('routes', __name__, url_prefix='/routes')
 
@@ -140,7 +141,8 @@ def create_route():
     task_id = request.args.get('task_id', None, type=int)
     if task_id:
         task = Task.query.get_or_404(task_id)
-        form.task_id = task_id
+        if form.task_id:
+            form.task_id.data = task_id
 
         # Pre-fill form if task exists
         form.start_point.data = task.start_point if hasattr(task, 'start_point') else ""
@@ -157,7 +159,7 @@ def create_route():
     form.driver_id.choices = drivers
 
     # If task_id provided, get tasks for dropdown
-    if not task_id and company_id:
+    if hasattr(form, 'task_id') and not task_id and company_id:
         tasks = Task.query.filter_by(company_id=company_id).filter(
             Task.status.in_([TaskStatus.NEW, TaskStatus.IN_PROGRESS])
         ).all()
@@ -166,25 +168,45 @@ def create_route():
 
     if form.validate_on_submit():
         try:
-            # Create route
-            route = RouteService.create_route(
-                form,
-                form.task_id.data if hasattr(form, 'task_id') and form.task_id.data != 0 else None,
-                form.driver_id.data,
-                company_id,
-                db
+            # Parse waypoints if provided
+            waypoints = None
+            if form.waypoints.data:
+                try:
+                    waypoints = json.loads(form.waypoints.data)
+                except json.JSONDecodeError:
+                    # If not valid JSON, keep as None
+                    pass
+
+            # Create route directly instead of using RouteService
+            route = Route(
+                start_point=form.start_point.data,
+                end_point=form.end_point.data,
+                distance=form.distance.data,
+                estimated_time=form.estimated_time.data,
+                start_time=form.start_time.data,
+                status=RouteStatus.PLANNED,
+                driver_id=form.driver_id.data,
+                task_id=form.task_id.data if hasattr(form, 'task_id') and form.task_id.data != 0 else None,
+                company_id=company_id,
+                waypoints=waypoints,
+                created_at=datetime.utcnow()
             )
+
+            db.session.add(route)
 
             # Update task status if task is assigned
             if hasattr(form, 'task_id') and form.task_id.data:
                 task = Task.query.get(form.task_id.data)
                 if task and task.status == TaskStatus.NEW:
                     task.status = TaskStatus.IN_PROGRESS
-                    db.session.commit()
+
+            db.session.commit()
+            log_action(ActionType.CREATE, f"Created route from {route.start_point} to {route.end_point}", db)
 
             flash(f'Route from {route.start_point} to {route.end_point} created successfully!', 'success')
             return redirect(url_for('routes.view_route', route_id=route.id))
         except Exception as e:
+            db.session.rollback()
             flash(f'Error creating route: {str(e)}', 'danger')
 
     return render_template(
@@ -262,22 +284,47 @@ def edit_route(route_id):
 
         # Format waypoints as JSON string
         if route.waypoints:
-            import json
             form.waypoints.data = json.dumps(route.waypoints)
 
     if form.validate_on_submit():
         try:
-            # Update route
-            RouteService.update_route(route, form, db)
+            # Parse waypoints if provided
+            waypoints = None
+            if form.waypoints.data:
+                try:
+                    waypoints = json.loads(form.waypoints.data)
+                except json.JSONDecodeError:
+                    # If not valid JSON, keep as None
+                    pass
+
+            # Update route details
+            route.start_point = form.start_point.data
+            route.end_point = form.end_point.data
+            route.distance = form.distance.data
+            route.estimated_time = form.estimated_time.data
+            route.start_time = form.start_time.data
+            route.status = RouteStatus(form.status.data)
+            route.driver_id = form.driver_id.data
+
+            # Update waypoints if provided
+            if waypoints is not None:
+                route.waypoints = waypoints
 
             # If route status changed to completed, update related task
             if form.status.data == RouteStatus.COMPLETED.value and route.task and route.task.status != TaskStatus.COMPLETED:
                 route.task.status = TaskStatus.COMPLETED
-                db.session.commit()
+
+                # Also set end time if not already set
+                if not route.end_time:
+                    route.end_time = datetime.utcnow()
+
+            db.session.commit()
+            log_action(ActionType.UPDATE, f"Updated route from {route.start_point} to {route.end_point}", db)
 
             flash('Route updated successfully!', 'success')
             return redirect(url_for('routes.view_route', route_id=route.id))
         except Exception as e:
+            db.session.rollback()
             flash(f'Error updating route: {str(e)}', 'danger')
 
     return render_template(
@@ -320,6 +367,44 @@ def delete_route(route_id):
         flash(f'Error deleting route: {str(e)}', 'danger')
 
     return redirect(url_for('routes.list_routes'))
+
+
+@routes.route('/geocode-address', methods=['POST'])
+@login_required
+def geocode_address():
+    """
+    API endpoint to geocode an address
+    """
+    address = request.json.get('address', '')
+
+    if not address:
+        return jsonify({'success': False, 'error': 'No address provided'})
+
+    try:
+        import requests
+
+        encoded_address = address.replace(' ', '+')
+        response = requests.get(
+            f"https://nominatim.openstreetmap.org/search?format=json&q={encoded_address}&limit=1",
+            headers={'User-Agent': 'Logistics CRM'}
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            if data and len(data) > 0:
+                return jsonify({
+                    'success': True,
+                    'lat': float(data[0]['lat']),
+                    'lng': float(data[0]['lon']),
+                    'display_name': data[0]['display_name']
+                })
+            else:
+                return jsonify({'success': False, 'error': 'Location not found'})
+        else:
+            return jsonify({'success': False, 'error': f'Geocoding API error: {response.status_code}'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
 
 
 @routes.route('/<int:route_id>/start', methods=['POST'])
@@ -538,17 +623,23 @@ def complete_waypoint(route_id, waypoint_index):
 
     # Only driver assigned to this route can update waypoints
     if current_user.role != UserRole.DRIVER or not current_user.driver or current_user.driver.id != route.driver_id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'Permission denied'})
         flash('You do not have permission to update waypoints for this route.', 'danger')
         return redirect(url_for('routes.view_route', route_id=route.id))
 
     # Route must be in progress
     if route.status != RouteStatus.IN_PROGRESS:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': 'Route is not in progress'})
         flash('You can only update waypoints for routes that are in progress.', 'danger')
         return redirect(url_for('routes.view_route', route_id=route.id))
 
     try:
         # Check if waypoint exists
         if not route.waypoints or waypoint_index >= len(route.waypoints):
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return jsonify({'success': False, 'error': 'Invalid waypoint'})
             flash('Invalid waypoint.', 'danger')
             return redirect(url_for('routes.view_route', route_id=route.id))
 
@@ -556,16 +647,40 @@ def complete_waypoint(route_id, waypoint_index):
         route.waypoints[waypoint_index]['completed'] = True
         route.waypoints[waypoint_index]['completion_time'] = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
 
+        # Set next waypoint as active
+        next_waypoint_index = None
+        for i, waypoint in enumerate(route.waypoints):
+            waypoint['active'] = False
+            if i > waypoint_index and not waypoint.get('completed', False) and next_waypoint_index is None:
+                next_waypoint_index = i
+
+        if next_waypoint_index is not None:
+            route.waypoints[next_waypoint_index]['active'] = True
+
+        # Check if all waypoints are completed
+        all_completed = all(w.get('completed', False) for w in route.waypoints)
+
+        # Update response data
+        response_data = {
+            'success': True,
+            'waypointIndex': waypoint_index,
+            'allCompleted': all_completed,
+            'nextWaypointIndex': next_waypoint_index
+        }
+
         db.session.commit()
         log_action(ActionType.UPDATE, f"Completed waypoint {waypoint_index} for route {route.id}", db)
+
+        # If AJAX request, return JSON response
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify(response_data)
+
         flash('Waypoint completed successfully!', 'success')
     except Exception as e:
         db.session.rollback()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'error': str(e)})
         flash(f'Error completing waypoint: {str(e)}', 'danger')
-
-    # AJAX request
-    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return jsonify({'success': True})
 
     return redirect(url_for('routes.view_route', route_id=route.id))
 

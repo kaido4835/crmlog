@@ -1,111 +1,178 @@
 {% extends "base.html" %}
 
+{% block styles %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+<style>
+    #routeMap {
+        height: 400px;
+        width: 100%;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .map-container {
+        position: relative;
+    }
+
+    .map-actions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        background: white;
+        padding: 10px;
+        border-radius: 4px;
+        box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+
+    .custom-div-icon {
+        background: transparent;
+        border: none;
+    }
+
+    .start-marker {
+        background-color: #dc3545;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid white;
+    }
+
+    .end-marker {
+        background-color: #198754;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid white;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row">
-        <div class="col-md-8 offset-md-2">
+        <div class="col-md-10 offset-md-1">
             <div class="card">
                 <div class="card-header bg-primary text-white">
                     <h4 class="mb-0">Create New Route</h4>
                 </div>
                 <div class="card-body">
-                    <form method="POST" action="{{ url_for('routes.create_route') }}">
+                    <form method="POST" action="{{ url_for('routes.create_route') }}" id="createRouteForm">
                         {{ form.hidden_tag() }}
-                        
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> Enter locations or drag markers on the map to set start and end points.
+                        </div>
+
+                        <!-- Map for route planning -->
+                        <div class="map-container mb-4">
+                            <div id="routeMap"></div>
+                        </div>
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     {{ form.start_point.label(class="form-label") }}
-                                    {{ form.start_point(class="form-control") }}
+                                    <div class="input-group">
+                                        {{ form.start_point(class="form-control", id="startPoint") }}
+                                        <button type="button" class="btn btn-outline-primary" id="searchStartBtn">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Enter an address or Google Maps URL
+                                    </small>
                                     {% for error in form.start_point.errors %}
-                                        <span class="text-danger">{{ error }}</span>
+                                        <div class="text-danger">{{ error }}</div>
                                     {% endfor %}
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     {{ form.end_point.label(class="form-label") }}
-                                    {{ form.end_point(class="form-control") }}
+                                    <div class="input-group">
+                                        {{ form.end_point(class="form-control", id="endPoint") }}
+                                        <button type="button" class="btn btn-outline-primary" id="searchEndBtn">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Enter an address or Google Maps URL
+                                    </small>
                                     {% for error in form.end_point.errors %}
-                                        <span class="text-danger">{{ error }}</span>
+                                        <div class="text-danger">{{ error }}</div>
                                     {% endfor %}
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     {{ form.distance.label(class="form-label") }}
-                                    {{ form.distance(class="form-control") }}
+                                    {{ form.distance(class="form-control", id="distance", readonly=true) }}
                                     {% for error in form.distance.errors %}
-                                        <span class="text-danger">{{ error }}</span>
+                                        <div class="text-danger">{{ error }}</div>
                                     {% endfor %}
-                                    <small class="form-text text-muted">Distance in kilometers</small>
+                                    <small class="form-text text-muted">Distance in kilometers (calculated automatically)</small>
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     {{ form.estimated_time.label(class="form-label") }}
-                                    {{ form.estimated_time(class="form-control") }}
+                                    {{ form.estimated_time(class="form-control", id="estimatedTime", readonly=true) }}
                                     {% for error in form.estimated_time.errors %}
-                                        <span class="text-danger">{{ error }}</span>
+                                        <div class="text-danger">{{ error }}</div>
                                     {% endfor %}
-                                    <small class="form-text text-muted">Time in minutes</small>
+                                    <small class="form-text text-muted">Time in minutes (calculated automatically)</small>
                                 </div>
                             </div>
-                            
+
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     {{ form.driver_id.label(class="form-label") }}
                                     {{ form.driver_id(class="form-select") }}
                                     {% for error in form.driver_id.errors %}
-                                        <span class="text-danger">{{ error }}</span>
+                                        <div class="text-danger">{{ error }}</div>
                                     {% endfor %}
                                 </div>
-                                
+
                                 {% if form.task_id %}
                                 <div class="mb-3">
                                     {{ form.task_id.label(class="form-label") }}
                                     {{ form.task_id(class="form-select") }}
                                     {% for error in form.task_id.errors %}
-                                        <span class="text-danger">{{ error }}</span>
+                                        <div class="text-danger">{{ error }}</div>
                                     {% endfor %}
                                 </div>
                                 {% endif %}
-                                
+
                                 <div class="mb-3">
                                     {{ form.start_time.label(class="form-label") }}
                                     {{ form.start_time(class="form-control", type="datetime-local") }}
                                     {% for error in form.start_time.errors %}
-                                        <span class="text-danger">{{ error }}</span>
+                                        <div class="text-danger">{{ error }}</div>
                                     {% endfor %}
                                 </div>
-                                
+
                                 <div class="mb-3">
                                     {{ form.waypoints.label(class="form-label") }}
-                                    {{ form.waypoints(class="form-control", rows=4) }}
+                                    {{ form.waypoints(class="form-control", rows=4, id="waypointsJson") }}
                                     {% for error in form.waypoints.errors %}
-                                        <span class="text-danger">{{ error }}</span>
+                                        <div class="text-danger">{{ error }}</div>
                                     {% endfor %}
                                     <small class="form-text text-muted">
-                                        Enter waypoints in JSON format. Example: 
-                                        <code>[{"location": "Warehouse B", "type": "pickup", "notes": "Loading zone #3"}]</code>
+                                        Enter waypoints in JSON format or use the map to add waypoints. Example:
+                                        <code>[{"location": "Warehouse B", "lat": 51.507, "lng": -0.095, "type": "pickup"}]</code>
                                     </small>
                                 </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="card mb-3">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Route Planning</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle"></i> In a complete application, this would include a map interface for selecting start/end points and visualizing the route.
+
+                                <div id="waypointsContainer" class="mb-3 d-none">
+                                    <label class="form-label">Waypoints</label>
+                                    <div class="list-group" id="waypointsList">
+                                        <!-- Waypoints will be added here dynamically -->
                                     </div>
-                                    <p class="mb-0">
-                                        Please provide accurate addresses for start and end points to ensure proper route planning.
-                                    </p>
+                                    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addWaypointBtn">
+                                        <i class="fas fa-plus"></i> Add Waypoint
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <div class="d-flex justify-content-between">
                             <a href="{{ url_for('routes.list_routes') }}" class="btn btn-secondary">
                                 <i class="fas fa-arrow-left"></i> Back to Routes
@@ -118,4 +185,235 @@
         </div>
     </div>
 </div>
+
+<!-- Add Waypoint Modal -->
+<div class="modal fade" id="addWaypointModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Waypoint</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Location</label>
+                    <input type="text" class="form-control" id="waypointLocation">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Type</label>
+                    <select class="form-select" id="waypointType">
+                        <option value="pickup">Pickup</option>
+                        <option value="delivery">Delivery</option>
+                        <option value="stop">Stop</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" id="waypointNotes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="saveWaypointBtn">Add Waypoint</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the route creation map
+        const routeMap = initRouteCreationMap('routeMap',
+            // Start point change callback
+            function(coords) {
+                console.log('Start point changed:', coords);
+                // This function doesn't update the input field
+            },
+            // End point change callback
+            function(coords) {
+                console.log('End point changed:', coords);
+                // This function doesn't update the input field
+            },
+            // Route change callback (updates distance and time)
+            function(routeData) {
+                console.log('Route updated:', routeData);
+                document.getElementById('distance').value = routeData.distance;
+                document.getElementById('estimatedTime').value = routeData.time;
+
+                // Update waypoints JSON
+                updateWaypointsJson();
+            }
+        );
+
+        // Handle start point search button
+        document.getElementById('searchStartBtn').addEventListener('click', function() {
+            const startInput = document.getElementById('startPoint');
+            const address = startInput.value.trim();
+
+            if (address) {
+                // First check if it's a Google Maps URL
+                const coords = extractCoordinatesFromGoogleMapsUrl(address);
+                if (coords) {
+                    routeMap.setStartPoint(coords.lat, coords.lng);
+                    return;
+                }
+
+                // Otherwise treat as address
+                routeMap.setStartByAddress(address).then(success => {
+                    if (!success) {
+                        alert('Could not find location. Please try a different address.');
+                    }
+                });
+            }
+        });
+
+        // Handle end point search button
+        document.getElementById('searchEndBtn').addEventListener('click', function() {
+            const endInput = document.getElementById('endPoint');
+            const address = endInput.value.trim();
+
+            if (address) {
+                // First check if it's a Google Maps URL
+                const coords = extractCoordinatesFromGoogleMapsUrl(address);
+                if (coords) {
+                    routeMap.setEndPoint(coords.lat, coords.lng);
+                    return;
+                }
+
+                // Otherwise treat as address
+                routeMap.setEndByAddress(address).then(success => {
+                    if (!success) {
+                        alert('Could not find location. Please try a different address.');
+                    }
+                });
+            }
+        });
+
+        // Waypoints functionality
+        let waypoints = [];
+
+        function updateWaypointsJson() {
+            const waypointsField = document.getElementById('waypointsJson');
+
+            // Create waypoints array with map data
+            const waypointsData = waypoints.map((waypoint, index) => {
+                return {
+                    location: waypoint.location,
+                    type: waypoint.type,
+                    notes: waypoint.notes,
+                    lat: null, // These would be set from real map waypoints
+                    lng: null
+                };
+            });
+
+            // Update JSON field
+            waypointsField.value = JSON.stringify(waypointsData);
+        }
+
+        function renderWaypoints() {
+            const waypointsList = document.getElementById('waypointsList');
+            waypointsList.innerHTML = '';
+
+            if (waypoints.length > 0) {
+                document.getElementById('waypointsContainer').classList.remove('d-none');
+
+                waypoints.forEach((waypoint, index) => {
+                    const waypointItem = document.createElement('div');
+                    waypointItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    waypointItem.innerHTML = `
+                        <div>
+                            <strong>${waypoint.location}</strong>
+                            <span class="badge bg-${waypoint.type === 'pickup' ? 'info' : (waypoint.type === 'delivery' ? 'warning' : 'secondary')} ms-2">
+                                ${waypoint.type}
+                            </span>
+                            ${waypoint.notes ? `<div><small class="text-muted">${waypoint.notes}</small></div>` : ''}
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-waypoint-index="${index}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+
+                    // Add event listener for delete button
+                    const deleteBtn = waypointItem.querySelector('button');
+                    deleteBtn.addEventListener('click', function() {
+                        const waypointIndex = parseInt(this.dataset.waypointIndex);
+                        waypoints.splice(waypointIndex, 1);
+                        renderWaypoints();
+                        updateWaypointsJson();
+                    });
+
+                    waypointsList.appendChild(waypointItem);
+                });
+            } else {
+                document.getElementById('waypointsContainer').classList.add('d-none');
+            }
+        }
+
+        // Add waypoint button
+        document.getElementById('addWaypointBtn').addEventListener('click', function() {
+            // Reset modal fields
+            document.getElementById('waypointLocation').value = '';
+            document.getElementById('waypointType').value = 'pickup';
+            document.getElementById('waypointNotes').value = '';
+
+            // Show modal
+            const waypointModal = new bootstrap.Modal(document.getElementById('addWaypointModal'));
+            waypointModal.show();
+        });
+
+        // Save waypoint button
+        document.getElementById('saveWaypointBtn').addEventListener('click', function() {
+            const location = document.getElementById('waypointLocation').value.trim();
+            const type = document.getElementById('waypointType').value;
+            const notes = document.getElementById('waypointNotes').value.trim();
+
+            if (location) {
+                // Add waypoint to array
+                waypoints.push({
+                    location: location,
+                    type: type,
+                    notes: notes
+                });
+
+                // Update UI
+                renderWaypoints();
+                updateWaypointsJson();
+
+                // Close modal
+                bootstrap.Modal.getInstance(document.getElementById('addWaypointModal')).hide();
+            } else {
+                alert('Please enter a location for the waypoint.');
+            }
+        });
+
+        // Try to parse existing waypoints
+        const waypointsField = document.getElementById('waypointsJson');
+        if (waypointsField.value) {
+            try {
+                waypoints = JSON.parse(waypointsField.value);
+                renderWaypoints();
+            } catch (e) {
+                console.error('Error parsing waypoints JSON:', e);
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('createRouteForm').addEventListener('submit', function(event) {
+            // Ensure distance and time are calculated
+            const distance = document.getElementById('distance').value;
+            const time = document.getElementById('estimatedTime').value;
+
+            if (!distance || !time) {
+                event.preventDefault();
+                alert('Please set the start and end points on the map to calculate distance and time.');
+            }
+        });
+    });
+</script>
+{% endblock %}
 {% endblock %}
