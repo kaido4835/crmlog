@@ -14,10 +14,10 @@ class TaskStatus(enum.Enum):
 
 
 class RouteStatus(enum.Enum):
-    PLANNED = "planned"
-    IN_PROGRESS = "in_progress"
-    COMPLETED = "completed"
-    CANCELLED = "cancelled"
+    PLANNED = "PLANNED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
 
 
 class ActionType(enum.Enum):
@@ -124,13 +124,23 @@ class CaseInsensitiveEnum(enum.Enum):
                     return member
         return None
 
+    def __str__(self):
+        # Convert to lowercase when converting to string for database storage
+        return self.value.lower()
+
+    def __conform__(self, protocol):
+        # This method is used by psycopg2 for adapting Python types to PostgreSQL types
+        if protocol is None:
+            return str(self.value).lower()
+        return None
+
 
 class DocumentCategory(CaseInsensitiveEnum):
-    PERSONAL = "PERSONAL"
-    VEHICLE = "VEHICLE"
-    TASK = "TASK"
-    ROUTE = "ROUTE"
-    OTHER = "OTHER"
+    PERSONAL = "personal"
+    VEHICLE = "vehicle"
+    TASK = "task"
+    ROUTE = "route"
+    OTHER = "other"
 
 
 class Document(db.Model):
