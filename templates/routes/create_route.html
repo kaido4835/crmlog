@@ -158,35 +158,14 @@
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">Waypoints Settings</label>
-                                    <div class="input-group mb-2">
-                                        <span class="input-group-text">Count</span>
-                                        <input type="number" class="form-control" id="waypointCount" value="3" min="0" max="10">
-                                        <button type="button" class="btn btn-outline-primary" id="generateWaypointsBtn">
-                                            <i class="fas fa-sync"></i> Generate
-                                        </button>
-                                    </div>
-                                    <small class="form-text text-muted">
-                                        Number of waypoints to generate automatically
-                                    </small>
-                                </div>
-
-                                <div class="mb-3">
                                     {{ form.waypoints.label(class="form-label") }}
                                     {{ form.waypoints(class="form-control", rows=4, id="waypointsJson") }}
                                     {% for error in form.waypoints.errors %}
                                         <div class="text-danger">{{ error }}</div>
                                     {% endfor %}
                                     <small class="form-text text-muted">
-                                        JSON data of waypoints (generated automatically)
+                                        Optional: Enter waypoints as JSON. Example: [{"location": "Warehouse B", "lat": 51.505, "lng": -0.09, "type": "pickup"}]
                                     </small>
-                                </div>
-
-                                <div id="waypointsContainer" class="mb-3">
-                                    <label class="form-label">Generated Waypoints</label>
-                                    <div class="list-group" id="waypointsList">
-                                        <!-- Generated waypoints will be shown here -->
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -209,7 +188,7 @@
 <script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize the route creation map with auto-generated waypoints
+        // Initialize the route creation map
         const routeMap = initRouteCreationMap('routeMap',
             // Start point change callback
             function(coords) {
@@ -221,20 +200,12 @@
                 console.log('End point changed:', coords);
                 // This function doesn't update the input field
             },
-            // Route change callback (updates distance, time, and waypoints)
+            // Route change callback (updates distance and time)
             function(routeData) {
                 console.log('Route updated:', routeData);
                 document.getElementById('distance').value = routeData.distance;
                 document.getElementById('estimatedTime').value = routeData.time;
-
-                // Update waypoints JSON and list
-                if (routeData.waypointsData) {
-                    updateWaypointsList(routeData.waypointsData);
-                    document.getElementById('waypointsJson').value = JSON.stringify(routeData.waypointsData);
-                }
-            },
-            // Initial waypoint count
-            3
+            }
         );
 
         // Handle start point search button with enhanced Google Maps URL support
@@ -330,71 +301,6 @@
                 alert('Could not find the location. Please try a different address or format.');
             }
         });
-
-        // Handle generate waypoints button
-        document.getElementById('generateWaypointsBtn').addEventListener('click', function() {
-            const count = parseInt(document.getElementById('waypointCount').value, 10);
-            if (typeof routeMap.setWaypointCount === 'function') {
-                routeMap.setWaypointCount(count);
-            } else {
-                console.warn('setWaypointCount function not available in routeMap');
-            }
-        });
-
-        // Handle waypoint count change
-        document.getElementById('waypointCount').addEventListener('change', function() {
-            const count = parseInt(this.value, 10);
-            if (typeof routeMap.setWaypointCount === 'function') {
-                routeMap.setWaypointCount(count);
-            } else {
-                console.warn('setWaypointCount function not available in routeMap');
-            }
-        });
-
-        // Function to update waypoints list UI
-        function updateWaypointsList(waypoints) {
-            const waypointsList = document.getElementById('waypointsList');
-            waypointsList.innerHTML = '';
-
-            if (waypoints && waypoints.length > 0) {
-                document.getElementById('waypointsContainer').classList.remove('d-none');
-
-                waypoints.forEach((waypoint, index) => {
-                    const waypointItem = document.createElement('div');
-                    waypointItem.className = 'list-group-item';
-                    waypointItem.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <strong>Waypoint ${index + 1}</strong>
-                                <span class="badge bg-info ms-2">
-                                    ${waypoint.type || 'stop'}
-                                </span>
-                            </div>
-                            <div>
-                                <small class="text-muted">
-                                    Lat: ${waypoint.lat.toFixed(6)}, Lng: ${waypoint.lng.toFixed(6)}
-                                </small>
-                            </div>
-                        </div>
-                    `;
-
-                    waypointsList.appendChild(waypointItem);
-                });
-            } else {
-                document.getElementById('waypointsContainer').classList.add('d-none');
-            }
-        }
-
-        // Try to parse existing waypoints
-        const waypointsField = document.getElementById('waypointsJson');
-        if (waypointsField.value) {
-            try {
-                const waypoints = JSON.parse(waypointsField.value);
-                updateWaypointsList(waypoints);
-            } catch (e) {
-                console.error('Error parsing waypoints JSON:', e);
-            }
-        }
 
         // Handle form submission
         document.getElementById('createRouteForm').addEventListener('submit', function(event) {
