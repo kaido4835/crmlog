@@ -224,16 +224,15 @@ def profile():
 
 
 @driver.route('/documents')
-@driver.route('/documents')
 @login_required
 @role_required("DRIVER")
 def documents():
     """
     Show driver documents
     """
-    page = request.args.get("PAGE", 1, type=int)
-    category = request.args.get("category", "ALL")  # Keep lowercase for arg name but uppercase for value
-    search_term = request.args.get("search", '')  # Keep lowercase for search param
+    page = request.args.get("page", 1, type=int)
+    category = request.args.get("category", "all").lower()  # Convert to lowercase to match enum values
+    search_term = request.args.get("search", '')
 
     # Create document query
     query = Document.query
@@ -255,21 +254,23 @@ def documents():
     query = query.filter(
         or_(
             Document.uploader_id == current_user.id,
-            Document.task_id.in_(task_ids),
+            Document.task_id.in_(task_ids) if task_ids else False,
             Document.route_id.in_(route_ids) if route_ids else False,
             Document.access_user_id == current_user.id
         )
     )
 
     # Apply category filter
-    if category == 'TASK':
-        query = query.filter(Document.task_id.isnot(None))
-    elif category == 'ROUTE':
-        query = query.filter(Document.route_id.isnot(None))
-    elif category == 'PERSONAL':
+    if category == 'task':
+        query = query.filter(Document.document_category == DocumentCategory.TASK)
+    elif category == 'route':
+        query = query.filter(Document.document_category == DocumentCategory.ROUTE)
+    elif category == 'personal':
         query = query.filter(Document.document_category == DocumentCategory.PERSONAL)
-    elif category == 'VEHICLE':
+    elif category == 'vehicle':
         query = query.filter(Document.document_category == DocumentCategory.VEHICLE)
+    elif category == 'other':
+        query = query.filter(Document.document_category == DocumentCategory.OTHER)
 
     # Apply search filter
     if search_term:
@@ -286,16 +287,26 @@ def documents():
         'all': Document.query.filter(
             or_(
                 Document.uploader_id == current_user.id,
-                Document.task_id.in_(task_ids),
+                Document.task_id.in_(task_ids) if task_ids else False,
                 Document.route_id.in_(route_ids) if route_ids else False,
                 Document.access_user_id == current_user.id
             )
         ).count(),
         'task': Document.query.filter(
-            Document.task_id.in_(task_ids)
+            Document.document_category == DocumentCategory.TASK,
+            or_(
+                Document.uploader_id == current_user.id,
+                Document.task_id.in_(task_ids) if task_ids else False,
+                Document.access_user_id == current_user.id
+            )
         ).count(),
         'route': Document.query.filter(
-            Document.route_id.in_(route_ids) if route_ids else False
+            Document.document_category == DocumentCategory.ROUTE,
+            or_(
+                Document.uploader_id == current_user.id,
+                Document.route_id.in_(route_ids) if route_ids else False,
+                Document.access_user_id == current_user.id
+            )
         ).count(),
         'personal': Document.query.filter(
             Document.document_category == DocumentCategory.PERSONAL,
@@ -306,6 +317,13 @@ def documents():
         ).count(),
         'vehicle': Document.query.filter(
             Document.document_category == DocumentCategory.VEHICLE,
+            or_(
+                Document.uploader_id == current_user.id,
+                Document.access_user_id == current_user.id
+            )
+        ).count(),
+        'other': Document.query.filter(
+            Document.document_category == DocumentCategory.OTHER,
             or_(
                 Document.uploader_id == current_user.id,
                 Document.access_user_id == current_user.id
@@ -357,26 +375,39 @@ def upload_document():
             # Get form data
             title = form.title.data
             document_file = form.document.data
-            document_category = request.form.get("DOCUMENT_CATEGORY", "PERSONAL")
-            task_id = request.form.get("TASK_ID")
-            route_id = request.form.get("ROUTE_ID")
+            document_category_str = request.form.get("document_category", "personal").lower()
+            task_id = request.form.get("task_id")
+            route_id = request.form.get("route_id")
 
             # Convert task_id and route_id to int or None
             task_id = int(task_id) if task_id and task_id.isdigit() else None
             route_id = int(route_id) if route_id and route_id.isdigit() else None
 
+            # Set document category based on context
+            if task_id:
+                document_category = DocumentCategory.TASK
+            elif route_id:
+                document_category = DocumentCategory.ROUTE
+            else:
+                # Map string values to enum values
+                try:
+                    document_category = DocumentCategory(document_category_str)
+                except ValueError:
+                    # Default to PERSONAL if invalid category provided
+                    document_category = DocumentCategory.PERSONAL
+
             # Validate task access if task_id is provided
             if task_id:
                 task = Task.query.get(task_id)
                 if not task or task.assignee_id != current_user.id:
-                    flash('You do not have access to upload documents to this task.', "DANGER")
+                    flash('You do not have access to upload documents to this task.', "danger")
                     return redirect(url_for('driver.documents'))
 
             # Validate route access if route_id is provided
             if route_id:
                 route = Route.query.get(route_id)
                 if not route or route.driver_id != current_user.driver.id:
-                    flash('You do not have access to upload documents to this route.', "DANGER")
+                    flash('You do not have access to upload documents to this route.', "danger")
                     return redirect(url_for('driver.documents'))
 
             # Generate unique filename
@@ -386,11 +417,11 @@ def upload_document():
 
             # Determine path based on document type
             if task_id:
-                upload_path = os.path.join("DOCUMENTS", "TASKS", str(task_id))
+                upload_path = os.path.join("documents", "tasks", str(task_id))
             elif route_id:
-                upload_path = os.path.join("DOCUMENTS", "ROUTES", str(route_id))
+                upload_path = os.path.join("documents", "routes", str(route_id))
             else:
-                upload_path = os.path.join("DOCUMENTS", "DRIVERS", str(current_user.id), document_category)
+                upload_path = os.path.join("documents", "drivers", str(current_user.id), document_category.value)
 
             # Ensure directory exists
             full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload_path)
@@ -406,9 +437,6 @@ def upload_document():
             # Get file type
             file_type = file_ext.lstrip('.').lower()
 
-            # Convert document_category to uppercase for enum
-            document_category_upper = document_category.upper()
-
             # Create document record
             document = Document(
                 title=title,
@@ -420,7 +448,7 @@ def upload_document():
                 task_id=task_id,
                 route_id=route_id,
                 company_id=current_user.driver.company_id,
-                document_category=DocumentCategory(document_category_upper)
+                document_category=document_category
             )
 
             db.session.add(document)
@@ -433,7 +461,7 @@ def upload_document():
             db.session.rollback()
             flash(f'Error uploading document: {str(e)}', 'danger')
 
-    return redirect(url_for('driver.documents', category=request.form.get('DOCUMENT_CATEGORY', 'ALL')))
+    return redirect(url_for('driver.documents', category=document_category.value))
 
 
 @driver.route('/unread-messages')

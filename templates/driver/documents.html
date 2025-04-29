@@ -31,34 +31,40 @@
                 <h5 class="mb-0">Document Categories</h5>
             </div>
             <div class="list-group list-group-flush">
-                <a href="{{ url_for('driver.documents', category='ALL') }}" class="list-group-item list-group-item-action {% if category == 'ALL' or not category %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='all') }}" class="list-group-item list-group-item-action {% if category == 'all' or not category %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-folder me-2"></i> All Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.all }}</span>
                     </div>
                 </a>
-                <a href="{{ url_for('driver.documents', category='TASK') }}" class="list-group-item list-group-item-action {% if category == 'TASK' %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='task') }}" class="list-group-item list-group-item-action {% if category == 'task' %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-tasks me-2"></i> Task Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.task }}</span>
                     </div>
                 </a>
-                <a href="{{ url_for('driver.documents', category='ROUTE') }}" class="list-group-item list-group-item-action {% if category == 'ROUTE' %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='route') }}" class="list-group-item list-group-item-action {% if category == 'route' %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-route me-2"></i> Route Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.route }}</span>
                     </div>
                 </a>
-                <a href="{{ url_for('driver.documents', category='PERSONAL') }}" class="list-group-item list-group-item-action {% if category == 'PERSONAL' %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='personal') }}" class="list-group-item list-group-item-action {% if category == 'personal' %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-user me-2"></i> Personal Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.personal }}</span>
                     </div>
                 </a>
-                <a href="{{ url_for('driver.documents', category='VEHICLE') }}" class="list-group-item list-group-item-action {% if category == 'VEHICLE' %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='vehicle') }}" class="list-group-item list-group-item-action {% if category == 'vehicle' %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-truck me-2"></i> Vehicle Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.vehicle }}</span>
+                    </div>
+                </a>
+                <a href="{{ url_for('driver.documents', category='other') }}" class="list-group-item list-group-item-action {% if category == 'other' %}active{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-file me-2"></i> Other Documents</span>
+                        <span class="badge bg-primary rounded-pill">{{ document_counts.other }}</span>
                     </div>
                 </a>
             </div>
@@ -89,18 +95,19 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="DOCUMENT_CATEGORY" class="form-label">Category</label>
-                        <select name="DOCUMENT_CATEGORY" id="DOCUMENT_CATEGORY" class="form-select">
-                            <option value="PERSONAL">Personal Document</option>
-                            <option value="VEHICLE">Vehicle Document</option>
-                            <option value="TASK">Task Document</option>
-                            <option value="ROUTE">Route Document</option>
+                        <label for="document_category" class="form-label">Category</label>
+                        <select name="document_category" id="document_category" class="form-select">
+                            <option value="personal">Personal Document</option>
+                            <option value="vehicle">Vehicle Document</option>
+                            <option value="task">Task Document</option>
+                            <option value="route">Route Document</option>
+                            <option value="other">Other Document</option>
                         </select>
                     </div>
 
                     <div class="mb-3" id="task_selection" style="display: none;">
-                        <label for="TASK_ID" class="form-label">Related Task</label>
-                        <select name="TASK_ID" id="TASK_ID" class="form-select">
+                        <label for="task_id" class="form-label">Related Task</label>
+                        <select name="task_id" id="task_id" class="form-select">
                             <option value="">Select a task...</option>
                             {% for task in active_tasks %}
                                 <option value="{{ task.id }}">{{ task.title }}</option>
@@ -109,8 +116,8 @@
                     </div>
 
                     <div class="mb-3" id="route_selection" style="display: none;">
-                        <label for="ROUTE_ID" class="form-label">Related Route</label>
-                        <select name="ROUTE_ID" id="ROUTE_ID" class="form-select">
+                        <label for="route_id" class="form-label">Related Route</label>
+                        <select name="route_id" id="route_id" class="form-select">
                             <option value="">Select a route...</option>
                             {% for route in active_routes %}
                                 <option value="{{ route.id }}">{{ route.start_point }} to {{ route.end_point }}</option>
@@ -130,14 +137,16 @@
         <div class="card">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    {% if category == 'TASK' %}
+                    {% if category == 'task' %}
                         Task Documents
-                    {% elif category == 'ROUTE' %}
+                    {% elif category == 'route' %}
                         Route Documents
-                    {% elif category == 'PERSONAL' %}
+                    {% elif category == 'personal' %}
                         Personal Documents
-                    {% elif category == 'VEHICLE' %}
+                    {% elif category == 'vehicle' %}
                         Vehicle Documents
+                    {% elif category == 'other' %}
+                        Other Documents
                     {% else %}
                         All Documents
                     {% endif %}
@@ -196,13 +205,13 @@
                                     </div>
                                 </td>
                                 <td>
-                                    {% if document.task %}
+                                    {% if document.document_category.value == 'task' %}
                                         <span class="badge bg-info">Task</span>
-                                    {% elif document.route_id %}
+                                    {% elif document.document_category.value == 'route' %}
                                         <span class="badge bg-primary">Route</span>
-                                    {% elif document.document_category.value == 'PERSONAL' %}
+                                    {% elif document.document_category.value == 'personal' %}
                                         <span class="badge bg-success">Personal</span>
-                                    {% elif document.document_category.value == 'VEHICLE' %}
+                                    {% elif document.document_category.value == 'vehicle' %}
                                         <span class="badge bg-warning">Vehicle</span>
                                     {% else %}
                                         <span class="badge bg-secondary">Other</span>
@@ -322,16 +331,16 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Show/hide task and route selection based on document category
-        const categorySelect = document.getElementById('DOCUMENT_CATEGORY');
+        const categorySelect = document.getElementById('document_category');
         const taskSelection = document.getElementById('task_selection');
         const routeSelection = document.getElementById('route_selection');
 
         if (categorySelect && taskSelection && routeSelection) {
             categorySelect.addEventListener('change', function() {
-                if (this.value === 'TASK') {
+                if (this.value === 'task') {
                     taskSelection.style.display = 'block';
                     routeSelection.style.display = 'none';
-                } else if (this.value === 'ROUTE') {
+                } else if (this.value === 'route') {
                     taskSelection.style.display = 'none';
                     routeSelection.style.display = 'block';
                 } else {

@@ -1,3 +1,5 @@
+from operator import or_
+
 from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, current_app
 from flask_login import login_required, current_user
 from werkzeug.utils import secure_filename
@@ -6,7 +8,7 @@ from datetime import datetime
 from utils import log_action
 
 from app import db
-from models import Document, User, UserRole, Task, TaskStatus, Route, RouteStatus, ActionType, Company
+from models import Document, User, UserRole, Task, TaskStatus, Route, RouteStatus, ActionType, Company, DocumentCategory
 from forms import DocumentUploadForm, DocumentSearchForm
 from utils import role_required, company_access_required, log_action, save_document, delete_file
 
@@ -22,6 +24,7 @@ def list_documents():
     page = request.args.get('page', 1, type=int)
     search_term = request.args.get('search', '')
     task_id = request.args.get('task_id', None, type=int)
+    category = request.args.get('category', None)
 
     # Get company ID based on user role
     company_id = None
@@ -49,6 +52,15 @@ def list_documents():
     if task_id:
         doc_query = doc_query.filter(Document.task_id == task_id)
 
+    # Apply category filter
+    if category:
+        try:
+            doc_category = DocumentCategory(category.lower())
+            doc_query = doc_query.filter(Document.document_category == doc_category)
+        except ValueError:
+            # Invalid category, ignore filter
+            pass
+
     # Apply search filter
     if search_term:
         doc_query = doc_query.filter(Document.title.ilike(f'%{search_term}%'))
@@ -62,6 +74,9 @@ def list_documents():
     # Get search form
     search_form = DocumentSearchForm()
 
+    # Get document categories for sidebar
+    categories = [(c.value, c.name) for c in DocumentCategory]
+
     log_action(ActionType.VIEW, "Viewed documents list", db)
 
     return render_template(
@@ -71,7 +86,9 @@ def list_documents():
         search_term=search_term,
         task_id=task_id,
         company_id=company_id,
-        search_form=search_form
+        search_form=search_form,
+        categories=categories,
+        current_category=category
     )
 
 
@@ -80,14 +97,7 @@ def list_documents():
 def upload_document():
     """
     Upload a new document
-
-    This is a fixed version of the upload_document function that properly:
-    1. Validates the form and file
-    2. Uses the save_document utility correctly
-    3. Creates the Document record in the database
     """
-    from forms import DocumentUploadForm
-
     form = DocumentUploadForm()
 
     if form.validate_on_submit():
@@ -116,15 +126,30 @@ def upload_document():
             title = form.title.data
             document_file = form.document.data
             task_id = request.form.get('task_id')
+            route_id = request.form.get('route_id')
+            document_category = request.form.get('document_category', 'other')  # Default to 'other'
 
             # Convert task_id to int or None
             task_id = int(task_id) if task_id and task_id.isdigit() else None
 
-            # Fix: Properly import and use the save_document function
-            from utils import save_document
+            # Convert route_id to int or None
+            route_id = int(route_id) if route_id and route_id.isdigit() else None
+
+            # Set document category based on task/route
+            if task_id:
+                document_category = 'task'
+            elif route_id:
+                document_category = 'route'
+
+            # Convert string category to enum
+            try:
+                doc_category = DocumentCategory(document_category.lower())
+            except ValueError:
+                doc_category = DocumentCategory.OTHER
 
             # Log the document upload attempt
-            current_app.logger.info(f"Attempting to save document: {title} for company: {company_id}, task: {task_id}")
+            current_app.logger.info(
+                f"Attempting to save document: {title} for company: {company_id}, task: {task_id}, category: {document_category}")
 
             # Save document and get file information
             file_path, file_type, file_size = save_document(document_file, task_id, company_id)
@@ -141,7 +166,9 @@ def upload_document():
                 size=file_size,
                 uploader_id=current_user.id,
                 task_id=task_id,
+                route_id=route_id,
                 company_id=company_id,
+                document_category=doc_category,
                 uploaded_at=datetime.utcnow()
             )
 
@@ -154,8 +181,10 @@ def upload_document():
             # Redirect to document list, with task filter if applicable
             if task_id:
                 return redirect(url_for('documents.list_documents', task_id=task_id))
+            elif route_id:
+                return redirect(url_for('documents.list_documents', route_id=route_id))
             else:
-                return redirect(url_for('documents.list_documents'))
+                return redirect(url_for('documents.list_documents', category=document_category))
 
         except Exception as e:
             db.session.rollback()
@@ -164,7 +193,11 @@ def upload_document():
             current_app.logger.error(traceback.format_exc())
             flash(f'Error uploading document: {str(e)}', 'danger')
 
-    return redirect(url_for('documents.upload_document'))
+    return render_template(
+        'documents/upload_document.html',
+        title='Upload Document',
+        form=form
+    )
 
 
 @documents.route('/<int:document_id>')
@@ -236,8 +269,10 @@ def delete_document(document_id):
         return redirect(url_for('documents.view_document', document_id=document_id))
 
     try:
-        # Get the task ID for redirect after delete
+        # Get the task ID and route ID for redirect after delete
         task_id = document.task_id
+        route_id = document.route_id
+        category = document.document_category.value if document.document_category else None
 
         # Delete the file from storage
         delete_file(document.file_path)
@@ -253,8 +288,10 @@ def delete_document(document_id):
         # Redirect to the task if this was a task document
         if task_id:
             return redirect(url_for('tasks.view_task', task_id=task_id))
+        elif route_id:
+            return redirect(url_for('routes.view_route', route_id=route_id))
         else:
-            return redirect(url_for('documents.list_documents'))
+            return redirect(url_for('documents.list_documents', category=category))
 
     except Exception as e:
         db.session.rollback()
@@ -304,7 +341,8 @@ def edit_document(document_id):
             return redirect(url_for('documents.view_document', document_id=document_id))
 
         # Hide company field for non-admins
-        del form.company_id
+        if hasattr(form, 'company_id'):
+            del form.company_id
 
     # Get available tasks for dropdown
     if company_id:
@@ -317,13 +355,15 @@ def edit_document(document_id):
         tasks = task_query.all()
 
         # Update task choices
-        form.task_id.choices = [(t.id, t.title) for t in tasks]
-        form.task_id.choices.insert(0, (0, 'No task'))
+        if hasattr(form, 'task_id'):
+            form.task_id.choices = [(t.id, t.title) for t in tasks]
+            form.task_id.choices.insert(0, (0, 'No task'))
 
     # For GET requests, fill form with current data
     if request.method == 'GET':
         form.title.data = document.title
-        form.task_id.data = document.task_id if document.task_id else 0
+        if hasattr(form, 'task_id'):
+            form.task_id.data = document.task_id if document.task_id else 0
         if hasattr(form, 'company_id'):
             form.company_id.data = document.company_id
 
@@ -333,13 +373,26 @@ def edit_document(document_id):
             document.title = form.title.data
 
             # Update task if changed
-            new_task_id = form.task_id.data if form.task_id.data != 0 else None
-            if new_task_id != document.task_id:
-                document.task_id = new_task_id
+            if hasattr(form, 'task_id'):
+                new_task_id = form.task_id.data if form.task_id.data != 0 else None
+                if new_task_id != document.task_id:
+                    document.task_id = new_task_id
+                    if new_task_id:
+                        document.document_category = DocumentCategory.TASK
+                    elif document.document_category == DocumentCategory.TASK:
+                        document.document_category = DocumentCategory.OTHER
 
             # Update company if allowed and changed
             if hasattr(form, 'company_id') and form.company_id.data != document.company_id:
                 document.company_id = form.company_id.data
+
+            # Update document category if provided
+            category = request.form.get('document_category')
+            if category:
+                try:
+                    document.document_category = DocumentCategory(category.lower())
+                except ValueError:
+                    document.document_category = DocumentCategory.OTHER
 
             db.session.commit()
 
@@ -356,7 +409,8 @@ def edit_document(document_id):
         'documents/edit_document.html',
         title=f'Edit Document: {document.title}',
         form=form,
-        document=document
+        document=document,
+        document_categories=[(c.value, c.name) for c in DocumentCategory]
     )
 
 
@@ -401,6 +455,111 @@ def task_documents(task_id):
     )
 
 
+@documents.route('/by-route/<int:route_id>')
+@login_required
+def route_documents(route_id):
+    """
+    Show documents for a specific route
+    """
+    route = Route.query.get_or_404(route_id)
+
+    # Check if user can access this route
+    company_id = None
+    if current_user.role == UserRole.COMPANY_OWNER and current_user.company_owner:
+        company_id = current_user.company_owner.company_id
+    elif current_user.role == UserRole.MANAGER and current_user.manager:
+        company_id = current_user.manager.company_id
+    elif current_user.role == UserRole.OPERATOR and current_user.operator:
+        company_id = current_user.operator.company_id
+    elif current_user.role == UserRole.DRIVER and current_user.driver:
+        company_id = current_user.driver.company_id
+
+    # Check if user has access to this route's company
+    if current_user.role != UserRole.ADMIN and (not company_id or route.company_id != company_id):
+        # Special case: driver can access their assigned routes
+        if not (current_user.role == UserRole.DRIVER and route.driver_id == current_user.driver.id):
+            flash('You do not have access to this route.', 'danger')
+            return redirect(url_for('documents.list_documents'))
+
+    # Get route documents
+    page = request.args.get('page', 1, type=int)
+    documents = Document.query.filter_by(route_id=route_id).order_by(Document.uploaded_at.desc()).paginate(page=page,
+                                                                                                           per_page=10)
+
+    log_action(ActionType.VIEW, f"Viewed documents for route: {route.id}", db)
+
+    return render_template(
+        'documents/route_documents.html',
+        title=f'Documents for Route: {route.start_point} to {route.end_point}',
+        documents=documents,
+        route=route
+    )
+
+
+@documents.route('/by-category/<category>')
+@login_required
+def category_documents(category):
+    """
+    Show documents by category
+    """
+    page = request.args.get('page', 1, type=int)
+
+    # Validate category
+    try:
+        doc_category = DocumentCategory(category.lower())
+    except ValueError:
+        flash('Invalid document category.', 'danger')
+        return redirect(url_for('documents.list_documents'))
+
+    # Get company ID based on user role
+    company_id = None
+    if current_user.role == UserRole.COMPANY_OWNER and current_user.company_owner:
+        company_id = current_user.company_owner.company_id
+    elif current_user.role == UserRole.MANAGER and current_user.manager:
+        company_id = current_user.manager.company_id
+    elif current_user.role == UserRole.OPERATOR and current_user.operator:
+        company_id = current_user.operator.company_id
+    elif current_user.role == UserRole.DRIVER and current_user.driver:
+        company_id = current_user.driver.company_id
+
+    # Build query
+    doc_query = Document.query.filter_by(document_category=doc_category)
+
+    # Apply company filter if not admin
+    if current_user.role != UserRole.ADMIN and company_id:
+        doc_query = doc_query.filter(Document.company_id == company_id)
+
+    # For drivers, only show documents they have access to
+    if current_user.role == UserRole.DRIVER:
+        task_ids = [task.id for task in Task.query.filter_by(assignee_id=current_user.id).all()]
+        route_ids = [route.id for route in Route.query.filter_by(driver_id=current_user.driver.id).all()]
+
+        doc_query = doc_query.filter(
+            or_(
+                Document.uploader_id == current_user.id,
+                Document.task_id.in_(task_ids) if task_ids else False,
+                Document.route_id.in_(route_ids) if route_ids else False,
+                Document.access_user_id == current_user.id
+            )
+        )
+
+    # Order by upload time (newest first)
+    doc_query = doc_query.order_by(Document.uploaded_at.desc())
+
+    # Paginate results
+    documents = doc_query.paginate(page=page, per_page=10)
+
+    log_action(ActionType.VIEW, f"Viewed documents by category: {category}", db)
+
+    return render_template(
+        'documents/category_documents.html',
+        title=f'Documents: {doc_category.name}',
+        documents=documents,
+        category=category,
+        category_name=doc_category.name
+    )
+
+
 @documents.route('/search', methods=['GET', 'POST'])
 @login_required
 def search_documents():
@@ -428,12 +587,17 @@ def search_documents():
         form.company_id.choices.insert(0, (0, 'All Companies'))
     else:
         # Non-admins can only search in their company
-        del form.company_id
+        if hasattr(form, 'company_id'):
+            del form.company_id
 
     # Get available file types for dropdown
     file_types = db.session.query(Document.file_type).distinct().all()
     form.file_type.choices = [(ft[0], ft[0].upper()) for ft in file_types]
     form.file_type.choices.insert(0, ('', 'All Types'))
+
+    # Add document categories dropdown
+    categories = [(c.value, c.name) for c in DocumentCategory]
+    categories.insert(0, ('', 'All Categories'))
 
     # Initialize results
     results = []
@@ -459,6 +623,16 @@ def search_documents():
         if form.file_type.data:
             search_query = search_query.filter(Document.file_type == form.file_type.data)
 
+        # Apply category filter
+        category = request.form.get('category', '')
+        if category:
+            try:
+                doc_category = DocumentCategory(category.lower())
+                search_query = search_query.filter(Document.document_category == doc_category)
+            except ValueError:
+                # Invalid category, ignore
+                pass
+
         # Apply date range filters
         if form.date_from.data:
             search_query = search_query.filter(Document.uploaded_at >= form.date_from.data)
@@ -469,8 +643,22 @@ def search_documents():
             search_query = search_query.filter(Document.uploaded_at <= end_date)
 
         # Apply uploader filter if admin/manager/owner
-        if form.uploader_id.data and form.uploader_id.data != 0:
+        if hasattr(form, 'uploader_id') and form.uploader_id.data and form.uploader_id.data != 0:
             search_query = search_query.filter(Document.uploader_id == form.uploader_id.data)
+
+        # For drivers, only show documents they have access to
+        if current_user.role == UserRole.DRIVER:
+            task_ids = [task.id for task in Task.query.filter_by(assignee_id=current_user.id).all()]
+            route_ids = [route.id for route in Route.query.filter_by(driver_id=current_user.driver.id).all()]
+
+            search_query = search_query.filter(
+                or_(
+                    Document.uploader_id == current_user.id,
+                    Document.task_id.in_(task_ids) if task_ids else False,
+                    Document.route_id.in_(route_ids) if route_ids else False,
+                    Document.access_user_id == current_user.id
+                )
+            )
 
         # Order by upload time (newest first)
         search_query = search_query.order_by(Document.uploaded_at.desc())
@@ -494,15 +682,17 @@ def search_documents():
 
         uploaders = uploader_query.distinct().all()
 
-        form.uploader_id.choices = [(u[0], f"{u[1]} {u[2]}") for u in uploaders]
-        form.uploader_id.choices.insert(0, (0, 'All Uploaders'))
+        if hasattr(form, 'uploader_id'):
+            form.uploader_id.choices = [(u[0], f"{u[1]} {u[2]}") for u in uploaders]
+            form.uploader_id.choices.insert(0, (0, 'All Uploaders'))
 
     return render_template(
         'documents/search_documents.html',
         title='Document Search',
         form=form,
         results=results,
-        searched=searched
+        searched=searched,
+        categories=categories
     )
 
 
@@ -529,9 +719,18 @@ def _can_access_document(document):
     # Must be in same company
     if document.company_id != company_id:
         # Special case: driver can access documents for their assigned tasks
-        if current_user.role == UserRole.DRIVER and document.task_id:
-            task = Task.query.get(document.task_id)
-            if task and task.assignee_id == current_user.id:
+        if current_user.role == UserRole.DRIVER:
+            if document.task_id:
+                task = Task.query.get(document.task_id)
+                if task and task.assignee_id == current_user.id:
+                    return True
+            # Driver can access documents for their routes
+            if document.route_id:
+                route = Route.query.get(document.route_id)
+                if route and route.driver_id == current_user.driver.id:
+                    return True
+            # Driver can access documents specifically assigned to them
+            if document.access_user_id == current_user.id:
                 return True
         return False
 
