@@ -448,7 +448,7 @@ def upload_document():
                 task_id=task_id,
                 route_id=route_id,
                 company_id=current_user.driver.company_id,
-                document_category=document_category
+                document_category=DocumentCategory(document_category)
             )
 
             db.session.add(document)
