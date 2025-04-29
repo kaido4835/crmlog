@@ -1,0 +1,81 @@
+/**
+ * This JavaScript can be directly added to static/js/map-utils.js
+ * by replacing the existing extractCoordinatesFromGoogleMapsUrl function
+ */
+
+/**
+ * Extract coordinates from a Google Maps URL using the server-side API
+ * @param {string} url - Google Maps URL
+ * @returns {Promise} Promise that resolves to coordinates {lat, lng} or null
+ */
+function extractCoordinatesFromGoogleMapsUrl(url) {
+    return new Promise((resolve, reject) => {
+        // Skip if URL is empty
+        if (!url) {
+            console.log('No URL provided');
+            resolve(null);
+            return;
+        }
+
+        // Check if it's a Google Maps URL
+        if (!url.includes('google.com/maps') && !url.includes('goo.gl/maps') && !url.includes('maps.app.goo.gl')) {
+            console.log('Not a Google Maps URL:', url);
+            resolve(null);
+            return;
+        }
+
+        console.log('Processing Google Maps URL:', url);
+
+        // Send the URL to our backend API
+        fetch('/geocode-maps-url', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ url: url })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Server response:', data);
+
+            if (data.success) {
+                // Return the coordinates if extraction was successful
+                resolve({
+                    lat: data.lat,
+                    lng: data.lng
+                });
+            } else {
+                // If the server returned a place name, try to geocode it
+                if (data.place) {
+                    console.log('Attempting to geocode place:', data.place);
+                    geocodeAddress(data.place)
+                        .then(coords => {
+                            if (coords) {
+                                resolve(coords);
+                            } else {
+                                console.log('Failed to geocode place:', data.place);
+                                resolve(null);
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Error geocoding place:', err);
+                            resolve(null);
+                        });
+                } else {
+                    // No coordinates found
+                    console.log('No coordinates found in URL:', url);
+                    resolve(null);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error extracting coordinates:', error);
+            resolve(null); // Resolve with null instead of rejecting to prevent errors
+        });
+    });
+}

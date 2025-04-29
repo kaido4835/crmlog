@@ -74,13 +74,13 @@
                                 <div class="mb-3">
                                     {{ form.start_point.label(class="form-label") }}
                                     <div class="input-group">
-                                        {{ form.start_point(class="form-control", id="startPoint") }}
+                                        {{ form.start_point(class="form-control", id="startPoint", placeholder="Enter address or paste Google Maps link") }}
                                         <button type="button" class="btn btn-outline-primary" id="searchStartBtn">
                                             <i class="fas fa-search"></i>
                                         </button>
                                     </div>
                                     <small class="form-text text-muted">
-                                        Enter an address or Google Maps URL
+                                        Enter an address or paste a Google Maps link (maps.google.com or goo.gl/maps)
                                     </small>
                                     {% for error in form.start_point.errors %}
                                         <div class="text-danger">{{ error }}</div>
@@ -90,13 +90,13 @@
                                 <div class="mb-3">
                                     {{ form.end_point.label(class="form-label") }}
                                     <div class="input-group">
-                                        {{ form.end_point(class="form-control", id="endPoint") }}
+                                        {{ form.end_point(class="form-control", id="endPoint", placeholder="Enter address or paste Google Maps link") }}
                                         <button type="button" class="btn btn-outline-primary" id="searchEndBtn">
                                             <i class="fas fa-search"></i>
                                         </button>
                                     </div>
                                     <small class="form-text text-muted">
-                                        Enter an address or Google Maps URL
+                                        Enter an address or paste a Google Maps link (maps.google.com or goo.gl/maps)
                                     </small>
                                     {% for error in form.end_point.errors %}
                                         <div class="text-danger">{{ error }}</div>
@@ -229,47 +229,109 @@
             3
         );
 
-        // Handle start point search button
+        // Handle start point search button with improved Google Maps URL support
         document.getElementById('searchStartBtn').addEventListener('click', function() {
             const startInput = document.getElementById('startPoint');
             const address = startInput.value.trim();
 
             if (address) {
-                // First check if it's a Google Maps URL
-                const coords = extractCoordinatesFromGoogleMapsUrl(address);
-                if (coords) {
-                    routeMap.setStartPoint(coords.lat, coords.lng);
-                    return;
-                }
+                // Show loading indicator
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
-                // Otherwise treat as address
-                routeMap.setStartByAddress(address).then(success => {
-                    if (!success) {
-                        alert('Could not find location. Please try a different address.');
-                    }
-                });
+                if (address.includes('google.com/maps') || address.includes('goo.gl/maps') || address.includes('maps.app.goo.gl')) {
+                    // Handle as Google Maps URL
+                    extractCoordinatesFromGoogleMapsUrl(address)
+                        .then(coords => {
+                            // Reset button
+                            this.innerHTML = '<i class="fas fa-search"></i>';
+
+                            if (coords) {
+                                console.log('Found coordinates:', coords);
+                                routeMap.setStartPoint(coords.lat, coords.lng);
+                            } else {
+                                // Try as regular address if URL extraction failed
+                                routeMap.setStartByAddress(address).then(success => {
+                                    if (!success) {
+                                        alert('Could not find location from the provided Google Maps link. Please try a different address or format.');
+                                    }
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error processing Google Maps URL:', error);
+                            this.innerHTML = '<i class="fas fa-search"></i>';
+                            alert('Error processing the Google Maps link. Please try a different address or format.');
+                        });
+                } else {
+                    // Handle as regular address
+                    routeMap.setStartByAddress(address)
+                        .then(success => {
+                            // Reset button
+                            this.innerHTML = '<i class="fas fa-search"></i>';
+
+                            if (!success) {
+                                alert('Could not find location. Please try a different address.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error geocoding address:', error);
+                            this.innerHTML = '<i class="fas fa-search"></i>';
+                            alert('Error finding the location. Please try a different address.');
+                        });
+                }
             }
         });
 
-        // Handle end point search button
+        // Handle end point search button with improved Google Maps URL support
         document.getElementById('searchEndBtn').addEventListener('click', function() {
             const endInput = document.getElementById('endPoint');
             const address = endInput.value.trim();
 
             if (address) {
-                // First check if it's a Google Maps URL
-                const coords = extractCoordinatesFromGoogleMapsUrl(address);
-                if (coords) {
-                    routeMap.setEndPoint(coords.lat, coords.lng);
-                    return;
-                }
+                // Show loading indicator
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
-                // Otherwise treat as address
-                routeMap.setEndByAddress(address).then(success => {
-                    if (!success) {
-                        alert('Could not find location. Please try a different address.');
-                    }
-                });
+                if (address.includes('google.com/maps') || address.includes('goo.gl/maps') || address.includes('maps.app.goo.gl')) {
+                    // Handle as Google Maps URL
+                    extractCoordinatesFromGoogleMapsUrl(address)
+                        .then(coords => {
+                            // Reset button
+                            this.innerHTML = '<i class="fas fa-search"></i>';
+
+                            if (coords) {
+                                console.log('Found coordinates:', coords);
+                                routeMap.setEndPoint(coords.lat, coords.lng);
+                            } else {
+                                // Try as regular address if URL extraction failed
+                                routeMap.setEndByAddress(address).then(success => {
+                                    if (!success) {
+                                        alert('Could not find location from the provided Google Maps link. Please try a different address or format.');
+                                    }
+                                });
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error processing Google Maps URL:', error);
+                            this.innerHTML = '<i class="fas fa-search"></i>';
+                            alert('Error processing the Google Maps link. Please try a different address or format.');
+                        });
+                } else {
+                    // Handle as regular address
+                    routeMap.setEndByAddress(address)
+                        .then(success => {
+                            // Reset button
+                            this.innerHTML = '<i class="fas fa-search"></i>';
+
+                            if (!success) {
+                                alert('Could not find location. Please try a different address.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error geocoding address:', error);
+                            this.innerHTML = '<i class="fas fa-search"></i>';
+                            alert('Error finding the location. Please try a different address.');
+                        });
+                }
             }
         });
 
@@ -340,6 +402,18 @@
                 event.preventDefault();
                 alert('Please set the start and end points on the map to calculate distance and time.');
             }
+        });
+
+        // Add debug logging for URL paste events
+        const startInput = document.getElementById('startPoint');
+        const endInput = document.getElementById('endPoint');
+
+        startInput.addEventListener('paste', function(e) {
+            console.log('Pasted content to start point:', e.clipboardData.getData('text'));
+        });
+
+        endInput.addEventListener('paste', function(e) {
+            console.log('Pasted content to end point:', e.clipboardData.getData('text'));
         });
     });
 </script>

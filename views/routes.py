@@ -7,7 +7,7 @@ from app import db
 from forms import RouteForm
 from models import Route, RouteStatus, User, UserRole, Driver, Task, TaskStatus
 from services import RouteService
-from utils import role_required, company_access_required, log_action
+from utils import role_required, company_access_required, log_action, extract_coordinates_from_maps_url
 from models import ActionType
 import json
 
@@ -781,3 +781,23 @@ def _can_cancel_route(route):
         return True
 
     return False
+
+
+@routes.route('/geocode-maps-url', methods=['POST'])
+@login_required
+def geocode_maps_url():
+    """
+    API endpoint to extract coordinates from Google Maps URL
+    """
+    data = request.json
+    url = data.get('url', '')
+
+    if not url:
+        return jsonify({'success': False, 'error': 'No URL provided'})
+
+    result = extract_coordinates_from_maps_url(url)
+
+    # Log the extraction attempt
+    log_action(ActionType.VIEW, f"Extracted coordinates from Google Maps URL", db)
+
+    return jsonify(result)

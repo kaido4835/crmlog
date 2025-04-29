@@ -1,7 +1,11 @@
 import os
+import re
 import uuid
 import shutil
 from functools import wraps
+from urllib.parse import urlparse, parse_qs
+
+import requests
 from flask import abort, flash, redirect, url_for, request, current_app, g
 from flask_login import current_user
 from werkzeug.utils import secure_filename
@@ -393,3 +397,83 @@ def log_error(error, context=None):
 
     if context:
         logger.error(f"Error context: {context}")
+
+
+def extract_coordinates_from_maps_url(url):
+    """
+    Extract latitude and longitude from a Google Maps URL.
+
+    Args:
+        url (str): Google Maps URL
+
+    Returns:
+        dict: Dictionary with lat and lng or error message
+    """
+    # Regular expressions for different Google Maps URL formats
+    coords_patterns = [
+        # Pattern 1: https://www.google.com/maps?q=51.507,-0.127
+        re.compile(r'google\.com/maps\?q=(-?\d+\.\d+),(-?\d+\.\d+)'),
+
+        # Pattern 2: https://www.google.com/maps/@51.507,-0.127,15z
+        re.compile(r'google\.com/maps/@(-?\d+\.\d+),(-?\d+\.\d+)'),
+
+        # Pattern 3: https://www.google.com/maps/place/.../data=!3m1!...!4m5!...!8m2!3d51.507!4d-0.127
+        re.compile(r'google\.com/maps/.*!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)'),
+
+        # Pattern 4: https://www.google.com/maps/place/.../ll=51.507,-0.127/data=...
+        re.compile(r'google\.com/maps/.*ll=(-?\d+\.\d+),(-?\d+\.\d+)'),
+
+        # Pattern 5: https://goo.gl/maps/XXXX -> Need to follow redirect
+
+        # Pattern 6: Coordinates in the fragment part of URL: #52.22967,21.01223
+        re.compile(r'#(-?\d+\.\d+),(-?\d+\.\d+)'),
+    ]
+
+    try:
+        # Validate URL
+        if not url or not isinstance(url, str):
+            return {'success': False, 'error': 'Invalid URL format'}
+
+        # Handle shortened URLs by following redirects
+        if 'goo.gl' in url or 'maps.app.goo.gl' in url:
+            try:
+                response = requests.head(url, allow_redirects=True, timeout=5)
+                url = response.url
+            except Exception as e:
+                return {'success': False, 'error': f'Error expanding shortened URL: {str(e)}'}
+
+        # Try all patterns to extract coordinates
+        for pattern in coords_patterns:
+            match = pattern.search(url)
+            if match:
+                lat = float(match.group(1))
+                lng = float(match.group(2))
+
+                # Validate reasonable coordinates
+                if -90 <= lat <= 90 and -180 <= lng <= 180:
+                    return {
+                        'success': True,
+                        'lat': lat,
+                        'lng': lng
+                    }
+
+        # Check for 'place' parameter which we can geocode
+        parsed_url = urlparse(url)
+        query_params = parse_qs(parsed_url.query)
+        path = parsed_url.path
+
+        # Extract place from path (common in newer Google Maps URLs)
+        place_match = re.search(r'/place/([^/]+)', path)
+        if place_match:
+            place = place_match.group(1)
+            return {
+                'success': False,
+                'error': 'Coordinates not found in URL',
+                'place': place  # Return place which can be geocoded by the client
+            }
+
+        # If we got here, we couldn't extract coordinates
+        return {'success': False, 'error': 'Coordinates not found in URL'}
+
+    except Exception as e:
+        return {'success': False, 'error': f'Error extracting coordinates: {str(e)}'}
