@@ -260,17 +260,17 @@ def documents():
         )
     )
 
-    # Apply category filter - using .value to ensure correct enum value comparison
+    # Apply category filter - using lowercase values to match database enum
     if category == 'task':
-        query = query.filter(Document.document_category == DocumentCategory.TASK.value)
+        query = query.filter(Document.document_category == 'task')
     elif category == 'route':
-        query = query.filter(Document.document_category == DocumentCategory.ROUTE.value)
+        query = query.filter(Document.document_category == 'route')
     elif category == 'personal':
-        query = query.filter(Document.document_category == DocumentCategory.PERSONAL.value)
+        query = query.filter(Document.document_category == 'personal')
     elif category == 'vehicle':
-        query = query.filter(Document.document_category == DocumentCategory.VEHICLE.value)
+        query = query.filter(Document.document_category == 'vehicle')
     elif category == 'other':
-        query = query.filter(Document.document_category == DocumentCategory.OTHER.value)
+        query = query.filter(Document.document_category == 'other')
 
     # Apply search filter
     if search_term:
@@ -282,7 +282,7 @@ def documents():
     # Paginate results
     documents = query.paginate(page=page, per_page=10)
 
-    # Get document counts for sidebar - using .value with enum comparisons
+    # Get document counts for sidebar - using lowercase strings for enum values
     document_counts = {
         'all': Document.query.filter(
             or_(
@@ -293,7 +293,7 @@ def documents():
             )
         ).count(),
         'task': Document.query.filter(
-            Document.document_category == DocumentCategory.TASK.value,
+            Document.document_category == 'task',
             or_(
                 Document.uploader_id == current_user.id,
                 Document.task_id.in_(task_ids) if task_ids else False,
@@ -301,7 +301,7 @@ def documents():
             )
         ).count(),
         'route': Document.query.filter(
-            Document.document_category == DocumentCategory.ROUTE.value,
+            Document.document_category == 'route',
             or_(
                 Document.uploader_id == current_user.id,
                 Document.route_id.in_(route_ids) if route_ids else False,
@@ -309,21 +309,21 @@ def documents():
             )
         ).count(),
         'personal': Document.query.filter(
-            Document.document_category == DocumentCategory.PERSONAL.value,
+            Document.document_category == 'personal',
             or_(
                 Document.uploader_id == current_user.id,
                 Document.access_user_id == current_user.id
             )
         ).count(),
         'vehicle': Document.query.filter(
-            Document.document_category == DocumentCategory.VEHICLE.value,
+            Document.document_category == 'vehicle',
             or_(
                 Document.uploader_id == current_user.id,
                 Document.access_user_id == current_user.id
             )
         ).count(),
         'other': Document.query.filter(
-            Document.document_category == DocumentCategory.OTHER.value,
+            Document.document_category == 'other',
             or_(
                 Document.uploader_id == current_user.id,
                 Document.access_user_id == current_user.id
@@ -334,13 +334,13 @@ def documents():
     # Get active tasks for document upload form
     active_tasks = Task.query.filter(
         Task.assignee_id == current_user.id,
-        Task.status.in_([TaskStatus.NEW.value, TaskStatus.IN_PROGRESS.value])
+        Task.status.in_(['NEW', 'IN_PROGRESS'])  # Используем строковые значения в нижнем регистре
     ).all()
 
     # Get active routes for document upload form
     active_routes = Route.query.filter(
         Route.driver_id == current_user.driver.id,
-        Route.status.in_([RouteStatus.PLANNED.value, RouteStatus.IN_PROGRESS.value])
+        Route.status.in_(['PLANNED', 'IN_PROGRESS'])  # Используем строковые значения в нижнем регистре
     ).all()
 
     # Create upload form
@@ -383,18 +383,18 @@ def upload_document():
             task_id = int(task_id) if task_id and task_id.isdigit() else None
             route_id = int(route_id) if route_id and route_id.isdigit() else None
 
-            # Set document category based on context
+            # Set document category based on context - используем строковые значения в нижнем регистре
             if task_id:
-                document_category = DocumentCategory.TASK.value
+                document_category = 'task'
             elif route_id:
-                document_category = DocumentCategory.ROUTE.value
+                document_category = 'route'
             else:
-                # Map string values to enum values
-                try:
-                    document_category = DocumentCategory(document_category_str)
-                except ValueError:
-                    # Default to PERSONAL if invalid category provided
-                    document_category = DocumentCategory.PERSONAL.value
+                # Проверяем валидность категории
+                if document_category_str in ['personal', 'vehicle', 'task', 'route', 'other']:
+                    document_category = document_category_str
+                else:
+                    # Default to personal if invalid category provided
+                    document_category = 'personal'
 
             # Validate task access if task_id is provided
             if task_id:
@@ -421,7 +421,7 @@ def upload_document():
             elif route_id:
                 upload_path = os.path.join("documents", "routes", str(route_id))
             else:
-                upload_path = os.path.join("documents", "drivers", str(current_user.id), document_category.value)
+                upload_path = os.path.join("documents", "drivers", str(current_user.id), document_category)
 
             # Ensure directory exists
             full_path = os.path.join(current_app.config['UPLOAD_FOLDER'], upload_path)
@@ -448,7 +448,7 @@ def upload_document():
                 task_id=task_id,
                 route_id=route_id,
                 company_id=current_user.driver.company_id,
-                document_category=document_category.value
+                document_category=document_category
             )
 
             db.session.add(document)
@@ -461,7 +461,7 @@ def upload_document():
             db.session.rollback()
             flash(f'Error uploading document: {str(e)}', 'danger')
 
-    return redirect(url_for('driver.documents', category=document_category.value))
+    return redirect(url_for('driver.documents', category=document_category))
 
 
 @driver.route('/unread-messages')
