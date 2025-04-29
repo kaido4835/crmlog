@@ -1,6 +1,9 @@
 from datetime import datetime
+
+import psycopg2
 from sqlalchemy import Enum, JSON, Text
 import enum
+
 
 from app import db
 
@@ -128,11 +131,15 @@ class CaseInsensitiveEnum(enum.Enum):
         # Convert to lowercase when converting to string for database storage
         return self.value.lower()
 
-    def __conform__(self, protocol):
-        # This method is used by psycopg2 for adapting Python types to PostgreSQL types
-        if protocol is None:
-            return str(self.value).lower()
-        return None
+
+def adapt_enum(enum_value):
+    """
+    Adapter for converting enum values to PostgreSQL strings
+    """
+    return psycopg2.extensions.AsIs("'{}'".format(str(enum_value).lower()))
+
+# Register the adapter for our enum type
+psycopg2.extensions.register_adapter(CaseInsensitiveEnum, adapt_enum)
 
 
 class DocumentCategory(CaseInsensitiveEnum):
@@ -141,6 +148,10 @@ class DocumentCategory(CaseInsensitiveEnum):
     TASK = "task"
     ROUTE = "route"
     OTHER = "other"
+
+    # Additional method to ensure proper serialization
+    def __str__(self):
+        return str(self.value).lower()
 
 
 class Document(db.Model):
@@ -168,6 +179,26 @@ class Document(db.Model):
     task = db.relationship('Task', back_populates='documents')
     route = db.relationship('Route', back_populates='documents')
     access_user = db.relationship('User', foreign_keys=[access_user_id], backref='accessible_documents')
+
+    @property
+    def category(self):
+        """Get document category as DocumentCategory enum"""
+        if self.document_category:
+            try:
+                return DocumentCategory(self.document_category)
+            except ValueError:
+                return DocumentCategory.OTHER
+        return DocumentCategory.OTHER
+
+    @category.setter
+    def category(self, value):
+        """Set document category from either enum or string"""
+        if isinstance(value, DocumentCategory):
+            self.document_category = value.value.lower()
+        elif isinstance(value, str):
+            self.document_category = value.lower()
+        else:
+            self.document_category = DocumentCategory.OTHER.value.lower()
 
     def __repr__(self):
         return f'<Document {self.title}>'
