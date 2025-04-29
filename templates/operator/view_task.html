@@ -11,19 +11,19 @@
                 <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                <a href="{{ url_for('operator["drivers"]') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-users"></i> My Drivers
                 </a>
-                <a href="{{ url_for('operator["tasks"]') }}" class="list-group-item list-group-item-action active">
+                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action active">
                     <i class="fas fa-tasks"></i> Tasks
                 </a>
-                <a href="{{ url_for('operator["routes"]') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-route"></i> Routes
                 </a>
                 <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-comments"></i> Messages
                 </a>
-                <a href="{{ url_for('operator["documents"]') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-file-alt"></i> Documents
                 </a>
             </div>
@@ -47,7 +47,7 @@
                 </div>
                 
                 <div class="d-grid gap-2">
-                    <a href="{{ url_for('operator["view_driver"]', driver_id=task.assignee.driver.id) }}" class="btn btn-outline-primary">
+                    <a href="{{ url_for('operator.view_driver', driver_id=task.assignee.driver.id) }}" class="btn btn-outline-primary">
                         <i class="fas fa-user"></i> View Driver
                     </a>
                     <a href="{{ url_for('messages.chat', user_id=task.assignee.id, task_id=task.id) }}" class="btn btn-outline-secondary">
@@ -422,7 +422,7 @@
                 </div>
             </div>
             <div class="card-footer">
-                <a href="{{ url_for('operator["tasks"]') }}" class="btn btn-secondary">
+                <a href="{{ url_for('operator.tasks') }}" class="btn btn-secondary">
                     <i class="fas fa-arrow-left"></i> Back to Tasks
                 </a>
             </div>

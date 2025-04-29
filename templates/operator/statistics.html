@@ -11,22 +11,22 @@
                 <a href="{{ url_for('main.operator_dashboard') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tachometer-alt"></i> Dashboard
                 </a>
-                <a href="{{ url_for('operator["drivers"]') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator.drivers') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-users"></i> My Drivers
                 </a>
-                <a href="{{ url_for('operator["tasks"]') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator.tasks') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tasks"></i> Tasks
                 </a>
-                <a href="{{ url_for('operator["routes"]') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator.routes') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-route"></i> Routes
                 </a>
                 <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-comments"></i> Messages
                 </a>
-                <a href="{{ url_for('operator["documents"]') }}" class="list-group-item list-group-item-action">
+                <a href="{{ url_for('operator.documents') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-file-alt"></i> Documents
                 </a>
-                <a href="{{ url_for('operator["statistics"]') }}" class="list-group-item list-group-item-action active">
+                <a href="{{ url_for('operator.statistics') }}" class="list-group-item list-group-item-action active">
                     <i class="fas fa-chart-bar"></i> Statistics
                 </a>
             </div>
@@ -37,7 +37,7 @@
                 <h5 class="mb-0">Report Filters</h5>
             </div>
             <div class="card-body">
-                <form method="GET" action="{{ url_for('operator["statistics"]') }}">
+                <form method="GET" action="{{ url_for('operator.statistics') }}">
                     <div class="mb-3">
                         <label class="form-label">Date Range</label>
                         <select class="form-select" name="period" id="period-select">
@@ -103,7 +103,7 @@
                     </button>
                     
                     <div class="mt-3">
-                        <a href="{{ url_for('operator["download_report"]', format='csv') }}?{{ request.query_string.decode() }}" class="btn btn-outline-secondary w-100">
+                        <a href="{{ url_for('operator.download_report', format='csv') }}?{{ request.query_string.decode() }}" class="btn btn-outline-secondary w-100">
                             <i class="fas fa-download"></i> Download CSV
                         </a>
                     </div>
@@ -232,7 +232,7 @@
                                     {% for driver in driver_stats %}
                                     <tr>
                                         <td>
-                                            <a href="{{ url_for('operator["view_driver"]', driver_id=driver.id) }}">
+                                            <a href="{{ url_for('operator.view_driver', driver_id=driver.id) }}">
                                                 {{ driver.user.first_name }} {{ driver.user.last_name }}
                                             </a>
                                         </td>

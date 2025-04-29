@@ -217,7 +217,7 @@
                                         <div class="timeline-marker bg-info"></div>
                                         <div class="timeline-content">
                                             <h6 class="timeline-title">Route Created</h6>
-                                            <p class="timeline-text">{{ route.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                                            <p class="timeline-text">{{ route.start_time.strftime('%Y-%m-%d %H:%M') if route.start_time else 'Not started yet' }}</p>
                                         </div>
                                     </div>
                                     

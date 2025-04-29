@@ -31,31 +31,31 @@
                 <h5 class="mb-0">Document Categories</h5>
             </div>
             <div class="list-group list-group-flush">
-                <a href="{{ url_for('driver.documents', category='all') }}" class="list-group-item list-group-item-action {% if category == 'all' or not category %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='ALL') }}" class="list-group-item list-group-item-action {% if category == 'ALL' or not category %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-folder me-2"></i> All Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.all }}</span>
                     </div>
                 </a>
-                <a href="{{ url_for('driver.documents', category='task') }}" class="list-group-item list-group-item-action {% if category == 'task' %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='TASK') }}" class="list-group-item list-group-item-action {% if category == 'TASK' %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-tasks me-2"></i> Task Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.task }}</span>
                     </div>
                 </a>
-                <a href="{{ url_for('driver.documents', category='route') }}" class="list-group-item list-group-item-action {% if category == 'route' %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='ROUTE') }}" class="list-group-item list-group-item-action {% if category == 'ROUTE' %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-route me-2"></i> Route Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.route }}</span>
                     </div>
                 </a>
-                <a href="{{ url_for('driver.documents', category='personal') }}" class="list-group-item list-group-item-action {% if category == 'personal' %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='PERSONAL') }}" class="list-group-item list-group-item-action {% if category == 'PERSONAL' %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-user me-2"></i> Personal Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.personal }}</span>
                     </div>
                 </a>
-                <a href="{{ url_for('driver.documents', category='vehicle') }}" class="list-group-item list-group-item-action {% if category == 'vehicle' %}active{% endif %}">
+                <a href="{{ url_for('driver.documents', category='VEHICLE') }}" class="list-group-item list-group-item-action {% if category == 'VEHICLE' %}active{% endif %}">
                     <div class="d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-truck me-2"></i> Vehicle Documents</span>
                         <span class="badge bg-primary rounded-pill">{{ document_counts.vehicle }}</span>
@@ -63,7 +63,7 @@
                 </a>
             </div>
         </div>
-        
+
         <div class="card">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">Upload Document</h5>
@@ -71,7 +71,7 @@
             <div class="card-body">
                 <form method="POST" action="{{ url_for('driver.upload_document') }}" enctype="multipart/form-data">
                     {{ upload_form.hidden_tag() }}
-                    
+
                     <div class="mb-3">
                         {{ upload_form.title.label(class="form-label") }}
                         {{ upload_form.title(class="form-control") }}
@@ -79,7 +79,7 @@
                             <span class="text-danger">{{ error }}</span>
                         {% endfor %}
                     </div>
-                    
+
                     <div class="mb-3">
                         {{ upload_form.document.label(class="form-label") }}
                         {{ upload_form.document(class="form-control") }}
@@ -87,37 +87,37 @@
                             <span class="text-danger">{{ error }}</span>
                         {% endfor %}
                     </div>
-                    
+
                     <div class="mb-3">
-                        <label for="document_category" class="form-label">Category</label>
-                        <select name="document_category" id="document_category" class="form-select">
-                            <option value="personal">Personal Document</option>
-                            <option value="vehicle">Vehicle Document</option>
-                            <option value="task">Task Document</option>
-                            <option value="route">Route Document</option>
+                        <label for="DOCUMENT_CATEGORY" class="form-label">Category</label>
+                        <select name="DOCUMENT_CATEGORY" id="DOCUMENT_CATEGORY" class="form-select">
+                            <option value="PERSONAL">Personal Document</option>
+                            <option value="VEHICLE">Vehicle Document</option>
+                            <option value="TASK">Task Document</option>
+                            <option value="ROUTE">Route Document</option>
                         </select>
                     </div>
-                    
+
                     <div class="mb-3" id="task_selection" style="display: none;">
-                        <label for="task_id" class="form-label">Related Task</label>
-                        <select name="task_id" id="task_id" class="form-select">
+                        <label for="TASK_ID" class="form-label">Related Task</label>
+                        <select name="TASK_ID" id="TASK_ID" class="form-select">
                             <option value="">Select a task...</option>
                             {% for task in active_tasks %}
                                 <option value="{{ task.id }}">{{ task.title }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    
+
                     <div class="mb-3" id="route_selection" style="display: none;">
-                        <label for="route_id" class="form-label">Related Route</label>
-                        <select name="route_id" id="route_id" class="form-select">
+                        <label for="ROUTE_ID" class="form-label">Related Route</label>
+                        <select name="ROUTE_ID" id="ROUTE_ID" class="form-select">
                             <option value="">Select a route...</option>
                             {% for route in active_routes %}
                                 <option value="{{ route.id }}">{{ route.start_point }} to {{ route.end_point }}</option>
                             {% endfor %}
                         </select>
                     </div>
-                    
+
                     <div class="d-grid">
                         {{ upload_form.submit(class="btn btn-primary") }}
                     </div>
@@ -125,18 +125,18 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-9">
         <div class="card">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    {% if category == 'task' %}
+                    {% if category == 'TASK' %}
                         Task Documents
-                    {% elif category == 'route' %}
+                    {% elif category == 'ROUTE' %}
                         Route Documents
-                    {% elif category == 'personal' %}
+                    {% elif category == 'PERSONAL' %}
                         Personal Documents
-                    {% elif category == 'vehicle' %}
+                    {% elif category == 'VEHICLE' %}
                         Vehicle Documents
                     {% else %}
                         All Documents
@@ -154,7 +154,7 @@
                     </form>
                 </div>
             </div>
-            
+
             <div class="card-body">
                 {% if documents.items %}
                 <div class="table-responsive">
@@ -200,9 +200,9 @@
                                         <span class="badge bg-info">Task</span>
                                     {% elif document.route_id %}
                                         <span class="badge bg-primary">Route</span>
-                                    {% elif document.document_category == 'personal' %}
+                                    {% elif document.document_category.value == 'PERSONAL' %}
                                         <span class="badge bg-success">Personal</span>
-                                    {% elif document.document_category == 'vehicle' %}
+                                    {% elif document.document_category.value == 'VEHICLE' %}
                                         <span class="badge bg-warning">Vehicle</span>
                                     {% else %}
                                         <span class="badge bg-secondary">Other</span>
@@ -216,14 +216,14 @@
                                         <a href="{{ url_for('documents.download_document', document_id=document.id) }}" class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-download"></i> Download
                                         </a>
-                                        
+
                                         {% if document.uploader_id == current_user.id %}
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ document.id }}">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                         {% endif %}
                                     </div>
-                                    
+
                                     <!-- Delete Modal -->
                                     <div class="modal fade" id="deleteModal{{ document.id }}" tabindex="-1" aria-labelledby="deleteModalLabel{{ document.id }}" aria-hidden="true">
                                         <div class="modal-dialog">
@@ -251,7 +251,7 @@
                         </tbody>
                     </table>
                 </div>
-                
+
                 <!-- Pagination -->
                 <nav aria-label="Document pagination">
                     <ul class="pagination justify-content-center">
@@ -322,16 +322,16 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Show/hide task and route selection based on document category
-        const categorySelect = document.getElementById('document_category');
+        const categorySelect = document.getElementById('DOCUMENT_CATEGORY');
         const taskSelection = document.getElementById('task_selection');
         const routeSelection = document.getElementById('route_selection');
-        
+
         if (categorySelect && taskSelection && routeSelection) {
             categorySelect.addEventListener('change', function() {
-                if (this.value === 'task') {
+                if (this.value === 'TASK') {
                     taskSelection.style.display = 'block';
                     routeSelection.style.display = 'none';
-                } else if (this.value === 'route') {
+                } else if (this.value === 'ROUTE') {
                     taskSelection.style.display = 'none';
                     routeSelection.style.display = 'block';
                 } else {
@@ -342,4 +342,5 @@
         }
     });
 </script>
+{% endblock %}
 {% endblock %}

@@ -146,7 +146,7 @@
                             </button>
                         </h5>
                         
-                        {% if task.documents %}
+                        {% if task.documents is defined and task.documents %}
                             <div class="table-responsive">
                                 <table class="table table-striped">
                                     <thead>

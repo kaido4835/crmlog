@@ -6,7 +6,7 @@ from sqlalchemy import func, or_, and_
 from app import db
 from models import (
     Route, RouteStatus, User, UserRole, Task, TaskStatus, Driver, Message,
-    Document, Operator, ActionType, Manager, CompanyOwner
+    Document, Operator, ActionType, Manager, CompanyOwner, DocumentCategory
 )
 from forms import DocumentUploadForm, MessageForm
 from utils import role_required, log_action
@@ -224,6 +224,7 @@ def profile():
 
 
 @driver.route('/documents')
+@driver.route('/documents')
 @login_required
 @role_required("DRIVER")
 def documents():
@@ -231,8 +232,8 @@ def documents():
     Show driver documents
     """
     page = request.args.get("PAGE", 1, type=int)
-    category = request.args.get("CATEGORY", "ALL")
-    search_term = request.args.get("SEARCH", '')
+    category = request.args.get("category", "ALL")  # Keep lowercase for arg name but uppercase for value
+    search_term = request.args.get("search", '')  # Keep lowercase for search param
 
     # Create document query
     query = Document.query
@@ -261,14 +262,14 @@ def documents():
     )
 
     # Apply category filter
-    if category == 'task':
+    if category == 'TASK':
         query = query.filter(Document.task_id.isnot(None))
-    elif category == 'route':
+    elif category == 'ROUTE':
         query = query.filter(Document.route_id.isnot(None))
-    elif category == 'personal':
-        query = query.filter(Document.document_category == 'personal')
-    elif category == 'vehicle':
-        query = query.filter(Document.document_category == 'vehicle')
+    elif category == 'PERSONAL':
+        query = query.filter(Document.document_category == DocumentCategory.PERSONAL)
+    elif category == 'VEHICLE':
+        query = query.filter(Document.document_category == DocumentCategory.VEHICLE)
 
     # Apply search filter
     if search_term:
@@ -297,14 +298,14 @@ def documents():
             Document.route_id.in_(route_ids) if route_ids else False
         ).count(),
         'personal': Document.query.filter(
-            Document.document_category == 'personal',
+            Document.document_category == DocumentCategory.PERSONAL,
             or_(
                 Document.uploader_id == current_user.id,
                 Document.access_user_id == current_user.id
             )
         ).count(),
         'vehicle': Document.query.filter(
-            Document.document_category == 'vehicle',
+            Document.document_category == DocumentCategory.VEHICLE,
             or_(
                 Document.uploader_id == current_user.id,
                 Document.access_user_id == current_user.id
@@ -405,6 +406,9 @@ def upload_document():
             # Get file type
             file_type = file_ext.lstrip('.').lower()
 
+            # Convert document_category to uppercase for enum
+            document_category_upper = document_category.upper()
+
             # Create document record
             document = Document(
                 title=title,
@@ -416,7 +420,7 @@ def upload_document():
                 task_id=task_id,
                 route_id=route_id,
                 company_id=current_user.driver.company_id,
-                document_category=document_category
+                document_category=DocumentCategory(document_category_upper)
             )
 
             db.session.add(document)
@@ -429,7 +433,7 @@ def upload_document():
             db.session.rollback()
             flash(f'Error uploading document: {str(e)}', 'danger')
 
-    return redirect(url_for('driver.documents', category=request.form.get('document_category', 'all')))
+    return redirect(url_for('driver.documents', category=request.form.get('DOCUMENT_CATEGORY', 'ALL')))
 
 
 @driver.route('/unread-messages')
