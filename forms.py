@@ -268,6 +268,8 @@ class RouteForm(FlaskForm):
 
     start_point = StringField('Start Point', validators=[DataRequired(), Length(max=256)])
     end_point = StringField('End Point', validators=[DataRequired(), Length(max=256)])
+    driver_id = SelectField('Driver', coerce=int, validators=[DataRequired()])
+    task_id = SelectField('Related Task', coerce=int, validators=[Optional()])
     waypoints = TextAreaField('Waypoints', validators=[Optional()],
                              description="Optional waypoints in JSON format")
     distance = FloatField('Distance (km)', validators=[Optional()])
