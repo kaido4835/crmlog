@@ -118,18 +118,27 @@ class CaseInsensitiveEnum(enum.Enum):
     @classmethod
     def _missing_(cls, value):
         if isinstance(value, str):
-            # Ищем по совпадению без учета регистра
+            # Case-insensitive lookup
             for member in cls:
                 if member.value.upper() == value.upper():
                     return member
-        return None
+        # Return a default value instead of None to avoid SQLAlchemy errors
+        return cls.OTHER if hasattr(cls, 'OTHER') else next(iter(cls))
 
     def __str__(self):
-        # Convert to lowercase when converting to string for database storage
+        # Always return lowercase string representation
         return self.value.lower()
 
+    def __eq__(self, other):
+        # Enhanced equality check to handle string comparison
+        if isinstance(other, str):
+            return self.value.lower() == other.lower()
+        elif isinstance(other, enum.Enum):
+            return self.value.lower() == other.value.lower()
+        return super().__eq__(other)
+
     def __conform__(self, protocol):
-        # This method is used by psycopg2 for adapting Python types to PostgreSQL types
+        # This is used by psycopg2 for adapting to PostgreSQL
         if protocol is None:
             return str(self.value).lower()
         return None
@@ -141,6 +150,18 @@ class DocumentCategory(CaseInsensitiveEnum):
     TASK = "task"
     ROUTE = "route"
     OTHER = "other"
+
+    @classmethod
+    def from_string(cls, value):
+        """Safely convert string to enum value with fallback to default"""
+        try:
+            if isinstance(value, cls):
+                return value
+            if isinstance(value, str):
+                return cls(value)
+            return cls.OTHER
+        except (ValueError, TypeError):
+            return cls.OTHER
 
 
 class Document(db.Model):
@@ -171,6 +192,17 @@ class Document(db.Model):
 
     def __repr__(self):
         return f'<Document {self.title}>'
+
+    @property
+    def category_name(self):
+        """Return a human-readable category name"""
+        if self.document_category:
+            return self.document_category.name.capitalize()
+        return "Other"
+
+    def set_category(self, category_value):
+        """Safely set the document category from string or enum"""
+        self.document_category = DocumentCategory.from_string(category_value)
 
 
 class Message(db.Model):

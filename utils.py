@@ -195,7 +195,7 @@ def save_document(file, task_id, company_id):
 
     Args:
         file: File object from form
-        task_id: ID of the task the document belongs to
+        task_id: ID of the task the document belongs to (can be None)
         company_id: ID of the company the document belongs to
 
     Returns:
@@ -216,15 +216,19 @@ def save_document(file, task_id, company_id):
         upload_folder = current_app.config['UPLOAD_FOLDER']
 
         # Make sure main upload folder exists
-        if not os.path.exists(upload_folder):
-            os.makedirs(upload_folder, exist_ok=True)
+        os.makedirs(upload_folder, exist_ok=True)
 
-        # Create upload folder with company and task-specific subfolder
-        # Fix: Use os.path.join consistently and ensure 'documents' is spelled correctly
-        document_folder = os.path.join(upload_folder, 'documents', str(company_id), str(task_id))
+        # Create appropriate folder path based on whether task_id is provided
+        if task_id:
+            # Create folder for task document
+            document_folder = os.path.join(upload_folder, 'documents', str(company_id), str(task_id))
+        else:
+            # Create folder for general company document
+            document_folder = os.path.join(upload_folder, 'documents', str(company_id), 'general')
+
         os.makedirs(document_folder, exist_ok=True)
 
-        # Save the file using os.path.join for consistent path handling
+        # Save the file
         file_path = os.path.join(document_folder, unique_filename)
         file.save(file_path)
 
@@ -233,15 +237,13 @@ def save_document(file, task_id, company_id):
         # Get file size in bytes
         file_size = os.path.getsize(file_path)
 
-        # Return relative path to be stored in database
-        # Use os.path.join and then normalize to forward slashes for web use
-        relative_path = os.path.join('uploads', 'documents', str(company_id), str(task_id), unique_filename)
-        # Normalize path separators for web use (forward slashes)
-        relative_path = relative_path.replace('\\', '/')
+        # Construct relative path for database storage
+        if task_id:
+            relative_path = f"uploads/documents/{company_id}/{task_id}/{unique_filename}"
+        else:
+            relative_path = f"uploads/documents/{company_id}/general/{unique_filename}"
 
-        current_app.logger.info(f"Document saved successfully at: {file_path}")
-        current_app.logger.info(f"Relative path for database: {relative_path}")
-
+        # Log file information
         current_app.logger.info(f"Document saved successfully at: {file_path}")
         current_app.logger.info(f"Relative path for database: {relative_path}")
         current_app.logger.info(f"File type: {file_type}, File size: {file_size}")
