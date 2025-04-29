@@ -8,7 +8,7 @@ from app import db
 from forms import TaskForm, DocumentUploadForm, MessageForm
 from models import User, Task, TaskStatus, Route, Document, Message, UserRole, ActionType, Company
 from services import TaskService, MessageService
-from utils import role_required, company_access_required, log_action
+from utils import role_required, company_access_required, log_action, save_document
 
 from app import db
 from forms import TaskForm, DocumentUploadForm, MessageForm
@@ -167,7 +167,7 @@ def create_task():
 
     if form.validate_on_submit():
         try:
-            # Создаем задачу напрямую, минуя TaskService
+            # Создаем задачу напрямую
             task = Task(
                 title=form.title.data,
                 description=form.description.data,
@@ -181,11 +181,30 @@ def create_task():
             )
 
             db.session.add(task)
-            db.session.commit()
+            db.session.commit()  # Важно: сначала сохраняем задачу, чтобы получить task.id
 
             # Handle document upload if provided
             if form.document.data:
-                TaskService.add_document(task, form.document.data, current_user.id, db)
+                file = form.document.data
+                # Save document file and get file info
+                file_path, file_type, file_size = save_document(file, task.id, task.company_id)
+
+                if file_path:
+                    # Create document record with a string category
+                    document = Document(
+                        title=file.filename,
+                        file_path=file_path,
+                        file_type=file_type,
+                        size=file_size,
+                        uploaded_at=datetime.utcnow(),
+                        uploader_id=current_user.id,
+                        task_id=task.id,
+                        company_id=task.company_id,
+                        document_category='task'  # Используем строковое значение
+                    )
+
+                    db.session.add(document)
+                    db.session.commit()  # Важно: сохраняем документ
 
             log_action(ActionType.CREATE, f"Created task {task.title}", db)
             flash(f'Task "{task.title}" created successfully!', 'success')
@@ -284,29 +303,54 @@ def complete_task(task_id):
 @tasks.route('/<int:task_id>/upload', methods=['POST'])
 @login_required
 def upload_document(task_id):
-    """
-    Upload a document to a task
-    """
+    """Upload document for a task"""
     task = Task.query.get_or_404(task_id)
 
-    # Check if user has access to this task
-    if not _can_access_task(task):
-        flash('You do not have permission to access this task.', 'danger')
-        return redirect(url_for('tasks.list_tasks'))
+    # Check permissions (simplified example)
+    if not (current_user.id == task.creator_id or current_user.id == task.assignee_id):
+        flash('You do not have permission to upload documents to this task.', 'danger')
+        return redirect(url_for('tasks.view_task', task_id=task_id))
 
     form = DocumentUploadForm()
 
     if form.validate_on_submit():
-        try:
-            document = TaskService.add_document(task, form.document.data, current_user.id, db)
-            if document:
-                flash('Document uploaded successfully!', 'success')
-            else:
-                flash('Error uploading document. Please check file type and size.', 'danger')
-        except Exception as e:
-            flash(f'Error uploading document: {str(e)}', 'danger')
+        # Process file upload
+        file = form.document.data
 
-    return redirect(url_for('tasks.view_task', task_id=task.id))
+        # Save document file and get file info
+        file_path, file_type, file_size = save_document(file, task_id, task.company_id)
+
+        if not file_path:
+            flash('Error saving document. Please check file type and size.', 'danger')
+            return redirect(url_for('tasks.view_task', task_id=task_id))
+
+        try:
+            # Create document record
+            document = Document(
+                title=form.title.data,
+                file_path=file_path,
+                file_type=file_type,
+                size=file_size,
+                uploaded_at=datetime.utcnow(),
+                uploader_id=current_user.id,
+                task_id=task_id,
+                company_id=task.company_id,
+                document_category='task'  # Строковое значение вместо перечисления
+            )
+
+            # Добавляем в сессию и сохраняем
+            db.session.add(document)
+            db.session.commit()
+
+            # Логируем действие
+            log_action(ActionType.UPLOAD, f"Uploaded document: {form.title.data}", db)
+            flash('Document uploaded successfully!', 'success')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"Error creating document record: {str(e)}")
+            flash(f'Error creating document record: {str(e)}', 'danger')
+
+    return redirect(url_for('tasks.view_task', task_id=task_id))
 
 
 @tasks.route('/documents/<int:document_id>/delete', methods=['POST'])
