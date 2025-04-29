@@ -1,3 +1,4 @@
+import traceback
 from operator import or_
 
 from flask import Blueprint, render_template, redirect, url_for, flash, request, send_file, current_app
@@ -119,7 +120,9 @@ def upload_document():
 
             # Validate company existence
             if not company_id:
-                flash('Company ID is required for document upload.', 'danger')
+                error_msg = 'Company ID is required for document upload.'
+                current_app.logger.warning(f"Document upload failed: {error_msg} User: {current_user.username} (ID: {current_user.id})")
+                flash(error_msg, 'danger')
                 return redirect(url_for('documents.list_documents'))
 
             # Get form data
@@ -145,17 +148,24 @@ def upload_document():
             try:
                 doc_category = DocumentCategory(document_category.lower())
             except ValueError:
+                error_msg = f"Invalid document category: {document_category}"
+                current_app.logger.warning(f"Document upload warning: {error_msg}. Using default category 'OTHER'")
                 doc_category = DocumentCategory.OTHER
 
             # Log the document upload attempt
             current_app.logger.info(
-                f"Attempting to save document: {title} for company: {company_id}, task: {task_id}, category: {document_category}")
+                f"Document upload attempt: Title: '{title}', Company: {company_id}, Task: {task_id}, Route: {route_id}, Category: {document_category}, User: {current_user.username} (ID: {current_user.id})"
+            )
 
             # Save document and get file information
             file_path, file_type, file_size = save_document(document_file, task_id, company_id)
 
             if not file_path:
-                flash('Error saving document. Please check file type and size.', 'danger')
+                error_msg = 'Error saving document. Please check file type and size.'
+                current_app.logger.error(
+                    f"Document upload failed: {error_msg} File: '{document_file.filename}', User: {current_user.username} (ID: {current_user.id})"
+                )
+                flash(error_msg, 'danger')
                 return redirect(url_for('documents.upload_document'))
 
             # Create document record
@@ -175,6 +185,10 @@ def upload_document():
             db.session.add(document)
             db.session.commit()
 
+            # Log successful upload
+            current_app.logger.info(
+                f"Document uploaded successfully: Title: '{title}', Type: {file_type}, Size: {file_size} bytes, Path: {file_path}, User: {current_user.username} (ID: {current_user.id})"
+            )
             log_action(ActionType.CREATE, f"Uploaded document: {title}", db)
             flash('Document uploaded successfully!', 'success')
 
@@ -188,9 +202,9 @@ def upload_document():
 
         except Exception as e:
             db.session.rollback()
-            current_app.logger.error(f"Error uploading document: {str(e)}")
-            import traceback
-            current_app.logger.error(traceback.format_exc())
+            # Enhanced error logging with full traceback
+            error_trace = traceback.format_exc()
+            current_app.logger.error(f"Document upload error: {str(e)}\nUser: {current_user.username} (ID: {current_user.id})\nTraceback: {error_trace}")
             flash(f'Error uploading document: {str(e)}', 'danger')
 
     return render_template(
@@ -265,7 +279,11 @@ def delete_document(document_id):
 
     # Check if user has permission to delete this document
     if not _can_delete_document(document):
-        flash('You do not have permission to delete this document.', 'danger')
+        unauthorized_msg = 'You do not have permission to delete this document.'
+        current_app.logger.warning(
+            f"Unauthorized document deletion attempt: Document: '{document.title}' (ID: {document.id}), User: {current_user.username} (ID: {current_user.id})"
+        )
+        flash(unauthorized_msg, 'danger')
         return redirect(url_for('documents.view_document', document_id=document_id))
 
     try:
@@ -274,14 +292,28 @@ def delete_document(document_id):
         route_id = document.route_id
         category = document.document_category.value if document.document_category else None
 
+        # Log deletion attempt
+        current_app.logger.info(
+            f"Document deletion attempt: Title: '{document.title}' (ID: {document.id}), Type: {document.file_type}, Path: {document.file_path}, User: {current_user.username} (ID: {current_user.id})"
+        )
+
         # Delete the file from storage
-        delete_file(document.file_path)
+        delete_result = delete_file(document.file_path)
+        if not delete_result:
+            # Log file deletion failure but proceed with database deletion
+            current_app.logger.warning(
+                f"File deletion failed but proceeding with database record deletion: Path: {document.file_path}, Document: '{document.title}' (ID: {document.id}), User: {current_user.username} (ID: {current_user.id})"
+            )
 
         # Delete the database record
         title = document.title
         db.session.delete(document)
         db.session.commit()
 
+        # Log successful deletion
+        current_app.logger.info(
+            f"Document deleted successfully: Title: '{title}' (ID: {document_id}), User: {current_user.username} (ID: {current_user.id})"
+        )
         log_action(ActionType.DELETE, f"Deleted document: {title}", db)
         flash(f'Document "{title}" deleted successfully!', 'success')
 
@@ -295,6 +327,11 @@ def delete_document(document_id):
 
     except Exception as e:
         db.session.rollback()
+        # Enhanced error logging with full traceback
+        error_trace = traceback.format_exc()
+        current_app.logger.error(
+            f"Document deletion error: {str(e)}\nDocument: '{document.title}' (ID: {document.id}), User: {current_user.username} (ID: {current_user.id})\nTraceback: {error_trace}"
+        )
         flash(f'Error deleting document: {str(e)}', 'danger')
         return redirect(url_for('documents.view_document', document_id=document_id))
 
@@ -309,7 +346,11 @@ def edit_document(document_id):
 
     # Check if user has permission to edit this document
     if not _can_edit_document(document):
-        flash('You do not have permission to edit this document.', 'danger')
+        unauthorized_msg = 'You do not have permission to edit this document.'
+        current_app.logger.warning(
+            f"Unauthorized document edit attempt: Document: '{document.title}' (ID: {document.id}), User: {current_user.username} (ID: {current_user.id})"
+        )
+        flash(unauthorized_msg, 'danger')
         return redirect(url_for('documents.view_document', document_id=document_id))
 
     # Create form
@@ -337,7 +378,11 @@ def edit_document(document_id):
     else:
         # Non-admins can only assign to their company
         if not company_id:
-            flash('You are not associated with a company.', 'danger')
+            error_msg = 'You are not associated with a company.'
+            current_app.logger.warning(
+                f"Document edit failed: {error_msg} User: {current_user.username} (ID: {current_user.id})"
+            )
+            flash(error_msg, 'danger')
             return redirect(url_for('documents.view_document', document_id=document_id))
 
         # Hide company field for non-admins
@@ -369,33 +414,67 @@ def edit_document(document_id):
 
     if form.validate_on_submit():
         try:
+            # Log edit attempt
+            current_app.logger.info(
+                f"Document edit attempt: Title: '{document.title}' (ID: {document.id}), User: {current_user.username} (ID: {current_user.id})"
+            )
+
+            # Track changes for logging
+            changes = []
+
             # Update document metadata
-            document.title = form.title.data
+            if document.title != form.title.data:
+                old_title = document.title
+                document.title = form.title.data
+                changes.append(f"Title: '{old_title}' → '{document.title}'")
 
             # Update task if changed
             if hasattr(form, 'task_id'):
                 new_task_id = form.task_id.data if form.task_id.data != 0 else None
                 if new_task_id != document.task_id:
+                    old_task_id = document.task_id
                     document.task_id = new_task_id
+                    changes.append(f"Task ID: {old_task_id} → {document.task_id}")
+
                     if new_task_id:
+                        old_category = document.document_category.value if document.document_category else None
                         document.document_category = DocumentCategory.TASK
+                        changes.append(f"Category: {old_category} → {document.document_category.value}")
                     elif document.document_category == DocumentCategory.TASK:
+                        old_category = document.document_category.value
                         document.document_category = DocumentCategory.OTHER
+                        changes.append(f"Category: {old_category} → {document.document_category.value}")
 
             # Update company if allowed and changed
             if hasattr(form, 'company_id') and form.company_id.data != document.company_id:
+                old_company_id = document.company_id
                 document.company_id = form.company_id.data
+                changes.append(f"Company ID: {old_company_id} → {document.company_id}")
 
             # Update document category if provided
             category = request.form.get('document_category')
             if category:
                 try:
+                    old_category = document.document_category.value if document.document_category else None
                     document.document_category = DocumentCategory(category.lower())
+                    if old_category != document.document_category.value:
+                        changes.append(f"Category: {old_category} → {document.document_category.value}")
                 except ValueError:
+                    current_app.logger.warning(
+                        f"Invalid document category provided: {category}. Using default category 'OTHER'. User: {current_user.username} (ID: {current_user.id})"
+                    )
+                    old_category = document.document_category.value if document.document_category else None
                     document.document_category = DocumentCategory.OTHER
+                    if old_category != document.document_category.value:
+                        changes.append(f"Category: {old_category} → {document.document_category.value}")
 
             db.session.commit()
 
+            # Log successful edit with details of changes
+            changes_str = ', '.join(changes) if changes else 'No changes made'
+            current_app.logger.info(
+                f"Document updated successfully: ID: {document.id}, {changes_str}, User: {current_user.username} (ID: {current_user.id})"
+            )
             log_action(ActionType.UPDATE, f"Updated document: {document.title}", db)
             flash('Document updated successfully!', 'success')
 
@@ -403,6 +482,11 @@ def edit_document(document_id):
 
         except Exception as e:
             db.session.rollback()
+            # Enhanced error logging with full traceback
+            error_trace = traceback.format_exc()
+            current_app.logger.error(
+                f"Document edit error: {str(e)}\nDocument: '{document.title}' (ID: {document.id}), User: {current_user.username} (ID: {current_user.id})\nTraceback: {error_trace}"
+            )
             flash(f'Error updating document: {str(e)}', 'danger')
 
     return render_template(
