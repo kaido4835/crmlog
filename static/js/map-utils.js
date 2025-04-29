@@ -61,49 +61,54 @@ function initMap(containerId, options = {}) {
 function extractCoordinatesFromGoogleMapsUrl(url) {
     try {
         // Handle different URL formats
+        console.log('Attempting to extract coordinates from URL:', url);
 
-        // Format 1: https://maps.app.goo.gl/JSibkzBSQSouqJBM6
-        if (url.includes('maps.app.goo.gl')) {
-            // For short URLs, we can't extract directly - need to make an API request
-            // This would require server-side processing or using a redirect service
-            console.log('Short Google Maps URL detected. Coordinates cannot be extracted directly.');
-            return null;
+        // Check if it's a short URL
+        if (url.includes('maps.app.goo.gl') || url.includes('goo.gl/maps')) {
+            // For short URLs, we need to use the server-side endpoint
+            console.log('Short Google Maps URL detected. Using server endpoint...');
+            return processShortUrl(url);
         }
 
-        // Format 2: https://www.google.com/maps?q=51.507,-0.127
-        if (url.includes('google.com/maps?q=')) {
-            const match = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-            if (match) {
-                return {
-                    lat: parseFloat(match[1]),
-                    lng: parseFloat(match[2])
-                };
-            }
+        // Format: https://www.google.com/maps?q=51.507,-0.127
+        const queryParamMatch = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+        if (queryParamMatch) {
+            console.log('Extracted coordinates from q= format:', queryParamMatch[1], queryParamMatch[2]);
+            return {
+                lat: parseFloat(queryParamMatch[1]),
+                lng: parseFloat(queryParamMatch[2])
+            };
         }
 
-        // Format 3: https://www.google.com/maps/@51.507,-0.127,15z
-        if (url.includes('google.com/maps/@')) {
-            const match = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-            if (match) {
-                return {
-                    lat: parseFloat(match[1]),
-                    lng: parseFloat(match[2])
-                };
-            }
+        // Format: https://www.google.com/maps/@51.507,-0.127,15z
+        const atSymbolMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+        if (atSymbolMatch) {
+            console.log('Extracted coordinates from @ format:', atSymbolMatch[1], atSymbolMatch[2]);
+            return {
+                lat: parseFloat(atSymbolMatch[1]),
+                lng: parseFloat(atSymbolMatch[2])
+            };
         }
 
-        // Format 4: https://www.google.com/maps/place/.../@51.507,-0.127,15z/...
-        if (url.includes('google.com/maps/place/')) {
-            const match = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-            if (match) {
-                return {
-                    lat: parseFloat(match[1]),
-                    lng: parseFloat(match[2])
-                };
-            }
+        // Format: https://www.google.com/maps/search/51.507,+-0.127/
+        const searchFormatMatch = url.match(/\/maps\/search\/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+        if (searchFormatMatch) {
+            console.log('Extracted coordinates from search format:', searchFormatMatch[1], searchFormatMatch[2]);
+            return {
+                lat: parseFloat(searchFormatMatch[1]),
+                lng: parseFloat(searchFormatMatch[2])
+            };
         }
 
-        // Handle more URL formats if needed
+        // Format: https://www.google.com/maps/place/...!3d51.507!4d-0.127...
+        const detailedFormatMatch = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+        if (detailedFormatMatch) {
+            console.log('Extracted coordinates from !3d!4d format:', detailedFormatMatch[1], detailedFormatMatch[2]);
+            return {
+                lat: parseFloat(detailedFormatMatch[1]),
+                lng: parseFloat(detailedFormatMatch[2])
+            };
+        }
 
         console.log('Coordinates not found in Google Maps URL');
         return null;
@@ -111,6 +116,46 @@ function extractCoordinatesFromGoogleMapsUrl(url) {
         console.error('Error extracting coordinates:', error);
         return null;
     }
+}
+
+/**
+ * Process a short Google Maps URL using server-side endpoint
+ * @param {string} url - Short Google Maps URL
+ * @returns {Promise<object|null>} Promise resolving to coordinates or null if invalid
+ */
+function processShortUrl(url) {
+    return new Promise((resolve, reject) => {
+        fetch('/routes/process-short-url', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ url: url })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server responded with status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.latitude && data.longitude) {
+                console.log('Server successfully processed short URL:', data);
+                resolve({
+                    lat: data.latitude,
+                    lng: data.longitude
+                });
+            } else {
+                console.warn('Server could not extract coordinates:', data.error || 'Unknown error');
+                resolve(null);
+            }
+        })
+        .catch(error => {
+            console.error('Error processing short URL:', error);
+            resolve(null);
+        });
+    });
 }
 
 /**
@@ -241,71 +286,65 @@ function calculateTotalDistance(points) {
 }
 
 /**
- * Generate waypoints between two points
- * @param {Array} startPoint - [lat, lng] of start point
- * @param {Array} endPoint - [lat, lng] of end point
- * @param {number} count - Number of waypoints to generate
- * @param {number} randomness - Factor of randomness (0-1), 0 means straight line
- * @returns {Array} Array of waypoint coordinates [lat, lng]
- */
-function generateWaypoints(startPoint, endPoint, count = 3, randomness = 0.2) {
-    const waypoints = [];
-
-    // If no points to generate, return empty array
-    if (count <= 0) {
-        return waypoints;
-    }
-
-    // Calculate distance between points to determine scale of randomness
-    const distance = calculateDistance(startPoint, endPoint);
-    // Maximum deviation from straight line (in km)
-    const maxDeviation = distance * randomness;
-
-    for (let i = 1; i <= count; i++) {
-        // Calculate position along straight line
-        const fraction = i / (count + 1);
-        const lat = startPoint[0] + fraction * (endPoint[0] - startPoint[0]);
-        const lng = startPoint[1] + fraction * (endPoint[1] - startPoint[1]);
-
-        // Add random deviation (perpendicular to the route)
-        // First get direction vector
-        const dx = endPoint[0] - startPoint[0];
-        const dy = endPoint[1] - startPoint[1];
-
-        // Calculate perpendicular vector
-        const length = Math.sqrt(dx*dx + dy*dy);
-        const perpX = -dy / length;
-        const perpY = dx / length;
-
-        // Generate random deviation
-        const deviation = (Math.random() * 2 - 1) * maxDeviation;
-
-        // Convert deviation to coordinate offsets (approximation)
-        // 111.32 km = 1 degree latitude
-        // 111.32 * cos(latitude) km = 1 degree longitude
-        const latOffset = (deviation * perpX) / 111.32;
-        const lngOffset = (deviation * perpY) / (111.32 * Math.cos(lat * Math.PI / 180));
-
-        waypoints.push([lat + latOffset, lng + lngOffset]);
-    }
-
-    return waypoints;
-}
-
-/**
  * Geocode an address using Nominatim (OpenStreetMap)
  * @param {string} address - Address to geocode
  * @returns {Promise} Promise that resolves to coordinates {lat, lng} or null
  */
 function geocodeAddress(address) {
     return new Promise((resolve, reject) => {
+        console.log('Geocoding address:', address);
+
+        // Check if it's a Google Maps URL first
+        if (address.includes('google.com/maps') || address.includes('maps.app.goo.gl') || address.includes('goo.gl/maps')) {
+            const coords = extractCoordinatesFromGoogleMapsUrl(address);
+            if (coords && typeof coords.then === 'function') {
+                // It's a promise (for short URLs)
+                coords.then(result => {
+                    if (result) {
+                        resolve(result);
+                    } else {
+                        // Fall back to Nominatim if extracting from URL failed
+                        geocodeWithNominatim(address).then(resolve).catch(reject);
+                    }
+                });
+            } else if (coords) {
+                // Direct result
+                resolve(coords);
+            } else {
+                // Fall back to Nominatim if extracting from URL failed
+                geocodeWithNominatim(address).then(resolve).catch(reject);
+            }
+        } else {
+            // Not a Google Maps URL, use Nominatim
+            geocodeWithNominatim(address).then(resolve).catch(reject);
+        }
+    });
+}
+
+/**
+ * Geocode an address using Nominatim
+ * @param {string} address - Address to geocode
+ * @returns {Promise} Promise that resolves to coordinates {lat, lng} or null
+ */
+function geocodeWithNominatim(address) {
+    return new Promise((resolve, reject) => {
         const encodedAddress = encodeURIComponent(address);
 
         // Use OpenStreetMap's Nominatim for geocoding
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`)
-            .then(response => response.json())
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1`, {
+            headers: {
+                'User-Agent': 'LogisticsCRM/1.0'
+            }
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Geocoding failed with status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => {
                 if (data && data.length > 0) {
+                    console.log('Geocoding result:', data[0]);
                     resolve({
                         lat: parseFloat(data[0].lat),
                         lng: parseFloat(data[0].lon)
@@ -328,10 +367,11 @@ function geocodeAddress(address) {
  * @param {function} onStartChange - Callback for start point changes
  * @param {function} onEndChange - Callback for end point changes
  * @param {function} onRouteChange - Callback for route changes (with distance and time)
- * @param {number} waypointCount - Number of waypoints to generate automatically
  * @returns {object} Object with map and control functions
  */
-function initRouteCreationMap(containerId, onStartChange, onEndChange, onRouteChange, waypointCount = 3) {
+function initRouteCreationMap(containerId, onStartChange, onEndChange, onRouteChange) {
+    console.log('Initializing route creation map');
+
     // Initialize map
     const map = initMap(containerId);
 
@@ -360,9 +400,6 @@ function initRouteCreationMap(containerId, onStartChange, onEndChange, onRouteCh
         })
     });
 
-    // Track waypoint markers
-    let waypointMarkers = [];
-
     // Initialize route
     let route = createRoute(
         map,
@@ -372,59 +409,27 @@ function initRouteCreationMap(containerId, onStartChange, onEndChange, onRouteCh
 
     // Update route when markers are moved
     function updateRoute() {
+        console.log('Updating route');
         const startPoint = [startMarker.getLatLng().lat, startMarker.getLatLng().lng];
         const endPoint = [endMarker.getLatLng().lat, endMarker.getLatLng().lng];
 
-        // Remove old route and waypoint markers
+        // Remove old route
         map.removeLayer(route);
-        waypointMarkers.forEach(marker => map.removeLayer(marker));
-        waypointMarkers = [];
 
-        // Generate waypoints
-        const generatedWaypoints = generateWaypoints(startPoint, endPoint, waypointCount);
-
-        // Create waypoint markers
-        generatedWaypoints.forEach((waypoint, index) => {
-            const waypointMarker = addMarker(map, waypoint[0], waypoint[1], {
-                draggable: false,
-                title: `Waypoint ${index + 1}`,
-                popupContent: `Waypoint ${index + 1}`,
-                icon: L.divIcon({
-                    className: 'custom-div-icon',
-                    html: '<div style="background-color: #0d6efd; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white;"></div>',
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
-                })
-            });
-            waypointMarkers.push(waypointMarker);
-        });
-
-        // Create new route with waypoints
-        route = createRoute(map, startPoint, endPoint, generatedWaypoints);
+        // Create new route
+        route = createRoute(map, startPoint, endPoint);
 
         // Calculate distance and time
-        const routePoints = [startPoint, ...generatedWaypoints, endPoint];
-        const distance = calculateTotalDistance(routePoints);
+        const distance = calculateDistance(startPoint, endPoint);
         const time = estimateTravelTime(distance);
 
-        // Transform waypoints to JSON structure for form
-        const waypointsData = generatedWaypoints.map((point, index) => {
-            return {
-                location: `Waypoint ${index + 1}`,
-                lat: point[0],
-                lng: point[1],
-                type: 'stop',
-                completed: false
-            };
-        });
+        console.log(`Route updated: ${distance.toFixed(2)} km, ${time} minutes`);
 
         // Call callback with route details
         if (typeof onRouteChange === 'function') {
             onRouteChange({
                 startPoint: startPoint,
                 endPoint: endPoint,
-                waypoints: generatedWaypoints,
-                waypointsData: waypointsData,
                 distance: distance.toFixed(2),
                 time: time
             });
@@ -433,6 +438,7 @@ function initRouteCreationMap(containerId, onStartChange, onEndChange, onRouteCh
 
     // Event handlers for marker drag events
     startMarker.on('dragend', function(event) {
+        console.log('Start marker dragged');
         updateRoute();
 
         if (typeof onStartChange === 'function') {
@@ -442,6 +448,7 @@ function initRouteCreationMap(containerId, onStartChange, onEndChange, onRouteCh
     });
 
     endMarker.on('dragend', function(event) {
+        console.log('End marker dragged');
         updateRoute();
 
         if (typeof onEndChange === 'function') {
@@ -450,42 +457,56 @@ function initRouteCreationMap(containerId, onStartChange, onEndChange, onRouteCh
         }
     });
 
-    // Set points by coordinates
+    // Set points by coordinates - with updateRoute call
     function setStartPoint(lat, lng) {
+        console.log(`Setting start point to: ${lat}, ${lng}`);
         startMarker.setLatLng([lat, lng]);
+        // Explicitly call updateRoute after setting point
         updateRoute();
     }
 
     function setEndPoint(lat, lng) {
+        console.log(`Setting end point to: ${lat}, ${lng}`);
         endMarker.setLatLng([lat, lng]);
+        // Explicitly call updateRoute after setting point
         updateRoute();
     }
 
-    // Set points by address
+    // Set points by address - with better error handling
     function setStartByAddress(address) {
-        return geocodeAddress(address).then(coords => {
-            if (coords) {
-                setStartPoint(coords.lat, coords.lng);
-                return true;
-            }
-            return false;
-        });
+        console.log('Setting start point by address:', address);
+        return geocodeAddress(address)
+            .then(coords => {
+                if (coords) {
+                    console.log(`Address resolved to coordinates: ${coords.lat}, ${coords.lng}`);
+                    setStartPoint(coords.lat, coords.lng);
+                    return true;
+                }
+                console.warn('Could not geocode address for start point');
+                return false;
+            })
+            .catch(error => {
+                console.error('Error setting start point by address:', error);
+                return false;
+            });
     }
 
     function setEndByAddress(address) {
-        return geocodeAddress(address).then(coords => {
-            if (coords) {
-                setEndPoint(coords.lat, coords.lng);
-                return true;
-            }
-            return false;
-        });
-    }
-
-    // Set number of waypoints
-    function setWaypointCount(count) {
-        waypointCount = count;
-        updateRoute();
+        console.log('Setting end point by address:', address);
+        return geocodeAddress(address)
+            .then(coords => {
+                if (coords) {
+                    console.log(`Address resolved to coordinates: ${coords.lat}, ${coords.lng}`);
+                    setEndPoint(coords.lat, coords.lng);
+                    return true;
+                }
+                console.warn('Could not geocode address for end point');
+                return false;
+            })
+            .catch(error => {
+                console.error('Error setting end point by address:', error);
+                return false;
+            });
     }
 
     // Initialize route calculation
@@ -496,13 +517,11 @@ function initRouteCreationMap(containerId, onStartChange, onEndChange, onRouteCh
         map,
         startMarker,
         endMarker,
-        waypointMarkers,
         route,
         setStartPoint,
         setEndPoint,
         setStartByAddress,
         setEndByAddress,
-        setWaypointCount,
         updateRoute
     };
 }

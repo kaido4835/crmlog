@@ -1,4 +1,7 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
+import re
+
+import requests
+from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify, current_app
 from flask_login import login_required, current_user
 from datetime import datetime
 from sqlalchemy import or_
@@ -801,3 +804,86 @@ def geocode_maps_url():
     log_action(ActionType.VIEW, f"Extracted coordinates from Google Maps URL", db)
 
     return jsonify(result)
+
+
+@routes.route('/process-short-url', methods=['POST'])
+@login_required
+def process_short_url():
+    """
+    Process a short Google Maps URL and extract coordinates
+    """
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'Invalid request format, expected JSON'}), 400
+
+    data = request.json
+    url = data.get('url')
+
+    if not url:
+        return jsonify({'success': False, 'error': 'No URL provided'}), 400
+
+    try:
+        latitude, longitude = get_coordinates(url)
+
+        if latitude is not None and longitude is not None:
+            return jsonify({
+                'success': True,
+                'latitude': latitude,
+                'longitude': longitude
+            })
+        else:
+            return jsonify({'success': False, 'error': 'Could not extract coordinates from URL'}), 404
+
+    except Exception as e:
+        log_action(ActionType.ERROR, f"Error processing URL: {str(e)}", db)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def get_coordinates(short_url):
+    """
+    Extract coordinates from a Google Maps URL by following redirects
+
+    Args:
+        short_url: Short or full Google Maps URL
+
+    Returns:
+        tuple: (latitude, longitude) or (None, None) if extraction failed
+    """
+    try:
+        # Add timeout and user agent for better reliability
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        response = requests.get(short_url, allow_redirects=True, timeout=10, headers=headers)
+        full_url = response.url
+
+        # Log for debugging
+        current_app.logger.info(f"Processing URL: {short_url} -> {full_url}")
+
+        # Try different patterns to extract coordinates
+
+        # Pattern 1: /maps/search/lat,long
+        match = re.search(r'/maps/search/([-+]?\d+\.\d+),\s*([-+]?\d+\.\d+)', full_url)
+        if match:
+            return float(match.group(1)), float(match.group(2))
+
+        # Pattern 2: @lat,long
+        match = re.search(r'@([-+]?\d+\.\d+),([-+]?\d+\.\d+)', full_url)
+        if match:
+            return float(match.group(1)), float(match.group(2))
+
+        # Pattern 3: !3dlat!4dlong
+        match = re.search(r'!3d([-+]?\d+\.\d+)!4d([-+]?\d+\.\d+)', full_url)
+        if match:
+            return float(match.group(1)), float(match.group(2))
+
+        # Pattern 4: q=lat,long
+        match = re.search(r'q=([-+]?\d+\.\d+),([-+]?\d+\.\d+)', full_url)
+        if match:
+            return float(match.group(1)), float(match.group(2))
+
+        # If we reach here, we couldn't extract coordinates
+        return None, None
+
+    except requests.RequestException as e:
+        current_app.logger.error(f"Error processing URL {short_url}: {e}")
+        return None, None

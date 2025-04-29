@@ -45,6 +45,14 @@
         border-radius: 50%;
         border: 3px solid white;
     }
+
+    .waypoint-marker {
+        background-color: #0d6efd;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
 </style>
 {% endblock %}
 
@@ -229,122 +237,118 @@
             3
         );
 
-        // Handle start point search button with improved Google Maps URL support
-        document.getElementById('searchStartBtn').addEventListener('click', function() {
+        // Handle start point search button with enhanced Google Maps URL support
+        document.getElementById('searchStartBtn').addEventListener('click', async function(e) {
+            e.preventDefault(); // Prevent form submission
             const startInput = document.getElementById('startPoint');
             const address = startInput.value.trim();
 
-            if (address) {
-                // Show loading indicator
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            if (!address) {
+                alert('Please enter a start location address or URL');
+                return;
+            }
 
+            // Show loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            this.disabled = true;
+
+            let success = false;
+
+            try {
                 if (address.includes('google.com/maps') || address.includes('goo.gl/maps') || address.includes('maps.app.goo.gl')) {
                     // Handle as Google Maps URL
-                    extractCoordinatesFromGoogleMapsUrl(address)
-                        .then(coords => {
-                            // Reset button
-                            this.innerHTML = '<i class="fas fa-search"></i>';
+                    const coords = await extractCoordinatesFromGoogleMapsUrl(address);
 
-                            if (coords) {
-                                console.log('Found coordinates:', coords);
-                                routeMap.setStartPoint(coords.lat, coords.lng);
-                            } else {
-                                // Try as regular address if URL extraction failed
-                                routeMap.setStartByAddress(address).then(success => {
-                                    if (!success) {
-                                        alert('Could not find location from the provided Google Maps link. Please try a different address or format.');
-                                    }
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error processing Google Maps URL:', error);
-                            this.innerHTML = '<i class="fas fa-search"></i>';
-                            alert('Error processing the Google Maps link. Please try a different address or format.');
-                        });
+                    if (coords) {
+                        console.log('Found coordinates:', coords);
+                        routeMap.setStartPoint(coords.lat, coords.lng);
+                        success = true;
+                    } else {
+                        // Try as regular address if URL extraction failed
+                        success = await routeMap.setStartByAddress(address);
+                    }
                 } else {
                     // Handle as regular address
-                    routeMap.setStartByAddress(address)
-                        .then(success => {
-                            // Reset button
-                            this.innerHTML = '<i class="fas fa-search"></i>';
-
-                            if (!success) {
-                                alert('Could not find location. Please try a different address.');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error geocoding address:', error);
-                            this.innerHTML = '<i class="fas fa-search"></i>';
-                            alert('Error finding the location. Please try a different address.');
-                        });
+                    success = await routeMap.setStartByAddress(address);
                 }
+            } catch (error) {
+                console.error('Error processing location:', error);
+            }
+
+            // Restore button state
+            this.innerHTML = '<i class="fas fa-search"></i>';
+            this.disabled = false;
+
+            if (!success) {
+                alert('Could not find the location. Please try a different address or format.');
             }
         });
 
-        // Handle end point search button with improved Google Maps URL support
-        document.getElementById('searchEndBtn').addEventListener('click', function() {
+        // Handle end point search button with enhanced Google Maps URL support
+        document.getElementById('searchEndBtn').addEventListener('click', async function(e) {
+            e.preventDefault(); // Prevent form submission
             const endInput = document.getElementById('endPoint');
             const address = endInput.value.trim();
 
-            if (address) {
-                // Show loading indicator
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            if (!address) {
+                alert('Please enter an end location address or URL');
+                return;
+            }
 
+            // Show loading state
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            this.disabled = true;
+
+            let success = false;
+
+            try {
                 if (address.includes('google.com/maps') || address.includes('goo.gl/maps') || address.includes('maps.app.goo.gl')) {
                     // Handle as Google Maps URL
-                    extractCoordinatesFromGoogleMapsUrl(address)
-                        .then(coords => {
-                            // Reset button
-                            this.innerHTML = '<i class="fas fa-search"></i>';
+                    const coords = await extractCoordinatesFromGoogleMapsUrl(address);
 
-                            if (coords) {
-                                console.log('Found coordinates:', coords);
-                                routeMap.setEndPoint(coords.lat, coords.lng);
-                            } else {
-                                // Try as regular address if URL extraction failed
-                                routeMap.setEndByAddress(address).then(success => {
-                                    if (!success) {
-                                        alert('Could not find location from the provided Google Maps link. Please try a different address or format.');
-                                    }
-                                });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error processing Google Maps URL:', error);
-                            this.innerHTML = '<i class="fas fa-search"></i>';
-                            alert('Error processing the Google Maps link. Please try a different address or format.');
-                        });
+                    if (coords) {
+                        console.log('Found coordinates:', coords);
+                        routeMap.setEndPoint(coords.lat, coords.lng);
+                        success = true;
+                    } else {
+                        // Try as regular address if URL extraction failed
+                        success = await routeMap.setEndByAddress(address);
+                    }
                 } else {
                     // Handle as regular address
-                    routeMap.setEndByAddress(address)
-                        .then(success => {
-                            // Reset button
-                            this.innerHTML = '<i class="fas fa-search"></i>';
-
-                            if (!success) {
-                                alert('Could not find location. Please try a different address.');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error geocoding address:', error);
-                            this.innerHTML = '<i class="fas fa-search"></i>';
-                            alert('Error finding the location. Please try a different address.');
-                        });
+                    success = await routeMap.setEndByAddress(address);
                 }
+            } catch (error) {
+                console.error('Error processing location:', error);
+            }
+
+            // Restore button state
+            this.innerHTML = '<i class="fas fa-search"></i>';
+            this.disabled = false;
+
+            if (!success) {
+                alert('Could not find the location. Please try a different address or format.');
             }
         });
 
         // Handle generate waypoints button
         document.getElementById('generateWaypointsBtn').addEventListener('click', function() {
             const count = parseInt(document.getElementById('waypointCount').value, 10);
-            routeMap.setWaypointCount(count);
+            if (typeof routeMap.setWaypointCount === 'function') {
+                routeMap.setWaypointCount(count);
+            } else {
+                console.warn('setWaypointCount function not available in routeMap');
+            }
         });
 
         // Handle waypoint count change
         document.getElementById('waypointCount').addEventListener('change', function() {
             const count = parseInt(this.value, 10);
-            routeMap.setWaypointCount(count);
+            if (typeof routeMap.setWaypointCount === 'function') {
+                routeMap.setWaypointCount(count);
+            } else {
+                console.warn('setWaypointCount function not available in routeMap');
+            }
         });
 
         // Function to update waypoints list UI
@@ -404,16 +408,111 @@
             }
         });
 
-        // Add debug logging for URL paste events
+        // Add event listeners for the input fields to handle direct URL pasting
         const startInput = document.getElementById('startPoint');
         const endInput = document.getElementById('endPoint');
 
+        // Debug paste event listeners
         startInput.addEventListener('paste', function(e) {
             console.log('Pasted content to start point:', e.clipboardData.getData('text'));
+
+            // Add a slight delay to allow the paste to complete
+            setTimeout(() => {
+                const address = this.value;
+                if (address.includes('google.com/maps') || address.includes('goo.gl/maps') || address.includes('maps.app.goo.gl')) {
+                    // Show loading indicator near the input
+                    const loadingIndicator = document.createElement('span');
+                    loadingIndicator.className = 'input-group-text';
+                    loadingIndicator.id = 'start-loading';
+                    loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                    // Insert the indicator after the input but before the search button
+                    this.parentNode.insertBefore(loadingIndicator, this.nextSibling);
+
+                    extractCoordinatesFromGoogleMapsUrl(address)
+                        .then(coords => {
+                            if (coords) {
+                                console.log('Auto-extracted coordinates from pasted URL:', coords);
+                                routeMap.setStartPoint(coords.lat, coords.lng);
+                            }
+
+                            // Remove loading indicator
+                            const indicator = document.getElementById('start-loading');
+                            if (indicator) indicator.remove();
+                        })
+                        .catch(error => {
+                            console.error('Error auto-processing pasted URL:', error);
+                            const indicator = document.getElementById('start-loading');
+                            if (indicator) indicator.remove();
+                        });
+                }
+            }, 100);
         });
 
         endInput.addEventListener('paste', function(e) {
             console.log('Pasted content to end point:', e.clipboardData.getData('text'));
+
+            // Add a slight delay to allow the paste to complete
+            setTimeout(() => {
+                const address = this.value;
+                if (address.includes('google.com/maps') || address.includes('goo.gl/maps') || address.includes('maps.app.goo.gl')) {
+                    // Show loading indicator near the input
+                    const loadingIndicator = document.createElement('span');
+                    loadingIndicator.className = 'input-group-text';
+                    loadingIndicator.id = 'end-loading';
+                    loadingIndicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                    // Insert the indicator after the input but before the search button
+                    this.parentNode.insertBefore(loadingIndicator, this.nextSibling);
+
+                    extractCoordinatesFromGoogleMapsUrl(address)
+                        .then(coords => {
+                            if (coords) {
+                                console.log('Auto-extracted coordinates from pasted URL:', coords);
+                                routeMap.setEndPoint(coords.lat, coords.lng);
+                            }
+
+                            // Remove loading indicator
+                            const indicator = document.getElementById('end-loading');
+                            if (indicator) indicator.remove();
+                        })
+                        .catch(error => {
+                            console.error('Error auto-processing pasted URL:', error);
+                            const indicator = document.getElementById('end-loading');
+                            if (indicator) indicator.remove();
+                        });
+                }
+            }, 100);
+        });
+
+        // Add change event listeners for input fields to handle manually entered URLs
+        startInput.addEventListener('change', function() {
+            const address = this.value.trim();
+            if (address.includes('google.com/maps') || address.includes('goo.gl/maps') || address.includes('maps.app.goo.gl')) {
+                document.getElementById('searchStartBtn').click();
+            }
+        });
+
+        endInput.addEventListener('change', function() {
+            const address = this.value.trim();
+            if (address.includes('google.com/maps') || address.includes('goo.gl/maps') || address.includes('maps.app.goo.gl')) {
+                document.getElementById('searchEndBtn').click();
+            }
+        });
+
+        // Make pressing Enter in the input fields trigger the search buttons
+        startInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                document.getElementById('searchStartBtn').click();
+            }
+        });
+
+        endInput.addEventListener('keydown', function(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                document.getElementById('searchEndBtn').click();
+            }
         });
     });
 </script>
