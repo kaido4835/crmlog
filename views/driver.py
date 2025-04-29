@@ -231,7 +231,8 @@ def documents():
     Show driver documents
     """
     page = request.args.get("page", 1, type=int)
-    category = request.args.get("category", "all").lower()  # Convert to lowercase to match enum values
+    # Не преобразуем в нижний регистр, чтобы сохранить оригинальный регистр
+    category = request.args.get("category", "all")
     search_term = request.args.get("search", '')
 
     # Create document query
@@ -260,16 +261,17 @@ def documents():
         )
     )
 
-    # Apply category filter
-    if category == 'task':
+    # Apply category filter - используем upper() для сравнения, поскольку предполагаем, что
+    # значения в enum DocumentCategory определены в верхнем регистре
+    if category.upper() == 'TASK':
         query = query.filter(Document.document_category == DocumentCategory.TASK)
-    elif category == 'route':
+    elif category.upper() == 'ROUTE':
         query = query.filter(Document.document_category == DocumentCategory.ROUTE)
-    elif category == 'personal':
+    elif category.upper() == 'PERSONAL':
         query = query.filter(Document.document_category == DocumentCategory.PERSONAL)
-    elif category == 'vehicle':
+    elif category.upper() == 'VEHICLE':
         query = query.filter(Document.document_category == DocumentCategory.VEHICLE)
-    elif category == 'other':
+    elif category.upper() == 'OTHER':
         query = query.filter(Document.document_category == DocumentCategory.OTHER)
 
     # Apply search filter
