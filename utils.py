@@ -242,6 +242,10 @@ def save_document(file, task_id, company_id):
         current_app.logger.info(f"Document saved successfully at: {file_path}")
         current_app.logger.info(f"Relative path for database: {relative_path}")
 
+        current_app.logger.info(f"Document saved successfully at: {file_path}")
+        current_app.logger.info(f"Relative path for database: {relative_path}")
+        current_app.logger.info(f"File type: {file_type}, File size: {file_size}")
+
         return (relative_path, file_type, file_size)
     except Exception as e:
         current_app.logger.error(f"Error saving document: {str(e)}")
