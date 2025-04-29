@@ -152,8 +152,8 @@ class Document(db.Model):
     file_type = db.Column(db.String(64), nullable=False)
     size = db.Column(db.Integer, nullable=False)  # in bytes
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
-    document_category = db.Column(Enum(DocumentCategory), default=DocumentCategory.OTHER, nullable=False)
-
+    document_category = db.Column(db.String(10), default="other",
+                                  nullable=False)
     uploader_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     task_id = db.Column(db.Integer, db.ForeignKey('tasks.id'), nullable=True, index=True)
     route_id = db.Column(db.Integer, db.ForeignKey('routes.id'), nullable=True, index=True)
