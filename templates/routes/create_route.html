@@ -224,196 +224,276 @@
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 <script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize the route creation map
-        const routeMap = initRouteCreationMap('routeMap',
-            // Start point change callback
-            function(coords) {
-                console.log('Start point changed:', coords);
-                // This function doesn't update the input field
-            },
-            // End point change callback
-            function(coords) {
-                console.log('End point changed:', coords);
-                // This function doesn't update the input field
-            },
-            // Route change callback (updates distance and time)
-            function(routeData) {
-                console.log('Route updated:', routeData);
-                document.getElementById('distance').value = routeData.distance;
-                document.getElementById('estimatedTime').value = routeData.time;
+    // Wait for DOM to be fully loaded
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the route creation map
+    const routeMap = initRouteCreationMap('routeMap',
+        // Start point change callback
+        function(coords) {
+            console.log('Start point changed:', coords);
+            // This doesn't update the input field, so we'll handle that explicitly below
+        },
+        // End point change callback
+        function(coords) {
+            console.log('End point changed:', coords);
+            // This doesn't update the input field, so we'll handle that explicitly below
+        },
+        // Route change callback (updates distance and time)
+        function(routeData) {
+            console.log('Route updated with data:', routeData);
+            // Update distance and time fields
+            document.getElementById('distance').value = routeData.distance;
+            document.getElementById('estimatedTime').value = routeData.time;
 
-                // Update waypoints JSON
-                updateWaypointsJson();
-            }
-        );
+            // Update waypoints JSON
+            updateWaypointsJson();
+        }
+    );
 
-        // Handle start point search button
-        document.getElementById('searchStartBtn').addEventListener('click', function() {
-            const startInput = document.getElementById('startPoint');
-            const address = startInput.value.trim();
+    // Enhanced start point search button
+    document.getElementById('searchStartBtn').addEventListener('click', function() {
+        const startInput = document.getElementById('startPoint');
+        const address = startInput.value.trim();
 
-            if (address) {
-                // First check if it's a Google Maps URL
-                const coords = extractCoordinatesFromGoogleMapsUrl(address);
-                if (coords) {
-                    routeMap.setStartPoint(coords.lat, coords.lng);
-                    return;
+        if (!address) {
+            alert('Please enter a start location address or URL');
+            return;
+        }
+
+        // Show loading state
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        this.disabled = true;
+
+        // First check if it's a Google Maps URL
+        const coords = extractCoordinatesFromGoogleMapsUrl(address);
+        if (coords) {
+            console.log('Extracted coordinates from URL:', coords);
+            routeMap.setStartPoint(coords.lat, coords.lng);
+            this.innerHTML = '<i class="fas fa-search"></i>';
+            this.disabled = false;
+            return;
+        }
+
+        // Otherwise treat as address
+        routeMap.setStartByAddress(address)
+            .then(success => {
+                this.innerHTML = '<i class="fas fa-search"></i>';
+                this.disabled = false;
+
+                if (!success) {
+                    alert('Could not find location. Please try a different address or format.');
                 }
+            })
+            .catch(error => {
+                console.error('Error searching for start location:', error);
+                this.innerHTML = '<i class="fas fa-search"></i>';
+                this.disabled = false;
+                alert('Error searching for location. Please try again or use a different address.');
+            });
+    });
 
-                // Otherwise treat as address
-                routeMap.setStartByAddress(address).then(success => {
-                    if (!success) {
-                        alert('Could not find location. Please try a different address.');
-                    }
-                });
-            }
-        });
+    // Enhanced end point search button
+    document.getElementById('searchEndBtn').addEventListener('click', function() {
+        const endInput = document.getElementById('endPoint');
+        const address = endInput.value.trim();
 
-        // Handle end point search button
-        document.getElementById('searchEndBtn').addEventListener('click', function() {
-            const endInput = document.getElementById('endPoint');
-            const address = endInput.value.trim();
+        if (!address) {
+            alert('Please enter an end location address or URL');
+            return;
+        }
 
-            if (address) {
-                // First check if it's a Google Maps URL
-                const coords = extractCoordinatesFromGoogleMapsUrl(address);
-                if (coords) {
-                    routeMap.setEndPoint(coords.lat, coords.lng);
-                    return;
+        // Show loading state
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        this.disabled = true;
+
+        // First check if it's a Google Maps URL
+        const coords = extractCoordinatesFromGoogleMapsUrl(address);
+        if (coords) {
+            console.log('Extracted coordinates from URL:', coords);
+            routeMap.setEndPoint(coords.lat, coords.lng);
+            this.innerHTML = '<i class="fas fa-search"></i>';
+            this.disabled = false;
+            return;
+        }
+
+        // Otherwise treat as address
+        routeMap.setEndByAddress(address)
+            .then(success => {
+                this.innerHTML = '<i class="fas fa-search"></i>';
+                this.disabled = false;
+
+                if (!success) {
+                    alert('Could not find location. Please try a different address or format.');
                 }
+            })
+            .catch(error => {
+                console.error('Error searching for end location:', error);
+                this.innerHTML = '<i class="fas fa-search"></i>';
+                this.disabled = false;
+                alert('Error searching for location. Please try again or use a different address.');
+            });
+    });
 
-                // Otherwise treat as address
-                routeMap.setEndByAddress(address).then(success => {
-                    if (!success) {
-                        alert('Could not find location. Please try a different address.');
-                    }
-                });
-            }
-        });
+    // Add waypoint button logic
+    document.getElementById('addWaypointBtn').addEventListener('click', function() {
+        // Reset modal fields
+        document.getElementById('waypointLocation').value = '';
+        document.getElementById('waypointType').value = 'pickup';
+        document.getElementById('waypointNotes').value = '';
 
-        // Waypoints functionality
-        let waypoints = [];
+        // Show modal
+        const waypointModal = new bootstrap.Modal(document.getElementById('addWaypointModal'));
+        waypointModal.show();
+    });
 
-        function updateWaypointsJson() {
-            const waypointsField = document.getElementById('waypointsJson');
+    // Save waypoint button logic
+    document.getElementById('saveWaypointBtn').addEventListener('click', function() {
+        const location = document.getElementById('waypointLocation').value.trim();
+        const type = document.getElementById('waypointType').value;
+        const notes = document.getElementById('waypointNotes').value.trim();
 
-            // Create waypoints array with map data
-            const waypointsData = waypoints.map((waypoint, index) => {
-                return {
-                    location: waypoint.location,
-                    type: waypoint.type,
-                    notes: waypoint.notes,
-                    lat: null, // These would be set from real map waypoints
-                    lng: null
-                };
+        if (location) {
+            // Add waypoint to array
+            waypoints.push({
+                location: location,
+                type: type,
+                notes: notes
             });
 
-            // Update JSON field
-            waypointsField.value = JSON.stringify(waypointsData);
+            // Update UI
+            renderWaypoints();
+            updateWaypointsJson();
+
+            // Close modal
+            bootstrap.Modal.getInstance(document.getElementById('addWaypointModal')).hide();
+        } else {
+            alert('Please enter a location for the waypoint.');
         }
-
-        function renderWaypoints() {
-            const waypointsList = document.getElementById('waypointsList');
-            waypointsList.innerHTML = '';
-
-            if (waypoints.length > 0) {
-                document.getElementById('waypointsContainer').classList.remove('d-none');
-
-                waypoints.forEach((waypoint, index) => {
-                    const waypointItem = document.createElement('div');
-                    waypointItem.className = 'list-group-item d-flex justify-content-between align-items-center';
-                    waypointItem.innerHTML = `
-                        <div>
-                            <strong>${waypoint.location}</strong>
-                            <span class="badge bg-${waypoint.type === 'pickup' ? 'info' : (waypoint.type === 'delivery' ? 'warning' : 'secondary')} ms-2">
-                                ${waypoint.type}
-                            </span>
-                            ${waypoint.notes ? `<div><small class="text-muted">${waypoint.notes}</small></div>` : ''}
-                        </div>
-                        <div>
-                            <button type="button" class="btn btn-sm btn-outline-danger" data-waypoint-index="${index}">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    `;
-
-                    // Add event listener for delete button
-                    const deleteBtn = waypointItem.querySelector('button');
-                    deleteBtn.addEventListener('click', function() {
-                        const waypointIndex = parseInt(this.dataset.waypointIndex);
-                        waypoints.splice(waypointIndex, 1);
-                        renderWaypoints();
-                        updateWaypointsJson();
-                    });
-
-                    waypointsList.appendChild(waypointItem);
-                });
-            } else {
-                document.getElementById('waypointsContainer').classList.add('d-none');
-            }
-        }
-
-        // Add waypoint button
-        document.getElementById('addWaypointBtn').addEventListener('click', function() {
-            // Reset modal fields
-            document.getElementById('waypointLocation').value = '';
-            document.getElementById('waypointType').value = 'pickup';
-            document.getElementById('waypointNotes').value = '';
-
-            // Show modal
-            const waypointModal = new bootstrap.Modal(document.getElementById('addWaypointModal'));
-            waypointModal.show();
-        });
-
-        // Save waypoint button
-        document.getElementById('saveWaypointBtn').addEventListener('click', function() {
-            const location = document.getElementById('waypointLocation').value.trim();
-            const type = document.getElementById('waypointType').value;
-            const notes = document.getElementById('waypointNotes').value.trim();
-
-            if (location) {
-                // Add waypoint to array
-                waypoints.push({
-                    location: location,
-                    type: type,
-                    notes: notes
-                });
-
-                // Update UI
-                renderWaypoints();
-                updateWaypointsJson();
-
-                // Close modal
-                bootstrap.Modal.getInstance(document.getElementById('addWaypointModal')).hide();
-            } else {
-                alert('Please enter a location for the waypoint.');
-            }
-        });
-
-        // Try to parse existing waypoints
-        const waypointsField = document.getElementById('waypointsJson');
-        if (waypointsField.value) {
-            try {
-                waypoints = JSON.parse(waypointsField.value);
-                renderWaypoints();
-            } catch (e) {
-                console.error('Error parsing waypoints JSON:', e);
-            }
-        }
-
-        // Handle form submission
-        document.getElementById('createRouteForm').addEventListener('submit', function(event) {
-            // Ensure distance and time are calculated
-            const distance = document.getElementById('distance').value;
-            const time = document.getElementById('estimatedTime').value;
-
-            if (!distance || !time) {
-                event.preventDefault();
-                alert('Please set the start and end points on the map to calculate distance and time.');
-            }
-        });
     });
+
+    // Waypoints functionality
+    let waypoints = [];
+
+    function updateWaypointsJson() {
+        const waypointsField = document.getElementById('waypointsJson');
+
+        // Create waypoints array with map data
+        const waypointsData = waypoints.map((waypoint, index) => {
+            return {
+                location: waypoint.location,
+                type: waypoint.type,
+                notes: waypoint.notes,
+                lat: null, // These would be set from real map waypoints
+                lng: null
+            };
+        });
+
+        // Update JSON field
+        waypointsField.value = JSON.stringify(waypointsData);
+    }
+
+    function renderWaypoints() {
+        const waypointsList = document.getElementById('waypointsList');
+        waypointsList.innerHTML = '';
+
+        if (waypoints.length > 0) {
+            document.getElementById('waypointsContainer').classList.remove('d-none');
+
+            waypoints.forEach((waypoint, index) => {
+                const waypointItem = document.createElement('div');
+                waypointItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                waypointItem.innerHTML = `
+                    <div>
+                        <strong>${waypoint.location}</strong>
+                        <span class="badge bg-${waypoint.type === 'pickup' ? 'info' : (waypoint.type === 'delivery' ? 'warning' : 'secondary')} ms-2">
+                            ${waypoint.type}
+                        </span>
+                        ${waypoint.notes ? `<div><small class="text-muted">${waypoint.notes}</small></div>` : ''}
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-sm btn-outline-danger" data-waypoint-index="${index}">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+
+                // Add event listener for delete button
+                const deleteBtn = waypointItem.querySelector('button');
+                deleteBtn.addEventListener('click', function() {
+                    const waypointIndex = parseInt(this.dataset.waypointIndex);
+                    waypoints.splice(waypointIndex, 1);
+                    renderWaypoints();
+                    updateWaypointsJson();
+                });
+
+                waypointsList.appendChild(waypointItem);
+            });
+        } else {
+            document.getElementById('waypointsContainer').classList.add('d-none');
+        }
+    }
+
+    // Try to parse existing waypoints
+    const waypointsField = document.getElementById('waypointsJson');
+    if (waypointsField.value) {
+        try {
+            waypoints = JSON.parse(waypointsField.value);
+            renderWaypoints();
+        } catch (e) {
+            console.error('Error parsing waypoints JSON:', e);
+        }
+    }
+
+    // Add event listeners for the input fields to handle direct URL pasting
+    document.getElementById('startPoint').addEventListener('change', function() {
+        const address = this.value.trim();
+        if (address.includes('google.com/maps') || address.includes('maps.app.goo.gl')) {
+            const coords = extractCoordinatesFromGoogleMapsUrl(address);
+            if (coords) {
+                console.log('Extracted coordinates from pasted URL:', coords);
+                routeMap.setStartPoint(coords.lat, coords.lng);
+            }
+        }
+    });
+
+    document.getElementById('endPoint').addEventListener('change', function() {
+        const address = this.value.trim();
+        if (address.includes('google.com/maps') || address.includes('maps.app.goo.gl')) {
+            const coords = extractCoordinatesFromGoogleMapsUrl(address);
+            if (coords) {
+                console.log('Extracted coordinates from pasted URL:', coords);
+                routeMap.setEndPoint(coords.lat, coords.lng);
+            }
+        }
+    });
+
+    // Make pressing Enter in the input fields trigger the search buttons
+    document.getElementById('startPoint').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            document.getElementById('searchStartBtn').click();
+        }
+    });
+
+    document.getElementById('endPoint').addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            document.getElementById('searchEndBtn').click();
+        }
+    });
+
+    // Handle form submission
+    document.getElementById('createRouteForm').addEventListener('submit', function(event) {
+        // Ensure distance and time are calculated
+        const distance = document.getElementById('distance').value;
+        const time = document.getElementById('estimatedTime').value;
+
+        if (!distance || !time) {
+            event.preventDefault();
+            alert('Please set the start and end points on the map to calculate distance and time.');
+        }
+    });
+});
 </script>
 {% endblock %}
 {% endblock %}
