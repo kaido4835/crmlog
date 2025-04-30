@@ -15,7 +15,7 @@ main = Blueprint('main', __name__)
 @main.route('/')
 def index():
     if current_user.is_authenticated:
-        if current_user.role == UserRole.ADMIN:
+        if current_user.role.value == 'ADMIN':
             return redirect(url_for('admin.dashboard'))
         elif current_user.role == UserRole.COMPANY_OWNER:
             return redirect(url_for('main.owner_dashboard'))

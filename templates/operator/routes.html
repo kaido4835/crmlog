@@ -40,6 +40,56 @@
                         <input type="text" class="form-control" name="search" value="{{ search_term }}" placeholder="Start or end location...">
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_all" value=""
+                                       {% if not status %}checked{% endif %}>
+                                <label class="form-check-label" for="status_all">All</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_planned" value="PLANNED"
+                                       {% if status == 'PLANNED' %}checked{% endif %}>
+                                <label class="form-check-label" for="status_planned">Planned</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_in_progress" value="IN_PROGRESS"
+                                       {% if status == 'IN_PROGRESS' %}checked{% endif %}>
+                                <label class="form-check-label" for="status_in_progress">In Progress</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="radio" name="status" id="status_completed" value="COMPLETED"
+                                       {% if status == 'COMPLETED' %}checked{% endif %}>
+                                <label class="form-check-label" for="status_completed">Completed</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Driver</label>
+                        <select class="form-select" name="driver_id">
+                            <option value="">All Drivers</option>
+                            {% for driver in drivers %}
+                                <option value="{{ driver.id }}" {% if driver_id == driver.id %}selected{% endif %}>
+                                    {{ driver.user.first_name }} {{ driver.user.last_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="date_from" value="{{ date_from }}" placeholder="From">
+                            </div>
+                            <div class="col-6">
+                                <input type="date" class="form-control" name="date_to" value="{{ date_to }}" placeholder="To">
+                            </div>
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn btn-primary w-100">
                         <i class="fas fa-filter"></i> Apply Filters
                     </button>
@@ -57,13 +107,14 @@
                 </a>
             </div>
             <div class="card-body p-0">
-                {% if routes %}
+                {% if routes and routes.items %}
                 <div class="table-responsive">
                     <table class="table table-hover">
                         <thead>
                             <tr>
                                 <th>Start Point</th>
                                 <th>End Point</th>
+                                <th>Related Task</th>
                                 <th>Driver</th>
                                 <th>Status</th>
                                 <th>Start Time</th>
@@ -76,6 +127,15 @@
                             <tr>
                                 <td>{{ route.start_point }}</td>
                                 <td>{{ route.end_point }}</td>
+                                <td>
+                                    {% if route.task %}
+                                        <a href="{{ url_for('tasks.view_task', task_id=route.task.id) }}" class="badge bg-info text-decoration-none">
+                                            <i class="fas fa-tasks me-1"></i>{{ route.task.title|truncate(30) }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">No task</span>
+                                    {% endif %}
+                                </td>
                                 <td>
                                     {% if route.driver and route.driver.user %}
                                         <a href="{{ url_for('operator.view_driver', driver_id=route.driver.id) }}" class="d-flex align-items-center text-decoration-none">
@@ -93,13 +153,13 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if route.status.value == 'planned' %}
+                                    {% if route.status.value == 'PLANNED' %}
                                         <span class="badge bg-primary">Planned</span>
-                                    {% elif route.status.value == 'in_progress' %}
+                                    {% elif route.status.value == 'IN_PROGRESS' %}
                                         <span class="badge bg-warning">In Progress</span>
-                                    {% elif route.status.value == 'completed' %}
+                                    {% elif route.status.value == 'COMPLETED' %}
                                         <span class="badge bg-success">Completed</span>
-                                    {% elif route.status.value == 'cancelled' %}
+                                    {% elif route.status.value == 'CANCELLED' %}
                                         <span class="badge bg-danger">Cancelled</span>
                                     {% endif %}
                                 </td>
@@ -149,7 +209,7 @@
                                                 </a>
                                             </li>
                                             <li><hr class="dropdown-divider"></li>
-                                            {% if route.status.value == 'planned' %}
+                                            {% if route.status.value == 'PLANNED' %}
                                             <li>
                                                 <form action="{{ url_for('routes.cancel_route', route_id=route.id) }}" method="POST" class="d-inline">
                                                     <button type="submit" class="dropdown-item text-danger">
@@ -288,7 +348,7 @@
                                 {% if route.waypoints %}
                                 <div class="mt-2">
                                     <div class="progress" style="height: 8px;">
-                                        {% set completed_waypoints = route.get_completed_waypoints_count() %}
+                                        {% set completed_waypoints = route.waypoints|selectattr('completed', 'defined')|selectattr('completed')|list|length %}
                                         {% set total_waypoints = route.waypoints|length %}
                                         {% set progress = (completed_waypoints / total_waypoints * 100) if total_waypoints > 0 else 0 %}
                                         <div class="progress-bar bg-success" role="progressbar" style="width: {{ progress }}%;"
@@ -442,56 +502,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-{% endblock %}Status</label>
-                        <div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="status" id="status_all" value=""
-                                       {% if not status %}checked{% endif %}>
-                                <label class="form-check-label" for="status_all">All</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="status" id="status_planned" value="planned"
-                                       {% if status == 'planned' %}checked{% endif %}>
-                                <label class="form-check-label" for="status_planned">Planned</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="status" id="status_in_progress" value="in_progress"
-                                       {% if status == 'in_progress' %}checked{% endif %}>
-                                <label class="form-check-label" for="status_in_progress">In Progress</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="status" id="status_completed" value="completed"
-                                       {% if status == 'completed' %}checked{% endif %}>
-                                <label class="form-check-label" for="status_completed">Completed</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Driver</label>
-                        <select class="form-select" name="driver_id">
-                            <option value="">All Drivers</option>
-                            {% for driver in drivers %}
-                                <option value="{{ driver.id }}" {% if driver_id == driver.id %}selected{% endif %}>
-                                    {{ driver.user.first_name }} {{ driver.user.last_name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">Date Range</label>
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <input type="date" class="form-control" name="date_from" value="{{ date_from }}" placeholder="From">
-                            </div>
-                            <div class="col-6">
-                                <input type="date" class="form-control" name="date_to" value="{{ date_to }}" placeholder="To">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label">
-                        </label>
-                    </div>
+{% endblock %}

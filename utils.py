@@ -72,7 +72,7 @@ def admin_required(f):
             flash('Your account is inactive.', 'danger')
             return redirect(url_for('main.index'))
 
-        if current_user.role.value != 'admin':
+        if current_user.role.value != 'ADMIN':
             flash('You do not have permission to access this page.', 'danger')
             return redirect(url_for('main.index'))
 
