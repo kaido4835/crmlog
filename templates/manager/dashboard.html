@@ -17,8 +17,14 @@
                 <a href="{{ url_for('main.manager_tasks') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-tasks"></i> Tasks
                 </a>
+                <a href="{{ url_for('statistics.dashboard') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-chart-line"></i> Statistics
+                </a>
+                <a href="{{ url_for('routes.list_routes') }}" class="list-group-item list-group-item-action">
+                    <i class="fas fa-route"></i> Routes
+                </a>
                 <a href="{{ url_for('main.manager_reports') }}" class="list-group-item list-group-item-action">
-                    <i class="fas fa-chart-line"></i> Reports
+                    <i class="fas fa-file-alt"></i> Reports
                 </a>
                 <a href="{{ url_for('messages.inbox') }}" class="list-group-item list-group-item-action">
                     <i class="fas fa-comments"></i> Messages
@@ -26,97 +32,234 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-9">
         <div class="card mb-4">
             <div class="card-header bg-primary text-white">
                 <h5 class="card-title mb-0">Manager Dashboard</h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i> This is a placeholder for the Manager Dashboard. In a complete application, this would show operator statistics, task management, and team performance metrics.
-                </div>
-                
                 <div class="row">
                     <div class="col-md-4">
                         <div class="card text-center mb-4">
                             <div class="card-body">
                                 <i class="fas fa-users fa-3x text-primary mb-3"></i>
-                                <h2 class="display-4">0</h2>
+                                <h2 class="display-4">{{ operator_count }}</h2>
                                 <p class="text-muted">Operators</p>
+                            </div>
+                            <div class="card-footer bg-light">
+                                <a href="{{ url_for('main.manager_operators') }}" class="btn btn-sm btn-outline-primary">View Operators</a>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <div class="card text-center mb-4">
                             <div class="card-body">
                                 <i class="fas fa-tasks fa-3x text-success mb-3"></i>
-                                <h2 class="display-4">0</h2>
+                                <h2 class="display-4">{{ active_tasks }}</h2>
                                 <p class="text-muted">Active Tasks</p>
+                            </div>
+                            <div class="card-footer bg-light">
+                                <a href="{{ url_for('main.manager_tasks') }}" class="btn btn-sm btn-outline-success">View Tasks</a>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div class="col-md-4">
                         <div class="card text-center mb-4">
                             <div class="card-body">
                                 <i class="fas fa-truck fa-3x text-warning mb-3"></i>
-                                <h2 class="display-4">0</h2>
+                                <h2 class="display-4">{{ active_routes }}</h2>
                                 <p class="text-muted">Active Routes</p>
+                            </div>
+                            <div class="card-footer bg-light">
+                                <a href="{{ url_for('routes.list_routes') }}" class="btn btn-sm btn-outline-warning">View Routes</a>
                             </div>
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="card mb-4">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Team Performance</h5>
+                        <a href="{{ url_for('main.manager_reports') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-chart-bar"></i> Detailed Reports
+                        </a>
                     </div>
                     <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Operator</th>
-                                        <th>Assigned Tasks</th>
-                                        <th>Completed Tasks</th>
-                                        <th>Completion Rate</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td colspan="4" class="text-center">No operators to display.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                        {% if team_performance %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Team Member</th>
+                                            <th>Role</th>
+                                            <th>Assigned Tasks</th>
+                                            <th>Completed Tasks</th>
+                                            <th>Completion Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for member in team_performance %}
+                                            <tr>
+                                                <td>{{ member.name }}</td>
+                                                <td>
+                                                    {% if member.role == 'Manager' %}
+                                                        <span class="badge bg-primary">{{ member.role }}</span>
+                                                    {% elif member.role == 'Operator' %}
+                                                        <span class="badge bg-info">{{ member.role }}</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">{{ member.role }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ member.assigned_tasks }}</td>
+                                                <td>{{ member.completed_tasks }}</td>
+                                                <td>
+                                                    {% if member.assigned_tasks > 0 %}
+                                                        {% set completion_rate = (member.completed_tasks / member.assigned_tasks * 100)|round %}
+                                                        <div class="progress" style="height: 20px;">
+                                                            <div class="progress-bar {% if completion_rate >= 75 %}bg-success{% elif completion_rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                                role="progressbar" style="width: {{ completion_rate }}%;"
+                                                                aria-valuenow="{{ completion_rate }}" aria-valuemin="0" aria-valuemax="100">{{ completion_rate }}%</div>
+                                                        </div>
+                                                    {% else %}
+                                                        <span class="text-muted">No tasks</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> No team performance data available.
+                            </div>
+                        {% endif %}
                     </div>
                 </div>
-                
+
                 <div class="card">
-                    <div class="card-header">
+                    <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Recent Tasks</h5>
+                        <a href="{{ url_for('main.manager_tasks') }}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-tasks"></i> View All Tasks
+                        </a>
                     </div>
                     <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Title</th>
-                                        <th>Assigned To</th>
-                                        <th>Status</th>
-                                        <th>Deadline</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td colspan="6" class="text-center">No tasks to display.</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                        {% if recent_tasks %}
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Title</th>
+                                            <th>Assigned To</th>
+                                            <th>Status</th>
+                                            <th>Deadline</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for task in recent_tasks %}
+                                            <tr>
+                                                <td>{{ task.id }}</td>
+                                                <td>{{ task.title }}</td>
+                                                <td>
+                                                    {% if task.assignee %}
+                                                        {{ task.assignee.first_name }} {{ task.assignee.last_name }}
+                                                    {% else %}
+                                                        <span class="text-muted">Unassigned</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if task.status.value == 'NEW' %}
+                                                        <span class="badge bg-primary">New</span>
+                                                    {% elif task.status.value == 'IN_PROGRESS' %}
+                                                        <span class="badge bg-warning">In Progress</span>
+                                                    {% elif task.status.value == 'COMPLETED' %}
+                                                        <span class="badge bg-success">Completed</span>
+                                                    {% elif task.status.value == 'ON_HOLD' %}
+                                                        <span class="badge bg-secondary">On Hold</span>
+                                                    {% elif task.status.value == 'CANCELLED' %}
+                                                        <span class="badge bg-danger">Cancelled</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    {% if task.deadline %}
+                                                        {% if task.deadline < now %}
+                                                            <span class="text-danger">{{ task.deadline.strftime('%Y-%m-%d') }}</span>
+                                                        {% elif (task.deadline - now).days < 2 %}
+                                                            <span class="text-warning">{{ task.deadline.strftime('%Y-%m-%d') }}</span>
+                                                        {% else %}
+                                                            <span>{{ task.deadline.strftime('%Y-%m-%d') }}</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="text-muted">No deadline</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>
+                                                    <div class="btn-group">
+                                                        <a href="{{ url_for('tasks.view_task', task_id=task.id) }}" class="btn btn-sm btn-outline-primary">
+                                                            <i class="fas fa-eye"></i>
+                                                        </a>
+                                                        <a href="{{ url_for('tasks.edit_task', task_id=task.id) }}" class="btn btn-sm btn-outline-secondary">
+                                                            <i class="fas fa-edit"></i>
+                                                        </a>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% else %}
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle"></i> No recent tasks to display.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Quick Actions</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-grid gap-2">
+                                    <a href="{{ url_for('main.add_operator') }}" class="btn btn-outline-primary">
+                                        <i class="fas fa-user-plus"></i> Add Operator
+                                    </a>
+                                    <a href="{{ url_for('tasks.create_task') }}" class="btn btn-outline-success">
+                                        <i class="fas fa-plus-circle"></i> Create New Task
+                                    </a>
+                                    <a href="{{ url_for('routes.create_route') }}" class="btn btn-outline-warning">
+                                        <i class="fas fa-route"></i> Create New Route
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Driver Count by Status</h5>
+                            </div>
+                            <div class="card-body">
+                                {% if driver_count > 0 %}
+                                    <div class="chart-container" style="position: relative; height:200px;">
+                                        <canvas id="driverStatusChart"></canvas>
+                                    </div>
+                                {% else %}
+                                    <div class="text-center py-5">
+                                        <i class="fas fa-chart-pie fa-3x text-muted mb-3"></i>
+                                        <p>No driver data available</p>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -124,4 +267,46 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+{% if driver_count > 0 %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sample data for driver status chart
+        // In a real implementation, this would be passed from the Flask route
+        const ctx = document.getElementById('driverStatusChart').getContext('2d');
+        const driverStatusChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Active', 'On Route', 'Inactive'],
+                datasets: [{
+                    data: [{{ driver_count - active_routes }}, {{ active_routes }}, 0],
+                    backgroundColor: [
+                        'rgba(40, 167, 69, 0.7)',
+                        'rgba(255, 193, 7, 0.7)',
+                        'rgba(108, 117, 125, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgb(40, 167, 69)',
+                        'rgb(255, 193, 7)',
+                        'rgb(108, 117, 125)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
 {% endblock %}

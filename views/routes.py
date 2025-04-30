@@ -78,7 +78,7 @@ def list_routes():
         )
 
     # Order by creation date (newest first)
-    routes_query = routes_query.order_by(Route.created_at.desc())
+    routes_query = routes_query.order_by(Route.start_time.desc())
 
     # Paginate results
     routes = routes_query.paginate(page=page, per_page=10)
