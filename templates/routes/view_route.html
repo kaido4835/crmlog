@@ -1,5 +1,88 @@
 {% extends "base.html" %}
 
+{% block styles %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+<style>
+    #routeMap {
+        height: 400px;
+        width: 100%;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .timeline {
+        position: relative;
+        padding-left: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .timeline:before {
+        content: '';
+        position: absolute;
+        left: 0.75rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -3rem;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+    }
+
+    .timeline-content {
+        padding-bottom: 1rem;
+    }
+
+    .timeline-title {
+        margin-bottom: 0.25rem;
+    }
+
+    .timeline-text {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+
+    .custom-div-icon {
+        background: transparent;
+        border: none;
+    }
+
+    .start-marker {
+        background-color: #dc3545;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid white;
+    }
+
+    .end-marker {
+        background-color: #198754;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 3px solid white;
+    }
+
+    .waypoint-marker {
+        background-color: #0d6efd;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container">
     <div class="row">
@@ -8,13 +91,13 @@
                 <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h4 class="mb-0">Route Details</h4>
                     <div>
-                        {% if current_user.role.value in ['admin', 'company_owner', 'manager', 'operator'] or 
+                        {% if current_user.role.value in ['admin', 'company_owner', 'manager', 'operator'] or
                               (current_user.role.value == 'driver' and current_user.id == route.driver.user.id) %}
                         <a href="{{ url_for('routes.edit_route', route_id=route.id) }}" class="btn btn-light btn-sm me-2">
                             <i class="fas fa-edit"></i> Edit
                         </a>
                         {% endif %}
-                        
+
                         {% if current_user.role.value == 'driver' and current_user.id == route.driver.user.id and route.status.value == 'planned' %}
                         <form action="{{ url_for('routes.start_route', route_id=route.id) }}" method="POST" class="d-inline">
                             <button type="submit" class="btn btn-success btn-sm me-2">
@@ -22,7 +105,7 @@
                             </button>
                         </form>
                         {% endif %}
-                        
+
                         {% if current_user.role.value == 'driver' and current_user.id == route.driver.user.id and route.status.value == 'in_progress' %}
                         <form action="{{ url_for('routes.complete_route', route_id=route.id) }}" method="POST" class="d-inline">
                             <button type="submit" class="btn btn-success btn-sm me-2">
@@ -30,7 +113,7 @@
                             </button>
                         </form>
                         {% endif %}
-                        
+
                         {% if current_user.role.value in ['admin', 'company_owner', 'manager'] %}
                         <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal">
                             <i class="fas fa-trash"></i> Delete
@@ -164,7 +247,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     {% if route.waypoints %}
                     <div class="mb-4">
                         <h5>Waypoints</h5>
@@ -192,22 +275,28 @@
                         </div>
                     </div>
                     {% endif %}
-                    
+
                     <div class="mb-4">
                         <h5>Map</h5>
                         <div class="card">
                             <div class="card-body">
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle"></i> In a complete application, this would display an interactive map with the route visualization.
-                                </div>
-                                <div class="text-center py-4 bg-light rounded">
-                                    <i class="fas fa-map-marked-alt fa-4x text-muted mb-3"></i>
-                                    <p>Route map from {{ route.start_point }} to {{ route.end_point }}</p>
+                                <div id="routeMap"></div>
+
+                                <div class="d-flex align-items-center justify-content-between mt-3">
+                                    <div>
+                                        <span class="badge bg-danger p-2 me-2"></span> Start
+                                        <span class="badge bg-primary p-2 me-2 ms-3"></span> Waypoint
+                                        <span class="badge bg-success p-2 me-2 ms-3"></span> End
+                                    </div>
+
+                                    <a href="{{ url_for('routes.route_map', route_id=route.id) }}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-expand-alt"></i> View Full Map
+                                    </a>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
+
                     <div>
                         <h5>Status Updates</h5>
                         <div class="card">
@@ -220,7 +309,7 @@
                                             <p class="timeline-text">{{ route.start_time.strftime('%Y-%m-%d %H:%M') if route.start_time else 'Not started yet' }}</p>
                                         </div>
                                     </div>
-                                    
+
                                     {% if route.status.value in ['in_progress', 'completed', 'cancelled'] %}
                                     <div class="timeline-item">
                                         <div class="timeline-marker bg-primary"></div>
@@ -236,7 +325,7 @@
                                         </div>
                                     </div>
                                     {% endif %}
-                                    
+
                                     {% if route.status.value in ['completed'] %}
                                     <div class="timeline-item">
                                         <div class="timeline-marker bg-success"></div>
@@ -252,7 +341,7 @@
                                         </div>
                                     </div>
                                     {% endif %}
-                                    
+
                                     {% if route.status.value in ['cancelled'] %}
                                     <div class="timeline-item">
                                         <div class="timeline-marker bg-danger"></div>
@@ -269,7 +358,7 @@
                                     </div>
                                     {% endif %}
                                 </div>
-                                
+
                                 {% if current_user.role.value == 'driver' and current_user.id == route.driver.user.id and route.status.value == 'in_progress' %}
                                 <div class="mt-3">
                                     <form action="{{ url_for('routes.add_status_update', route_id=route.id) }}" method="POST">
@@ -317,50 +406,123 @@
         </div>
     </div>
 </div>
-
-{% block styles %}
-<style>
-    .timeline {
-        position: relative;
-        padding-left: 3rem;
-        margin-bottom: 1rem;
-    }
-    
-    .timeline:before {
-        content: '';
-        position: absolute;
-        left: 0.75rem;
-        top: 0;
-        bottom: 0;
-        width: 2px;
-        background-color: #e9ecef;
-    }
-    
-    .timeline-item {
-        position: relative;
-        margin-bottom: 1.5rem;
-    }
-    
-    .timeline-marker {
-        position: absolute;
-        left: -3rem;
-        width: 1.5rem;
-        height: 1.5rem;
-        border-radius: 50%;
-    }
-    
-    .timeline-content {
-        padding-bottom: 1rem;
-    }
-    
-    .timeline-title {
-        margin-bottom: 0.25rem;
-    }
-    
-    .timeline-text {
-        color: #6c757d;
-        margin-bottom: 0;
-    }
-</style>
 {% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize the map
+        const map = L.map('routeMap').setView([51.505, -0.09], 13);
+
+        // Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Get route data
+        const routeData = {{ route.waypoints|tojson if route.waypoints else '[]' }};
+
+        // Define default coordinates (London)
+        const defaultLat = 51.505;
+        const defaultLng = -0.09;
+
+        let coordinates = {
+            start: [defaultLat - 0.02, defaultLng - 0.02],
+            end: [defaultLat + 0.02, defaultLng + 0.02],
+            waypoints: []
+        };
+
+        // Check if waypoints have coordinates
+        let hasValidCoordinates = false;
+        if (routeData && routeData.length > 0) {
+            // Look for waypoints with lat/lng
+            for (const waypoint of routeData) {
+                if (waypoint.lat && waypoint.lng) {
+                    hasValidCoordinates = true;
+                    coordinates.waypoints.push([waypoint.lat, waypoint.lng]);
+                }
+            }
+        }
+
+        // If we don't have valid coordinates from waypoints,
+        // generate placeholder coordinates
+        if (!hasValidCoordinates && routeData && routeData.length > 0) {
+            const waypointCount = routeData.length;
+
+            // Calculate positions along a straight line from start to end
+            for (let i = 1; i <= waypointCount; i++) {
+                const fraction = i / (waypointCount + 1);
+                const lat = coordinates.start[0] + fraction * (coordinates.end[0] - coordinates.start[0]);
+                const lng = coordinates.start[1] + fraction * (coordinates.end[1] - coordinates.start[1]);
+
+                coordinates.waypoints.push([lat, lng]);
+            }
+        }
+
+        // Create custom marker icons
+        const startIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<div class="start-marker"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        const waypointIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<div class="waypoint-marker"></div>',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+        });
+
+        const endIcon = L.divIcon({
+            className: 'custom-div-icon',
+            html: '<div class="end-marker"></div>',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+
+        // Add start marker
+        const startMarker = L.marker(coordinates.start, {
+            title: 'Start: {{ route.start_point }}',
+            icon: startIcon
+        }).addTo(map);
+        startMarker.bindPopup('<strong>Start:</strong> {{ route.start_point }}');
+
+        // Add waypoint markers
+        const waypointMarkers = [];
+        for (let i = 0; i < coordinates.waypoints.length; i++) {
+            const waypoint = coordinates.waypoints[i];
+            const waypointInfo = routeData[i] || { location: `Waypoint ${i+1}` };
+
+            const waypointMarker = L.marker(waypoint, {
+                title: `Waypoint ${i+1}: ${waypointInfo.location}`,
+                icon: waypointIcon
+            }).addTo(map);
+
+            waypointMarker.bindPopup(`<strong>Waypoint ${i+1}:</strong> ${waypointInfo.location}`);
+            waypointMarkers.push(waypointMarker);
+        }
+
+        // Add end marker
+        const endMarker = L.marker(coordinates.end, {
+            title: 'End: {{ route.end_point }}',
+            icon: endIcon
+        }).addTo(map);
+        endMarker.bindPopup('<strong>End:</strong> {{ route.end_point }}');
+
+        // Create route polyline
+        const routePoints = [coordinates.start, ...coordinates.waypoints, coordinates.end];
+        const routeLine = L.polyline(routePoints, {
+            color: '#0d6efd',
+            weight: 5,
+            opacity: 0.7
+        }).addTo(map);
+
+        // Fit map to bounds
+        map.fitBounds(routeLine.getBounds(), {
+            padding: [50, 50]
+        });
+    });
+</script>
 {% endblock %}
