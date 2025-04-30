@@ -406,61 +406,172 @@
         </div>
     </div>
 </div>
-{% endblock %}
 
 {% block scripts %}
 <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+<script src="{{ url_for('static', filename='js/map-utils.js') }}"></script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize the map
-        const map = L.map('routeMap').setView([51.505, -0.09], 13);
+        const map = initMap('routeMap');
 
-        // Add OpenStreetMap tile layer
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        }).addTo(map);
-
-        // Get route data
+        // Get route data from backend
+        const startPointText = "{{ route.start_point }}";
+        const endPointText = "{{ route.end_point }}";
         const routeData = {{ route.waypoints|tojson if route.waypoints else '[]' }};
 
-        // Define default coordinates (London)
+        // Get or create map-utils.js functions if not available
+        // (These might normally be in map-utils.js but we're ensuring they're available)
+        if (typeof extractCoordinatesFromGoogleMapsUrl !== 'function') {
+            // Simple implementation of coordinate extraction from URL
+            window.extractCoordinatesFromGoogleMapsUrl = function(url) {
+                try {
+                    // Format: ?q=lat,lng or @lat,lng,zoom
+                    const queryParamMatch = url.match(/[?&@](?:q|ll)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                    if (queryParamMatch) {
+                        return {
+                            lat: parseFloat(queryParamMatch[1]),
+                            lng: parseFloat(queryParamMatch[2])
+                        };
+                    }
+
+                    // Format: maps/@lat,lng or maps/place/.../@lat,lng
+                    const atSymbolMatch = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+                    if (atSymbolMatch) {
+                        return {
+                            lat: parseFloat(atSymbolMatch[1]),
+                            lng: parseFloat(atSymbolMatch[2])
+                        };
+                    }
+
+                    // Format: !3dlat!4dlng
+                    const detailedFormatMatch = url.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+                    if (detailedFormatMatch) {
+                        return {
+                            lat: parseFloat(detailedFormatMatch[1]),
+                            lng: parseFloat(detailedFormatMatch[2])
+                        };
+                    }
+
+                    // Direct coordinates in format lat,lng
+                    const directCoords = url.match(/^(-?\d+\.\d+),\s*(-?\d+\.\d+)$/);
+                    if (directCoords) {
+                        return {
+                            lat: parseFloat(directCoords[1]),
+                            lng: parseFloat(directCoords[2])
+                        };
+                    }
+
+                    return null;
+                } catch (error) {
+                    console.error('Error extracting coordinates:', error);
+                    return null;
+                }
+            };
+        }
+
+        // Default coordinates (London) as fallback
         const defaultLat = 51.505;
         const defaultLng = -0.09;
 
-        let coordinates = {
-            start: [defaultLat - 0.02, defaultLng - 0.02],
-            end: [defaultLat + 0.02, defaultLng + 0.02],
-            waypoints: []
-        };
+        // Initialize coordinates
+        let startCoords = null;
+        let endCoords = null;
+        let waypointCoords = [];
 
-        // Check if waypoints have coordinates
-        let hasValidCoordinates = false;
+        // Try to extract coordinates from start point (it might be a Google Maps URL)
+        if (startPointText.includes('google.com/maps') || startPointText.includes('goo.gl/maps')) {
+            const coords = extractCoordinatesFromGoogleMapsUrl(startPointText);
+            if (coords) {
+                startCoords = [coords.lat, coords.lng];
+                console.log('Extracted start coordinates from URL:', startCoords);
+            }
+        } else {
+            // Try to parse direct coordinates like "lat, lng"
+            const directCoords = startPointText.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+            if (directCoords) {
+                startCoords = [parseFloat(directCoords[1]), parseFloat(directCoords[2])];
+                console.log('Parsed start coordinates from text:', startCoords);
+            }
+        }
+
+        // Try to extract coordinates from end point
+        if (endPointText.includes('google.com/maps') || endPointText.includes('goo.gl/maps')) {
+            const coords = extractCoordinatesFromGoogleMapsUrl(endPointText);
+            if (coords) {
+                endCoords = [coords.lat, coords.lng];
+                console.log('Extracted end coordinates from URL:', endCoords);
+            }
+        } else {
+            // Try to parse direct coordinates
+            const directCoords = endPointText.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+            if (directCoords) {
+                endCoords = [parseFloat(directCoords[1]), parseFloat(directCoords[2])];
+                console.log('Parsed end coordinates from text:', endCoords);
+            }
+        }
+
+        // Set default coordinates if not found
+        if (!startCoords) {
+            startCoords = [defaultLat - 0.02, defaultLng - 0.02];
+            console.log('Using default start coordinates:', startCoords);
+        }
+
+        if (!endCoords) {
+            endCoords = [defaultLat + 0.02, defaultLng + 0.02];
+            console.log('Using default end coordinates:', endCoords);
+        }
+
+        // Process waypoints if available
         if (routeData && routeData.length > 0) {
-            // Look for waypoints with lat/lng
             for (const waypoint of routeData) {
+                // Check if waypoint has explicit lat/lng properties
                 if (waypoint.lat && waypoint.lng) {
-                    hasValidCoordinates = true;
-                    coordinates.waypoints.push([waypoint.lat, waypoint.lng]);
+                    waypointCoords.push([parseFloat(waypoint.lat), parseFloat(waypoint.lng)]);
+                    continue;
                 }
+
+                // Try to extract coordinates from location field if it exists
+                if (waypoint.location) {
+                    // Check if location is a Google Maps URL
+                    if (waypoint.location.includes('google.com/maps') || waypoint.location.includes('goo.gl/maps')) {
+                        const coords = extractCoordinatesFromGoogleMapsUrl(waypoint.location);
+                        if (coords) {
+                            waypointCoords.push([coords.lat, coords.lng]);
+                            continue;
+                        }
+                    }
+
+                    // Try to parse direct coordinates from location
+                    const directCoords = waypoint.location.match(/(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+                    if (directCoords) {
+                        waypointCoords.push([parseFloat(directCoords[1]), parseFloat(directCoords[2])]);
+                        continue;
+                    }
+                }
+
+                // If no coordinates found for this waypoint, we'll position it on a straight line
+                // This will be handled below if waypointCoords.length != routeData.length
             }
         }
 
-        // If we don't have valid coordinates from waypoints,
-        // generate placeholder coordinates
-        if (!hasValidCoordinates && routeData && routeData.length > 0) {
-            const waypointCount = routeData.length;
+        // If we couldn't extract all waypoint coordinates, position them along a straight line
+        if (routeData && routeData.length > waypointCoords.length) {
+            // Calculate how many waypoints need coordinates
+            const missingWaypoints = routeData.length - waypointCoords.length;
 
-            // Calculate positions along a straight line from start to end
-            for (let i = 1; i <= waypointCount; i++) {
-                const fraction = i / (waypointCount + 1);
-                const lat = coordinates.start[0] + fraction * (coordinates.end[0] - coordinates.start[0]);
-                const lng = coordinates.start[1] + fraction * (coordinates.end[1] - coordinates.start[1]);
-
-                coordinates.waypoints.push([lat, lng]);
+            // Generate evenly spaced coordinates between start and end
+            for (let i = 1; i <= missingWaypoints; i++) {
+                const fraction = i / (missingWaypoints + 1);
+                const lat = startCoords[0] + fraction * (endCoords[0] - startCoords[0]);
+                const lng = startCoords[1] + fraction * (endCoords[1] - startCoords[1]);
+                waypointCoords.push([lat, lng]);
             }
         }
 
-        // Create custom marker icons
+        // Create markers and route
+
+        // Custom icons
         const startIcon = L.divIcon({
             className: 'custom-div-icon',
             html: '<div class="start-marker"></div>',
@@ -483,46 +594,49 @@
         });
 
         // Add start marker
-        const startMarker = L.marker(coordinates.start, {
-            title: 'Start: {{ route.start_point }}',
+        const startMarker = L.marker(startCoords, {
+            title: 'Start: ' + startPointText,
             icon: startIcon
         }).addTo(map);
-        startMarker.bindPopup('<strong>Start:</strong> {{ route.start_point }}');
+        startMarker.bindPopup('<strong>Start:</strong> ' + startPointText);
 
         // Add waypoint markers
         const waypointMarkers = [];
-        for (let i = 0; i < coordinates.waypoints.length; i++) {
-            const waypoint = coordinates.waypoints[i];
-            const waypointInfo = routeData[i] || { location: `Waypoint ${i+1}` };
+        for (let i = 0; i < waypointCoords.length; i++) {
+            const waypointInfo = routeData[i] || { location: 'Waypoint ' + (i+1) };
+            const waypointTitle = waypointInfo.location || ('Waypoint ' + (i+1));
 
-            const waypointMarker = L.marker(waypoint, {
-                title: `Waypoint ${i+1}: ${waypointInfo.location}`,
+            const waypointMarker = L.marker(waypointCoords[i], {
+                title: 'Waypoint ' + (i+1) + ': ' + waypointTitle,
                 icon: waypointIcon
             }).addTo(map);
 
-            waypointMarker.bindPopup(`<strong>Waypoint ${i+1}:</strong> ${waypointInfo.location}`);
+            waypointMarker.bindPopup('<strong>Waypoint ' + (i+1) + ':</strong> ' + waypointTitle);
             waypointMarkers.push(waypointMarker);
         }
 
         // Add end marker
-        const endMarker = L.marker(coordinates.end, {
-            title: 'End: {{ route.end_point }}',
+        const endMarker = L.marker(endCoords, {
+            title: 'End: ' + endPointText,
             icon: endIcon
         }).addTo(map);
-        endMarker.bindPopup('<strong>End:</strong> {{ route.end_point }}');
+        endMarker.bindPopup('<strong>End:</strong> ' + endPointText);
 
         // Create route polyline
-        const routePoints = [coordinates.start, ...coordinates.waypoints, coordinates.end];
+        const routePoints = [startCoords, ...waypointCoords, endCoords];
         const routeLine = L.polyline(routePoints, {
             color: '#0d6efd',
             weight: 5,
             opacity: 0.7
         }).addTo(map);
 
-        // Fit map to bounds
-        map.fitBounds(routeLine.getBounds(), {
-            padding: [50, 50]
-        });
+        // Fit map bounds to show the entire route
+        if (routePoints.length > 0) {
+            map.fitBounds(routeLine.getBounds(), {
+                padding: [50, 50]
+            });
+        }
     });
 </script>
+{% endblock %}
 {% endblock %}
