@@ -39,7 +39,7 @@ A comprehensive Customer Relationship Management system designed specifically fo
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/logistics-crm.git
+   git clone https://github.com/kaido4835/logistics-crm.git
    cd logistics-crm
    ```
 
@@ -57,14 +57,14 @@ A comprehensive Customer Relationship Management system designed specifically fo
 4. **Set up PostgreSQL database**
    ```sql
    CREATE DATABASE crm;
-   CREATE USER postgres WITH PASSWORD 'mirka2003';
-   GRANT ALL PRIVILEGES ON DATABASE crm TO postgres;
+   CREATE USER your_username WITH PASSWORD 'your_password';
+   GRANT ALL PRIVILEGES ON DATABASE crm TO your_username;
    ```
 
 5. **Configure environment variables**
    Create a `.env` file in the root directory:
    ```env
-   DATABASE_URL=postgresql://postgres:mirka2003@localhost/crm
+   DATABASE_URL=postgresql://your_username:your_password@localhost/crm
    SECRET_KEY=your-secret-key-here
    FLASK_ENV=development
    ```
@@ -85,12 +85,14 @@ The application will be available at `http://localhost:5000`
 
 ## 🗄️ Database Configuration
 
-### Default Connection Parameters:
-- **Username**: postgres
-- **Password**: mirka2003
+### Connection Parameters:
+- **Username**: your_username
+- **Password**: your_password
 - **Database**: crm
 - **Host**: localhost
 - **Port**: 5432
+
+> **Note**: Replace the database credentials with your own PostgreSQL setup.
 
 ## 📁 Project Structure
 
@@ -179,7 +181,7 @@ logistics-crm/
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DATABASE_URL` | PostgreSQL connection string | `postgresql://postgres:mirka2003@localhost/crm` |
+| `DATABASE_URL` | PostgreSQL connection string | `postgresql://your_username:your_password@localhost/crm` |
 | `SECRET_KEY` | Flask secret key for sessions | Required |
 | `FLASK_ENV` | Flask environment | `production` |
 | `UPLOAD_FOLDER` | Directory for file uploads | `static/uploads` |
@@ -274,19 +276,19 @@ python -m pytest --cov=app tests/
 - Add docstrings to all functions and classes
 - Write tests for new features
 
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## 👥 Authors
 
-- **Your Name** - *Initial work* - [YourGitHub](https://github.com/yourusername)
+- **Kaido4835** - *Initial work* - [GitHub](https://github.com/kaido4835)
+
+## 📚 Academic Project
+
+This project was developed as a diploma thesis for educational purposes, demonstrating the implementation of a comprehensive logistics management system using modern web technologies.
 
 ## 🆘 Support
 
 If you encounter any issues or have questions:
 
-1. Check the [Issues](https://github.com/yourusername/logistics-crm/issues) page
+1. Check the [Issues](https://github.com/kaido4835/logistics-crm/issues) page
 2. Create a new issue with detailed description
 3. Contact the development team
 
