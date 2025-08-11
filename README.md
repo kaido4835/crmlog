@@ -278,7 +278,7 @@ python -m pytest --cov=app tests/
 
 ## 👥 Authors
 
-- **Kaido4835** - *Initial work* - [GitHub](https://github.com/kaido4835)
+- **Mironshoh Rahmatullaev** - *Initial work* - [GitHub](https://github.com/kaido4835) | [LinkedIn](https://www.linkedin.com/in/mironshoh-rahmatullaev-531197237/)
 
 ## 📚 Academic Project
 
@@ -287,10 +287,12 @@ This project was developed as a diploma thesis for educational purposes, demonst
 ## 🆘 Support
 
 If you encounter any issues or have questions:
+Contact me directly:
+   - **Telegram**: [@nacht003](https://t.me/nacht003)
+   - **LinkedIn**: [Mironshoh Rahmatullaev](https://www.linkedin.com/in/mironshoh-rahmatullaev-531197237/)
+   - **Discord**: kaido02
 
-1. Check the [Issues](https://github.com/kaido4835/logistics-crm/issues) page
-2. Create a new issue with detailed description
-3. Contact the development team
+For collaboration, questions about the project, or professional inquiries, feel free to reach out!
 
 ## 🔮 Roadmap
 
