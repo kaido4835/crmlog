@@ -96,32 +96,53 @@ The application will be available at `http://localhost:5000`
 
 ```
 logistics-crm/
-├── app/
-│   ├── models/           # Database models
-│   │   ├── users.py      # User and role models
-│   │   ├── operations.py # Task, route, document models
-│   │   └── __init__.py
-│   ├── views/            # Route handlers
-│   │   ├── auth.py       # Authentication routes
-│   │   ├── tasks.py      # Task management routes
-│   │   ├── users.py      # User management routes
-│   │   └── main.py       # Main application routes
-│   ├── templates/        # HTML templates
-│   │   ├── base.html     # Base template
-│   │   ├── index.html    # Homepage
-│   │   └── tasks/        # Task-related templates
-│   ├── static/           # Static files (CSS, JS, images)
-│   │   ├── css/
-│   │   ├── js/
-│   │   └── uploads/      # File upload directory
-│   ├── forms.py          # WTForms form classes
-│   ├── services.py       # Business logic services
-│   └── __init__.py       # Application factory
-├── migrations/           # Database migrations
-├── requirements.txt      # Python dependencies
-├── config.py            # Application configuration
-├── run.py              # Application entry point
-└── README.md           # This file
+├── models/               # Database models
+│   ├── __init__.py      # Models initialization
+│   ├── users.py         # User, role, company models
+│   └── operations.py    # Task, route, document models
+├── views/               # Route handlers (Blueprints)
+│   ├── __init__.py     
+│   ├── admin.py         # Admin panel routes
+│   ├── auth.py          # Authentication routes
+│   ├── documents.py     # Document management routes
+│   ├── driver.py        # Driver-specific routes
+│   ├── main.py          # Main application routes
+│   ├── messages.py      # Messaging system routes
+│   ├── operator.py      # Operator-specific routes
+│   ├── routes.py        # Route management routes
+│   ├── statistics.py    # Analytics and reporting routes
+│   └── tasks.py         # Task management routes
+├── templates/           # HTML templates
+│   ├── base.html        # Base template
+│   ├── index.html       # Homepage
+│   ├── auth/            # Authentication templates
+│   ├── admin/           # Admin panel templates
+│   ├── driver/          # Driver dashboard templates
+│   ├── operator/        # Operator dashboard templates
+│   ├── owner/           # Company owner templates
+│   ├── manager/         # Manager dashboard templates
+│   ├── tasks/           # Task-related templates
+│   ├── documents/       # Document management templates
+│   ├── messages/        # Messaging templates
+│   └── errors/          # Error page templates
+├── static/              # Static files
+│   ├── css/            # Stylesheets
+│   │   └── style.css   # Custom styles
+│   ├── js/             # JavaScript files
+│   └── uploads/        # File upload directory
+│       └── documents/  # Document storage
+├── migrations/          # Database migrations
+├── logs/               # Application logs
+│   └── crm.log        # Main log file
+├── app.py              # Application factory
+├── config.py           # Application configuration
+├── forms.py            # WTForms form classes
+├── services.py         # Business logic services
+├── utils.py            # Utility functions
+├── jinja2_filters.py   # Custom Jinja2 filters
+├── requirements.txt    # Python dependencies
+├── run.py             # Application entry point
+└── README.md          # This file
 ```
 
 ## 🚦 Getting Started
